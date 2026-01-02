@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Interview Copilot</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+
+<body>
+    <div class="popup-container">
+        <!-- Header -->
+        <div class="header">
+            <div class="logo">
+                <img src="icons/icon48.png" alt="Icon" class="logo-icon">
+                <div class="logo-text">
+                    <h1>Interview Copilot</h1>
+                    <span class="tagline">AI Interview Assistant</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Login View -->
+        <div id="loginView" class="view">
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" placeholder="you@example.com">
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" placeholder="••••••••">
+            </div>
+            <button id="loginBtn" class="btn btn-primary">Login</button>
+            <button id="signupBtn" class="btn btn-secondary">Create Account</button>
+            <div id="authError" class="error-message"></div>
+        </div>
+
+        <!-- Setup View -->
+        <div id="setupView" class="view" style="display: none;">
+            <div class="user-info">
+                <span id="userEmail"></span>
+                <button id="logoutBtn" class="btn-link">Logout</button>
+            </div>
+
+            <div class="form-section">
+                <h3 class="section-title">Interview Details</h3>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="roleInput">Role Applying For</label>
+                        <input type="text" id="roleInput" placeholder="e.g. Frontend Engineer">
+                    </div>
+                </div>
+
+                <div class="form-row two-col">
+                    <div class="form-group">
+                        <label for="experienceLevel">Experience Level</label>
+                        <select id="experienceLevel">
+                            <option value="junior">Junior (0-2 yrs)</option>
+                            <option value="mid" selected>Mid (2-5 yrs)</option>
+                            <option value="senior">Senior (5+ yrs)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="interviewType">Interview Type</label>
+                        <select id="interviewType">
+                            <option value="technical" selected>Technical</option>
+                            <option value="behavioral">Behavioral</option>
+                            <option value="system-design">System Design</option>
+                            <option value="hr">HR / Culture</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row two-col">
+                    <div class="form-group">
+                        <label for="techStack">Primary Tech Stack</label>
+                        <input type="text" id="techStack" placeholder="e.g. React, TypeScript">
+                    </div>
+                    <div class="form-group">
+                        <label for="companyType">Company Type</label>
+                        <select id="companyType">
+                            <option value="startup" selected>Startup</option>
+                            <option value="mid-size">Mid-size</option>
+                            <option value="enterprise">Enterprise</option>
+                            <option value="faang">FAANG/Big Tech</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Response Style</label>
+                    <div class="radio-group">
+                        <label class="radio-option">
+                            <input type="radio" name="responseStyle" value="short">
+                            <span>Short</span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="responseStyle" value="balanced" checked>
+                            <span>Balanced</span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="responseStyle" value="detailed">
+                            <span>Detailed</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="weakAreas">Weak Areas (optional)</label>
+                    <textarea id="weakAreas" placeholder="e.g. System design, concurrency..."></textarea>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="meetingUrl">Meeting URL (optional)</label>
+                <input type="text" id="meetingUrl" placeholder="https://meet.google.com/...">
+            </div>
+
+            <button id="startBtn" class="btn btn-primary btn-large">
+                <span class="btn-icon">▶</span>
+                Start Session
+            </button>
+
+            <div class="credits-info">
+                <span id="creditsCount">10</span> credits remaining
+            </div>
+        </div>
+
+        <!-- Active Session View -->
+        <div id="activeView" class="view" style="display: none;">
+            <div class="session-status">
+                <div class="status-indicator active"></div>
+                <span>Session Active</span>
+            </div>
+
+            <div class="session-timer" id="sessionTimer">00:00</div>
+
+            <div class="session-info">
+                <span id="sessionPlatform">Google Meet</span>
+            </div>
+
+            <button id="openConsoleBtn" class="btn btn-primary">
+                Open Console Dashboard
+            </button>
+
+            <div class="session-actions">
+                <button id="cancelBtn" class="btn btn-secondary">Cancel Interview</button>
+                <button id="stopBtn" class="btn btn-danger">End Session</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,105 @@
+{
+  "manifest_version": 3,
+  "name": "Interview Copilot",
+  "version": "1.0.0",
+  "description": "AI-powered interview assistant for conversational interviews, live coding, and online assessments",
+  "permissions": [
+    "tabs",
+    "tabCapture",
+    "storage",
+    "activeTab",
+    "scripting",
+    "offscreen"
+  ],
+  "host_permissions": [
+    "https://meet.google.com/*",
+    "https://zoom.us/*",
+    "https://*.zoom.us/*",
+    "https://teams.microsoft.com/*",
+    "https://*.webex.com/*",
+    "https://web.whatsapp.com/*",
+    "https://*.slack.com/*",
+    "https://discord.com/*",
+    "https://web.telegram.org/*",
+    "https://*/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://meet.google.com/*",
+        "https://zoom.us/*",
+        "https://*.zoom.us/*",
+        "https://teams.microsoft.com/*",
+        "https://*.webex.com/*",
+        "https://web.whatsapp.com/*",
+        "https://*.slack.com/*",
+        "https://discord.com/*",
+        "https://web.telegram.org/*",
+        "http://localhost:5173/*",
+        "https://localhost:5173/*",
+        "http://127.0.0.1:5173/*"
+      ],
+      "js": [
+        "content-script.js"
+      ],
+      "css": [
+        "content-styles.css"
+      ],
+      "run_at": "document_end"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "overlay.html",
+        "overlay.js",
+        "offscreen.html",
+        "offscreen.js",
+        "icons/*"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ],
+  "commands": {
+    "trigger-help": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+H",
+        "mac": "Command+Shift+H"
+      },
+      "description": "Request AI hint"
+    },
+    "take-screenshot": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+S",
+        "mac": "Command+Shift+S"
+      },
+      "description": "Capture screenshot"
+    },
+    "toggle-overlay": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+O",
+        "mac": "Command+Shift+O"
+      },
+      "description": "Show/hide overlay"
+    }
+  }
+}

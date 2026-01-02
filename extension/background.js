@@ -1,0 +1,1132 @@
+// Background Service Worker - Main Orchestrator
+import { StateManager } from './lib/state-manager.js';
+import { AudioCaptureManager } from './lib/audio-capture.js';
+import { ScreenCaptureManager } from './lib/screen-capture.js';
+import { AIService } from './lib/ai-service.js';
+import { ConsoleSync } from './lib/console-sync.js';
+import { supabaseREST } from './lib/supabase-config.js';
+import { TranscriptionManager } from './lib/transcription-manager.js';
+
+class BackgroundService {
+  constructor() {
+    this.state = new StateManager();
+    this.audioManager = new AudioCaptureManager();
+    this.screenManager = new ScreenCaptureManager();
+    this.aiService = new AIService();
+    this.consoleSync = new ConsoleSync();
+
+    // Single source of truth for transcription state (append-only, no flicker)
+    this.transcriptionManager = new TranscriptionManager();
+
+    this.sessionActive = false;
+    this.tabId = null;
+    this.transcriptionBuffer = [];
+    this.screenshotQueue = [];
+
+    this.init();
+  }
+
+  async init() {
+    // Load saved state
+    await this.state.load();
+
+    // Setup message listeners
+    chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+      this.handleMessage(msg, sender, sendResponse);
+      return true; // Keep channel open for async response
+    });
+
+    // Setup command listeners (keyboard shortcuts)
+    chrome.commands.onCommand.addListener((command) => {
+      this.handleCommand(command);
+    });
+
+    // Monitor tab changes
+    chrome.tabs.onActivated.addListener((activeInfo) => {
+      if (this.sessionActive && this.tabId !== activeInfo.tabId) {
+        this.pauseSession();
+      }
+    });
+
+    // Restore active session if any
+    if (this.state.data.activeSession) {
+      this.resumeSession();
+    }
+
+    // Listen for remote console commands (Supabase)
+    this.consoleSync.onMessage((msg) => {
+      console.log('[Background] Received remote console command:', msg);
+
+      switch (msg.type) {
+        case 'REQUEST_HINT':
+          this.requestHint(msg.data?.requestType ? { requestType: msg.data.requestType } : { trigger: 'manual' });
+          break;
+        case 'TAKE_SCREENSHOT':
+          this.takeScreenshot({ trigger: 'manual' });
+          break;
+      }
+    });
+  }
+
+  async handleMessage(msg, sender, sendResponse) {
+    console.log('[Background] Message received:', msg.type);
+
+    switch (msg.type) {
+      case 'LOGIN':
+        await this.handleLogin(msg.data, sendResponse);
+        break;
+
+      case 'SIGNUP':
+        await this.handleSignup(msg.data, sendResponse);
+        break;
+
+      case 'LOGOUT':
+        await this.handleLogout(sendResponse);
+        break;
+
+      case 'START_SESSION':
+        await this.startSession(msg.data, sendResponse);
+        break;
+
+      case 'STOP_SESSION':
+        await this.stopSession(sendResponse);
+        break;
+
+      case 'CANCEL_SESSION':
+        await this.cancelSession(sendResponse);
+        break;
+
+      case 'REQUEST_HINT':
+        await this.requestHint(msg.data, sendResponse);
+        break;
+
+      case 'TAKE_SCREENSHOT':
+        await this.takeScreenshot(msg.data, sendResponse);
+        break;
+
+      case 'TOGGLE_MODE':
+        await this.toggleMode(msg.data, sendResponse);
+        break;
+
+      case 'GET_SESSION_STATUS':
+        sendResponse({
+          active: this.sessionActive,
+          tabId: this.tabId,
+          mode: this.state.data.settings.mode,
+          credits: this.state.data.credits,
+          sessionTime: this.getSessionTime(),
+          meetingUrl: this.state.data.activeSession?.url || ''
+        });
+        break;
+
+      case 'UPDATE_SETTINGS':
+        await this.updateSettings(msg.data, sendResponse);
+        break;
+
+      case 'CONSOLE_CONNECT':
+        await this.connectConsole(msg.data, sender, sendResponse);
+        break;
+
+      case 'GET_CREDITS':
+        // Fetch fresh credits from Supabase
+        try {
+          const creditsResult = await supabaseREST.getCredits();
+          if (creditsResult.success) {
+            this.state.data.credits = creditsResult.balance;
+            await chrome.storage.local.set({ credits: creditsResult.balance });
+            sendResponse({ success: true, credits: creditsResult.balance });
+          } else {
+            sendResponse({ success: false, credits: this.state.data.credits, error: creditsResult.error });
+          }
+        } catch (error) {
+          sendResponse({ success: false, credits: this.state.data.credits, error: error.message });
+        }
+        break;
+
+      case 'TRANSCRIPTION_RESULT':
+        // Handle transcription from offscreen document (Deepgram)
+        if (msg.data && msg.data.text) {
+          this.onTranscription({
+            text: msg.data.text,
+            confidence: msg.data.confidence || 0.95,
+            isFinal: msg.data.isFinal
+          });
+        }
+        sendResponse({ success: true });
+        break;
+
+      default:
+        sendResponse({ error: 'Unknown message type' });
+    }
+  }
+
+  // Supabase authentication handlers
+  async handleLogin(data, sendResponse) {
+    try {
+      const { email, password } = data;
+
+      if (!email || !password) {
+        sendResponse({ success: false, error: 'Email and password required' });
+        return;
+      }
+
+      console.log('[Background] Attempting Supabase login for:', email);
+
+      // Use real Supabase authentication
+      const result = await supabaseREST.signIn(email, password);
+
+      if (!result.success) {
+        sendResponse({ success: false, error: result.error });
+        return;
+      }
+
+      // Fetch real credits from Supabase
+      let credits = 0;
+      try {
+        const creditsResult = await supabaseREST.getCredits();
+        if (creditsResult.success) {
+          credits = creditsResult.balance;
+        }
+        console.log('[Background] Fetched credits:', credits);
+      } catch (creditsError) {
+        console.error('[Background] Failed to fetch credits:', creditsError);
+      }
+
+      const user = {
+        id: result.user?.id,
+        email: result.user?.email || email,
+        credits: credits,
+        plan: 'free'
+      };
+
+      if (!user.id) {
+        throw new Error('No user ID returned from Supabase');
+      }
+
+      this.state.data.user = user;
+      this.state.data.credits = user.credits;
+      await this.state.save();
+
+      console.log('[Background] Supabase login successful:', user.email);
+
+      sendResponse({
+        success: true,
+        user: user,
+        token: result.token
+      });
+
+    } catch (error) {
+      console.error('[Background] Login error:', error);
+      sendResponse({ success: false, error: error.message });
+    }
+  }
+
+  async handleSignup(data, sendResponse) {
+    try {
+      const { email, password } = data;
+
+      if (!email || !password) {
+        sendResponse({ success: false, error: 'Email and password required' });
+        return;
+      }
+
+      console.log('[Background] Attempting Supabase signup for:', email);
+
+      // Use real Supabase authentication
+      const result = await supabaseREST.signUp(email, password);
+
+      if (!result.success) {
+        sendResponse({ success: false, error: result.error });
+        return;
+      }
+
+      // Fetch real credits from Supabase (new users should have initial credits from signup trigger)
+      let credits = 0;
+      try {
+        const creditsResult = await supabaseREST.getCredits();
+        if (creditsResult.success) {
+          credits = creditsResult.balance;
+        }
+        console.log('[Background] Fetched credits for new user:', credits);
+      } catch (creditsError) {
+        console.error('[Background] Failed to fetch credits:', creditsError);
+      }
+
+      const user = {
+        id: result.user?.id || `user_${Date.now()}`,
+        email: result.user?.email || email,
+        credits: credits,
+        plan: 'free'
+      };
+
+      this.state.data.user = user;
+      this.state.data.credits = user.credits;
+      await this.state.save();
+
+      console.log('[Background] Supabase signup successful:', user.email);
+
+      sendResponse({
+        success: true,
+        user: user,
+        token: result.token
+      });
+
+    } catch (error) {
+      console.error('[Background] Signup error:', error);
+      sendResponse({ success: false, error: error.message });
+    }
+  }
+
+  async handleLogout(sendResponse) {
+    try {
+      // Stop any active session
+      if (this.sessionActive) {
+        await this.stopSession(() => { });
+      }
+
+      // Clear user data
+      this.state.data.user = null;
+      await this.state.save();
+
+      sendResponse({ success: true });
+
+    } catch (error) {
+      console.error('[Background] Logout error:', error);
+      sendResponse({ success: false, error: error.message });
+    }
+  }
+
+  async handleCommand(command) {
+    console.log('[Background] Command:', command);
+
+    switch (command) {
+      case 'trigger-help':
+        await this.requestHint({ trigger: 'keyboard' });
+        break;
+      case 'take-screenshot':
+        await this.takeScreenshot({ trigger: 'keyboard' });
+        break;
+      case 'toggle-overlay':
+        await this.toggleOverlay();
+        break;
+    }
+  }
+
+  async startSession(data, sendResponse) {
+    try {
+      // Get the tab ID from the request or current active tab
+      let tabId = data?.tabId;
+
+      if (!tabId) {
+        const [currentTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (!currentTab) {
+          sendResponse({ success: false, error: 'No active tab found' });
+          return;
+        }
+        tabId = currentTab.id;
+      }
+
+      const meetingUrl = data?.meetingUrl;
+
+      this.tabId = tabId;
+
+      console.log('[Background] Starting session for tab:', tabId, 'URL:', meetingUrl);
+
+      // Clear any previous session's transcripts from storage
+      await chrome.storage.local.set({ overlayTranscripts: [], lastTranscriptTime: 0 });
+      console.log('[Background] Cleared previous transcripts from storage');
+
+      this.sessionActive = true;
+
+      // Initialize session state will be done after DB creation attempt to ensure ID consistency
+      // Old initialization removed from here to avoid overwriting IDs
+
+
+      await this.state.save();
+
+      // Start real audio capture with Deepgram (fallback to mock if fails)
+      try {
+        await this.startRealAudioCapture(tabId);
+        console.log('[Background] Real audio capture started');
+      } catch (error) {
+        console.log('[Background] Real audio capture failed, using mock:', error.message);
+        this.startMockTranscription();
+      }
+
+      // Connect console sync
+      const consoleToken = this.generateConsoleToken();
+      this.state.data.consoleToken = consoleToken;
+      await this.state.save();
+
+      // DATABASE SYNC: Create session in Supabase if user is logged in
+      const sessionId = crypto.randomUUID(); // Use UUID for DB compatibility
+
+      try {
+        if (this.state.data.user && this.state.data.user.id) {
+          console.log('[Background] Creating DB session for user:', this.state.data.user.id);
+          // We need to use supabaseREST here as we are in background script
+          await supabaseREST.insert('interview_sessions', {
+            id: sessionId,
+            user_id: this.state.data.user.id,
+            role: data?.interviewContext?.role || 'Software Engineer', // Default or from context
+            type: data?.interviewContext?.type || 'Technical',         // Default or from context
+            difficulty: 'medium',
+            status: 'active',
+            console_token: consoleToken,
+            started_at: new Date().toISOString()
+          });
+          console.log('[Background] DB Session created:', sessionId);
+        }
+      } catch (dbError) {
+        console.error('[Background] Failed to create DB session:', dbError);
+        // Continue anyway, local sync might still work if we pass token manually
+      }
+
+      this.state.data.activeSession = {
+        id: sessionId,
+        tabId: tabId,
+        startTime: Date.now(),
+        url: meetingUrl || 'unknown',
+        platform: this.detectPlatform(meetingUrl || ''),
+        interviewContext: data?.interviewContext || {}
+      };
+
+      await this.state.save();
+
+      await this.consoleSync.connect(consoleToken, sessionId);
+
+      // Notify content script to show overlay (content-script.js is the single overlay authority)
+      await this.notifyContentScript(tabId);
+
+      // Send console token to overlay for console sync
+      setTimeout(() => {
+        this.sendToOverlay({
+          type: 'CONSOLE_TOKEN',
+          data: {
+            token: consoleToken,
+            sessionId: this.state.data.activeSession.id
+          }
+        });
+      }, 1000);
+
+      // Add a test transcript to verify overlay is working
+      setTimeout(() => {
+        this.onTranscription({
+          text: '🎤 Session started! Listening for audio...',
+          confidence: 1.0,
+          isFinal: true
+        });
+      }, 3000);
+
+      sendResponse({
+        success: true,
+        sessionId: this.state.data.activeSession.id,
+        consoleToken: consoleToken
+      });
+
+    } catch (error) {
+      console.error('[Background] Start session error:', error);
+      sendResponse({ success: false, error: error.message });
+    }
+  }
+
+  // Removed: injectOverlayWithRetry - content-script.js now handles overlay creation
+  // This eliminates race conditions between overlay-manager.js and content-script.js
+
+  async notifyContentScript(tabId) {
+    // Content script is auto-injected via manifest.json for meeting platforms
+    // But we need to manually inject for other URLs (like YouTube, testing pages, etc.)
+    console.log('[Background] Notifying content script on tab:', tabId);
+
+    // Try to send message first
+    let contentScriptReady = false;
+    try {
+      await chrome.tabs.sendMessage(tabId, { type: 'PING' });
+      contentScriptReady = true;
+      console.log('[Background] Content script already loaded');
+    } catch (err) {
+      console.log('[Background] Content script not loaded, will inject manually');
+    }
+
+    // If content script not ready, inject it manually
+    if (!contentScriptReady) {
+      try {
+        // Inject CSS first
+        await chrome.scripting.insertCSS({
+          target: { tabId },
+          files: ['content-styles.css']
+        });
+        console.log('[Background] Content styles injected');
+
+        // Then inject the script
+        await chrome.scripting.executeScript({
+          target: { tabId },
+          files: ['content-script.js']
+        });
+        console.log('[Background] Content script injected manually');
+
+        // Wait for initialization
+        await new Promise(resolve => setTimeout(resolve, 500));
+      } catch (error) {
+        console.error('[Background] Failed to inject content script:', error.message);
+        return;
+      }
+    }
+
+    // Send the session started message
+    try {
+      await chrome.tabs.sendMessage(tabId, {
+        type: 'SESSION_STARTED',
+        data: {
+          sessionId: this.state.data.activeSession?.id,
+          showOverlay: true
+        }
+      });
+      console.log('[Background] Content script notified successfully');
+    } catch (err) {
+      console.error('[Background] Failed to notify content script:', err.message);
+    }
+  }
+
+  // Removed: directInjectOverlay - content-script.js now handles overlay creation
+  // This eliminates race conditions between overlay-manager.js and content-script.js
+
+  // Real audio capture using offscreen document and Deepgram
+  async startRealAudioCapture(tabId) {
+    console.log('[Background] Starting real audio capture for tab:', tabId);
+
+    // Create offscreen document if it doesn't exist
+    await this.createOffscreenDocument();
+
+    // Get tab capture stream ID using tabCapture.getMediaStreamId
+    const streamId = await new Promise((resolve, reject) => {
+      chrome.tabCapture.getMediaStreamId({ targetTabId: tabId }, (id) => {
+        if (chrome.runtime.lastError) {
+          reject(new Error(chrome.runtime.lastError.message));
+        } else {
+          resolve(id);
+        }
+      });
+    });
+
+    console.log('[Background] Got stream ID:', streamId);
+
+    // Send stream ID to offscreen document to start capture
+    const response = await chrome.runtime.sendMessage({
+      type: 'START_AUDIO_CAPTURE',
+      streamId: streamId
+    });
+
+    if (!response?.success) {
+      throw new Error(response?.error || 'Failed to start audio capture');
+    }
+
+    console.log('[Background] Audio capture started successfully');
+  }
+
+  async createOffscreenDocument() {
+    // Check if offscreen document already exists
+    const existingContexts = await chrome.runtime.getContexts({
+      contextTypes: ['OFFSCREEN_DOCUMENT']
+    });
+
+    if (existingContexts.length > 0) {
+      console.log('[Background] Offscreen document already exists');
+      return;
+    }
+
+    // Create offscreen document
+    await chrome.offscreen.createDocument({
+      url: 'offscreen.html',
+      reasons: ['USER_MEDIA'],
+      justification: 'Capturing tab audio for transcription'
+    });
+
+    console.log('[Background] Offscreen document created');
+  }
+
+  async stopRealAudioCapture() {
+    try {
+      await chrome.runtime.sendMessage({ type: 'STOP_AUDIO_CAPTURE' });
+
+      // Close offscreen document
+      await chrome.offscreen.closeDocument();
+      console.log('[Background] Audio capture stopped and offscreen document closed');
+    } catch (error) {
+      console.log('[Background] Error stopping audio capture:', error.message);
+    }
+  }
+
+  startMockTranscription() {
+    console.log('[Background] Starting mock transcription mode');
+
+    // Notify overlay that we're in mock mode
+    setTimeout(() => {
+      this.broadcastToExtensionPages({
+        type: 'TRANSCRIPTION_STATUS',
+        data: { mode: 'mock', message: 'Using demo transcription' }
+      });
+    }, 2000);
+
+    // Generate mock transcription for testing
+    const mockTexts = [
+      "Tell me about your experience with JavaScript.",
+      "How would you handle state management in a large React application?",
+      "Can you explain the difference between let, const, and var?",
+      "Describe a challenging bug you've debugged recently.",
+      "What are your thoughts on TypeScript?",
+      "How do you approach code reviews?",
+      "Tell me about a project you're proud of."
+    ];
+
+    // Send first transcription after 3 seconds so user sees it working
+    setTimeout(() => {
+      if (this.sessionActive) {
+        const randomText = mockTexts[Math.floor(Math.random() * mockTexts.length)];
+        this.onTranscription({
+          text: randomText,
+          confidence: 0.95,
+          isFinal: true
+        });
+      }
+    }, 3000);
+
+    // Then continue every 8 seconds
+    this.mockTranscriptionInterval = setInterval(() => {
+      if (!this.sessionActive) {
+        clearInterval(this.mockTranscriptionInterval);
+        return;
+      }
+
+      const randomText = mockTexts[Math.floor(Math.random() * mockTexts.length)];
+      this.onTranscription({
+        text: randomText,
+        confidence: 0.95,
+        isFinal: true
+      });
+    }, 8000);
+  }
+
+  async stopSession(sendResponse) {
+    try {
+      // Stop mock transcription
+      if (this.mockTranscriptionInterval) {
+        clearInterval(this.mockTranscriptionInterval);
+        this.mockTranscriptionInterval = null;
+      }
+
+      // Stop real audio capture
+      await this.stopRealAudioCapture();
+
+      // DATABASE SYNC: Complete session in Supabase (this deducts 1 credit atomically)
+      let newCredits = this.state.data.credits;
+      try {
+        if (this.state.data.activeSession && this.state.data.activeSession.id) {
+          const result = await supabaseREST.completeSession(this.state.data.activeSession.id);
+
+          if (result.success) {
+            console.log('[Background] DB Session completed, credit deducted. New balance:', result.new_balance);
+            newCredits = result.new_balance;
+            this.state.data.credits = newCredits;
+
+            // Update stored credits
+            await chrome.storage.local.set({ credits: newCredits });
+          } else {
+            console.error('[Background] Failed to complete session via RPC:', result.error || result.message);
+            // Fallback: try direct update (won't deduct credits properly but at least marks complete)
+            await supabaseREST.update('interview_sessions',
+              { status: 'completed', ended_at: new Date().toISOString() },
+              { id: this.state.data.activeSession.id }
+            );
+          }
+        }
+      } catch (dbError) {
+        console.error('[Background] Failed to end DB session:', dbError);
+      }
+
+      // Stop old audio capture (if ever used)
+      try {
+        await this.audioManager.stopCapture();
+      } catch (e) {
+        // Ignore if audio manager not initialized
+      }
+
+      // Save session history
+      if (this.state.data.activeSession) {
+        this.state.data.sessionHistory.unshift({
+          ...this.state.data.activeSession,
+          endTime: Date.now(),
+          transcripts: this.transcriptionBuffer.slice(),
+          screenshots: this.screenshotQueue.slice()
+        });
+
+        // Keep only last 10 sessions
+        this.state.data.sessionHistory = this.state.data.sessionHistory.slice(0, 10);
+      }
+
+      // Clear session data
+      this.sessionActive = false;
+      this.state.data.activeSession = null;
+      this.transcriptionBuffer = [];
+      this.screenshotQueue = [];
+
+      // Clear TranscriptionManager state (single source of truth cleanup)
+      this.transcriptionManager.clear();
+
+      // Cancel any pending console debounce timer
+      if (this.consoleTranscriptTimeout) {
+        clearTimeout(this.consoleTranscriptTimeout);
+        this.consoleTranscriptTimeout = null;
+      }
+
+      await this.state.save();
+
+      // Disconnect console
+      await this.consoleSync.disconnect();
+
+      // Notify content script
+      if (this.tabId) {
+        chrome.tabs.sendMessage(this.tabId, { type: 'SESSION_STOPPED' });
+      }
+
+      sendResponse({ success: true });
+
+    } catch (error) {
+      console.error('[Background] Stop session error:', error);
+      sendResponse({ success: false, error: error.message });
+    }
+  }
+
+  // Cancel session without deducting credits
+  async cancelSession(sendResponse) {
+    try {
+      // Stop mock transcription
+      if (this.mockTranscriptionInterval) {
+        clearInterval(this.mockTranscriptionInterval);
+        this.mockTranscriptionInterval = null;
+      }
+
+      // Stop real audio capture
+      await this.stopRealAudioCapture();
+
+      // DATABASE SYNC: Mark session as cancelled (NO credit deduction)
+      try {
+        if (this.state.data.activeSession && this.state.data.activeSession.id) {
+          await supabaseREST.update('interview_sessions',
+            { status: 'cancelled', ended_at: new Date().toISOString() },
+            { id: this.state.data.activeSession.id }
+          );
+          console.log('[Background] DB Session marked cancelled (no credit deducted)');
+        }
+      } catch (dbError) {
+        console.error('[Background] Failed to cancel DB session:', dbError);
+      }
+
+      // Clear session data
+      this.sessionActive = false;
+      this.state.data.activeSession = null;
+      this.transcriptionBuffer = [];
+      this.screenshotQueue = [];
+
+      // Clear TranscriptionManager state
+      this.transcriptionManager.clear();
+
+      // Cancel any pending console debounce timer
+      if (this.consoleTranscriptTimeout) {
+        clearTimeout(this.consoleTranscriptTimeout);
+        this.consoleTranscriptTimeout = null;
+      }
+
+      await this.state.save();
+
+      // Disconnect console
+      await this.consoleSync.disconnect();
+
+      // Notify content script
+      if (this.tabId) {
+        chrome.tabs.sendMessage(this.tabId, { type: 'SESSION_STOPPED' });
+      }
+
+      sendResponse({ success: true, cancelled: true });
+
+    } catch (error) {
+      console.error('[Background] Cancel session error:', error);
+      sendResponse({ success: false, error: error.message });
+    }
+  }
+
+  async requestHint(data, sendResponse) {
+    if (!this.sessionActive) {
+      if (sendResponse) sendResponse({ error: 'No active session' });
+      return;
+    }
+
+    try {
+      // Check credits
+      if (this.state.data.credits <= 0) {
+        throw new Error('No credits remaining');
+      }
+
+      // Prepare context
+      const context = {
+        transcripts: this.transcriptionBuffer.slice(-10), // Last 10 transcripts
+        screenshots: this.screenshotQueue.slice(),
+        language: this.state.data.settings.language,
+        verbosity: this.state.data.settings.verbosity,
+        userProfile: this.state.data.userProfile,
+        requestType: data.requestType || 'hint',
+        customPrompt: data.customPrompt || null,
+        interviewContext: this.state.data.activeSession?.interviewContext || {}
+      };
+
+      // Show loading state
+      await this.updateOverlay({ loading: true, message: 'Thinking...' });
+      await this.consoleSync.send({ type: 'HINT_LOADING' });
+
+      // Request from AI service
+      const response = await this.aiService.getHint(context);
+
+      // Decrement credits
+      this.state.data.credits--;
+      await this.state.save();
+
+      // Update overlay
+      await this.updateOverlay({ loading: false, hint: response.hint });
+
+      // Send to console
+      await this.consoleSync.send({
+        type: 'HINT_RECEIVED',
+        data: response
+      });
+
+      if (sendResponse) {
+        sendResponse({ success: true, hint: response.hint, credits: this.state.data.credits });
+      }
+
+    } catch (error) {
+      console.error('[Background] Request hint error:', error);
+      await this.updateOverlay({ loading: false, error: error.message });
+      await this.consoleSync.send({ type: 'HINT_ERROR', error: error.message });
+
+      if (sendResponse) {
+        sendResponse({ success: false, error: error.message });
+      }
+    }
+  }
+
+  async takeScreenshot(data, sendResponse) {
+    try {
+      const screenshot = await this.screenManager.captureScreen();
+
+      // Process screenshot (OCR, compression)
+      const processed = await this.screenManager.processScreenshot(screenshot);
+
+      // Add to queue
+      this.screenshotQueue.push({
+        id: Date.now(),
+        data: processed.data,
+        text: processed.text,
+        timestamp: Date.now()
+      });
+
+      // Keep only last 5 screenshots
+      if (this.screenshotQueue.length > 5) {
+        this.screenshotQueue.shift();
+      }
+
+      // Send to console
+      await this.consoleSync.send({
+        type: 'SCREENSHOT_ADDED',
+        data: processed
+      });
+
+      if (sendResponse) {
+        sendResponse({ success: true, screenshot: processed });
+      }
+
+    } catch (error) {
+      console.error('[Background] Screenshot error:', error);
+      if (sendResponse) {
+        sendResponse({ success: false, error: error.message });
+      }
+    }
+  }
+
+  async toggleMode(data, sendResponse) {
+    this.state.data.settings.mode = data.mode;
+    await this.state.save();
+
+    // Notify content script
+    if (this.tabId) {
+      chrome.tabs.sendMessage(this.tabId, {
+        type: 'MODE_CHANGED',
+        mode: data.mode
+      });
+    }
+
+    sendResponse({ success: true, mode: data.mode });
+  }
+
+  async updateSettings(data, sendResponse) {
+    this.state.data.settings = { ...this.state.data.settings, ...data };
+    await this.state.save();
+    sendResponse({ success: true });
+  }
+
+  async connectConsole(data, sender, sendResponse) {
+    try {
+      const safeData = data || {};
+      const token = safeData.token || this.generateConsoleToken();
+      this.state.data.consoleToken = token;
+
+      await this.state.save();
+
+      if (this.sessionActive) {
+        await this.consoleSync.connect(token, this.state.data.activeSession.id);
+      }
+
+      sendResponse({ success: true, token });
+    } catch (error) {
+      sendResponse({ success: false, error: error.message });
+    }
+  }
+
+  onTranscription(transcript) {
+    console.log('[Background] Transcription:', transcript.text, 'isFinal:', transcript.isFinal);
+
+    // Process through TranscriptionManager (single source of truth, append-only)
+    const state = this.transcriptionManager.processResult(
+      transcript.text,
+      transcript.isFinal,
+      transcript.confidence
+    );
+
+    // Store entry for buffer (for AI context)
+    const transcriptEntry = {
+      id: Date.now(),
+      text: transcript.text,
+      timestamp: Date.now(),
+      confidence: transcript.confidence,
+      isFinal: transcript.isFinal
+    };
+    this.transcriptionBuffer.push(transcriptEntry);
+
+    // Auto-trigger in auto mode (only on final results)
+    if (transcript.isFinal && this.state.data.settings.mode === 'auto') {
+      this.checkAutoTrigger(transcript.text);
+    }
+
+    // OVERLAY: Send full transcription state IMMEDIATELY (no debounce for smooth display)
+    const tabId = this.state.data.activeSession?.tabId;
+    if (tabId) {
+      chrome.tabs.sendMessage(tabId, {
+        type: 'TRANSCRIPTION_STATE',
+        data: {
+          finalizedText: state.finalizedText,
+          interimText: state.interimText,
+          displayText: state.displayText,
+          isFinal: transcript.isFinal,
+          hasInterim: state.hasInterim
+        }
+      }).catch(err => {
+        console.log('[Background] Could not send transcription state to content script:', err.message);
+      });
+    }
+
+    // FALLBACK: Direct injection to overlay iframe
+    this.sendToOverlay({
+      type: 'TRANSCRIPTION_STATE',
+      data: {
+        finalizedText: state.finalizedText,
+        interimText: state.interimText,
+        displayText: state.displayText,
+        isFinal: transcript.isFinal,
+        hasInterim: state.hasInterim
+      }
+    });
+
+    // CONSOLE: Send finalized text only, with shorter debounce (500ms instead of 1500ms)
+    // This provides smoother console updates while still being efficient
+    if (transcript.isFinal) {
+      // Clear existing timer and set new one
+      if (this.consoleTranscriptTimeout) {
+        clearTimeout(this.consoleTranscriptTimeout);
+      }
+
+      this.consoleTranscriptTimeout = setTimeout(() => {
+        this.consoleSync.send({
+          type: 'TRANSCRIPTION_STATE',
+          data: {
+            finalizedText: state.finalizedText,
+            interimText: '',
+            text: transcript.text,
+            confidence: transcript.confidence,
+            isFinal: true
+          }
+        });
+      }, 500); // 500ms debounce for console (was 1500ms)
+    }
+
+    // Save to storage for fallback polling
+    this.saveTranscriptToStorage({
+      ...transcriptEntry,
+      finalizedText: state.finalizedText,
+      interimText: state.interimText
+    });
+  }
+
+  // Save transcript to chrome.storage.local as fallback delivery mechanism
+  // Primary delivery is via postMessage through content script to overlay iframe
+  async saveTranscriptToStorage(transcriptEntry) {
+    try {
+      const { overlayTranscripts = [] } = await chrome.storage.local.get('overlayTranscripts');
+
+      // Add new transcript
+      overlayTranscripts.push(transcriptEntry);
+
+      // Keep only last 50 transcripts
+      const trimmed = overlayTranscripts.slice(-50);
+
+      await chrome.storage.local.set({
+        overlayTranscripts: trimmed,
+        lastTranscriptTime: Date.now()
+      });
+
+      console.log('[Background] Saved transcript to storage, total:', trimmed.length);
+    } catch (error) {
+      console.error('[Background] Error saving transcript to storage:', error);
+    }
+  }
+
+  // Broadcast a message to all extension pages (overlay, popup, etc.)
+  async broadcastToExtensionPages(message) {
+    try {
+      // Get all extension views/contexts
+      const views = chrome.extension?.getViews ? chrome.extension.getViews() : [];
+
+      // Send to all views using runtime messaging
+      // This will reach any extension page with a message listener
+      chrome.runtime.sendMessage(message).catch(err => {
+        // This error is expected if no listeners are registered
+        console.log('[Background] No extension listeners for broadcast:', err.message);
+      });
+
+      console.log('[Background] Broadcast message:', message.type);
+    } catch (error) {
+      console.log('[Background] Broadcast error:', error.message);
+    }
+  }
+
+  async sendToOverlay(message) {
+    if (!this.tabId) return;
+
+    try {
+      // Method 1: Direct postMessage to iframe
+      await chrome.scripting.executeScript({
+        target: { tabId: this.tabId },
+        func: (msg) => {
+          const overlay = document.getElementById('interview-copilot-overlay');
+          if (overlay && overlay.contentWindow) {
+            console.log('[Injected] Forwarding message to overlay iframe:', msg.type);
+            overlay.contentWindow.postMessage(msg, '*');
+            return { success: true };
+          }
+          return { success: false, reason: 'no overlay' };
+        },
+        args: [message]
+      });
+    } catch (error) {
+      console.log('[Background] Could not send to overlay via injection:', error.message);
+    }
+  }
+
+  checkAutoTrigger(text) {
+    // Detect question patterns
+    const questionPatterns = [
+      /can you/i,
+      /how would you/i,
+      /tell me about/i,
+      /what is/i,
+      /explain/i,
+      /describe/i,
+      /why do you/i
+    ];
+
+    const isQuestion = questionPatterns.some(pattern => pattern.test(text));
+
+    if (isQuestion && !this.recentlyTriggered()) {
+      this.requestHint({ trigger: 'auto', text });
+    }
+  }
+
+  recentlyTriggered() {
+    // Prevent triggering more than once per 30 seconds
+    const lastTrigger = this.state.data.lastAutoTrigger || 0;
+    return Date.now() - lastTrigger < 30000;
+  }
+
+  // NOTE: chrome.tabCapture.capture is not available in MV3 service workers
+  // Audio capture would require an offscreen document approach in production
+  // For demo/testing, we use mock transcription instead
+
+  async injectOverlay(tabId) {
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      files: ['overlay.js']
+    });
+  }
+
+  async updateOverlay(data) {
+    // Send to overlay iframe using postMessage
+    await this.sendToOverlay({
+      type: 'UPDATE_OVERLAY',
+      data
+    });
+  }
+
+  async toggleOverlay() {
+    if (this.tabId) {
+      chrome.tabs.sendMessage(this.tabId, {
+        type: 'TOGGLE_OVERLAY'
+      });
+    }
+  }
+
+  detectPlatform(url) {
+    if (url.includes('meet.google.com')) return 'Google Meet';
+    if (url.includes('zoom.us')) return 'Zoom';
+    if (url.includes('teams.microsoft.com')) return 'Microsoft Teams';
+    if (url.includes('webex.com')) return 'WebEx';
+    if (url.includes('slack.com')) return 'Slack';
+    if (url.includes('discord.com')) return 'Discord';
+    return 'Web';
+  }
+
+  generateSessionId() {
+    return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  generateConsoleToken() {
+    return `token_${Date.now()}_${Math.random().toString(36).substr(2, 16)}`;
+  }
+
+  getSessionTime() {
+    if (!this.state.data.activeSession) return 0;
+    return Math.floor((Date.now() - this.state.data.activeSession.startTime) / 1000);
+  }
+
+  pauseSession() {
+    // Pause audio capture but keep session active
+    this.audioManager.pause();
+  }
+
+  async resumeSession() {
+    // Resume audio capture
+    await this.audioManager.resume();
+  }
+}
+
+// Initialize background service
+const backgroundService = new BackgroundService();
+
+console.log('[Background] Service worker initialized');

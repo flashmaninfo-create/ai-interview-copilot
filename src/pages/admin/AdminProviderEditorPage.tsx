@@ -21,7 +21,7 @@ export function AdminProviderEditorPage() {
     const [providerData, setProviderData] = useState<Partial<LLMProvider>>({
         name: '',
         slug: '',
-        api_key: '',
+        api_key_encrypted: '',
         enabled: true,
         config: {}
     });
@@ -72,10 +72,9 @@ export function AdminProviderEditorPage() {
         // Let's refine the payload.
 
         const payload: any = { ...providerData };
-        if (isEditing && payload.api_key === '') {
-            delete payload.api_key; // Don't wipe key if not provided (assuming masked in UI if retrieved, but we retrieved full object?)
-            // If getProvider returned the key, it's populated. If it returned null (masked), it's empty.
-            // If user leaves it empty, they probably don't want to change it.
+        if (isEditing && payload.api_key_encrypted === '') {
+            delete payload.api_key_encrypted; // Don't wipe key if not provided
+            // If user leaves it empty, they don't want to change it.
             // If they type something, we send it.
         }
 
@@ -171,8 +170,8 @@ export function AdminProviderEditorPage() {
                             <input
                                 type="password"
                                 className="w-full px-3 py-2 border border-slate-300 rounded focus:ring-primary focus:border-primary"
-                                value={providerData.api_key || ''}
-                                onChange={e => setProviderData({ ...providerData, api_key: e.target.value })}
+                                value={providerData.api_key_encrypted || ''}
+                                onChange={e => setProviderData({ ...providerData, api_key_encrypted: e.target.value })}
                                 placeholder={isEditing ? "(Unchanged)" : "sk-..."}
                             />
                         </div>

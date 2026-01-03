@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
 import { useConsoleSync } from '../../hooks/useConsoleSync';
 import { creditService } from '../../lib/services/creditService';
 import {
@@ -15,7 +14,7 @@ import {
 } from 'lucide-react';
 
 export function LiveConsolePage() {
-    useAuth(); // Auth context used for session validation
+    // user not needed - credits fetched from creditService
 
     // Use the unified sync hook
     const {

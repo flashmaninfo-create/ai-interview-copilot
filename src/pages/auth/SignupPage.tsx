@@ -65,16 +65,13 @@ export function SignupPage() {
         const result = await signUp(formData.email, formData.password, formData.fullName);
 
         if (result.error) {
-            // Check if email confirmation is required
-            if (result.error.code === 'EMAIL_NOT_CONFIRMED') {
-                setSuccessMessage('Please check your email to verify your account.');
-            }
-            // Other errors will be shown by AuthError component
-        } else {
-            // Auto-login successful
-            navigate('/dashboard');
+            // Error occurred - it will be shown via AuthError component
+            setLoading(false);
+            return;
         }
 
+        // Success - navigate to dashboard
+        navigate('/dashboard');
         setLoading(false);
     };
 

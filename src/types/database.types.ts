@@ -66,7 +66,8 @@ export interface Database {
                     id: string
                     name: string
                     slug: string
-                    api_key: string | null
+                    api_key_encrypted: string | null
+                    api_base_url: string | null
                     enabled: boolean
                     config: Json | null
                 }
@@ -74,7 +75,8 @@ export interface Database {
                     id?: string
                     name: string
                     slug: string
-                    api_key?: string | null
+                    api_key_encrypted?: string | null
+                    api_base_url?: string | null
                     enabled?: boolean
                     config?: Json | null
                 }
@@ -82,7 +84,8 @@ export interface Database {
                     id?: string
                     name?: string
                     slug?: string
-                    api_key?: string | null
+                    api_key_encrypted?: string | null
+                    api_base_url?: string | null
                     enabled?: boolean
                     config?: Json | null
                 }

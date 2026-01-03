@@ -39,11 +39,24 @@ export const llmService = {
 
     /**
      * Create or Update Provider
-     * If api_key is empty string/undefined in updates, do not overwrite existing unless null explicitly passed?
-     * Supabase update: passes what is in object.
+     * Enforces single-enabled-provider logic: if this provider is enabled,
+     * all other providers are automatically disabled.
      */
     async upsertProvider(provider: LLMProviderInsert): Promise<{ error: Error | null }> {
-        // Prepare payload, removing undefined fields if necessary, or just trust caller.
+        // If enabling this provider, disable all others first
+        if (provider.enabled === true) {
+            // Disable all other providers
+            const { error: disableError } = await supabase
+                .from('llm_providers')
+                .update({ enabled: false })
+                .neq('id', provider.id || '00000000-0000-0000-0000-000000000000'); // Dummy UUID for new providers
+
+            if (disableError) {
+                console.error('Failed to disable other providers:', disableError);
+            }
+        }
+
+        // Now upsert the provider
         const { error } = await supabase
             .from('llm_providers')
             .upsert(provider);

@@ -1,7 +1,7 @@
 // Supabase REST API Configuration
 
-const SUPABASE_URL = 'https://clsjevuiznknosrtkqrv.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNsc2pldnVpem5rbm9zcnRrcXJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY4NjI3OTYsImV4cCI6MjA4MjQzODc5Nn0.E0EdjKz_8n1a_lTIqfpdHxao_0oYEMJXaIOhNTTeCgw';
+const SUPABASE_URL = 'https://vabwmzmxgdhrlwvwxuxq.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZhYndtem14Z2Rocmx3dnd4dXhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc0NDMxNDksImV4cCI6MjA4MzAxOTE0OX0.Cfe9nm10ERvdYnl4hO_2JbfEFJKAzdb91RpbgIxUuBE';
 
 // Store access token for authenticated requests
 let accessToken = null;
@@ -187,6 +187,12 @@ export const supabaseREST = {
         if (summary !== null) params.p_summary = summary;
 
         const result = await this.rpcCall('complete_session', params);
+        return result;
+    },
+
+    // Get active LLM configuration (provider + model + API key)
+    async getLLMConfig() {
+        const result = await this.rpcCall('get_active_llm_config');
         return result;
     }
 };

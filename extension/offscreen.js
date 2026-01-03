@@ -1,7 +1,7 @@
 // Offscreen Document - Handles audio capture and Deepgram transcription
 // This runs in an offscreen document context where we have access to MediaRecorder
 
-const DEEPGRAM_API_KEY = '87fdc61a249e2e068fdf7eabc96eebfd7f46c407';
+const DEEPGRAM_API_KEY = '5e2e3945f5f5e171dbdc62bb3d06cd3f6a088266';
 
 let mediaRecorder = null;
 let audioStream = null;

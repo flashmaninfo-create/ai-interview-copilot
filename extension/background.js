@@ -369,7 +369,7 @@ class BackgroundService {
             id: sessionId,
             user_id: this.state.data.user.id,
             role: data?.interviewContext?.role || 'Software Engineer', // Default or from context
-            type: data?.interviewContext?.type || 'Technical',         // Default or from context
+            type: (data?.interviewContext?.type || 'technical').toLowerCase(), // Must be lowercase: technical, behavioral, mixed
             difficulty: 'medium',
             status: 'active',
             console_token: consoleToken,
@@ -408,15 +408,6 @@ class BackgroundService {
           }
         });
       }, 1000);
-
-      // Add a test transcript to verify overlay is working
-      setTimeout(() => {
-        this.onTranscription({
-          text: '🎤 Session started! Listening for audio...',
-          confidence: 1.0,
-          isFinal: true
-        });
-      }, 3000);
 
       sendResponse({
         success: true,
@@ -917,7 +908,10 @@ class BackgroundService {
     }
 
     // OVERLAY: Send full transcription state IMMEDIATELY (no debounce for smooth display)
-    const tabId = this.state.data.activeSession?.tabId;
+    // Use this.tabId (set at session start) as primary, fallback to activeSession.tabId
+    const tabId = this.tabId || this.state.data.activeSession?.tabId;
+    console.log('[Background] Sending transcription to tab:', tabId);
+
     if (tabId) {
       chrome.tabs.sendMessage(tabId, {
         type: 'TRANSCRIPTION_STATE',
@@ -931,19 +925,12 @@ class BackgroundService {
       }).catch(err => {
         console.log('[Background] Could not send transcription state to content script:', err.message);
       });
+    } else {
+      console.warn('[Background] No tabId available for overlay - cannot send transcription');
     }
 
-    // FALLBACK: Direct injection to overlay iframe
-    this.sendToOverlay({
-      type: 'TRANSCRIPTION_STATE',
-      data: {
-        finalizedText: state.finalizedText,
-        interimText: state.interimText,
-        displayText: state.displayText,
-        isFinal: transcript.isFinal,
-        hasInterim: state.hasInterim
-      }
-    });
+    // NOTE: Overlay is now a direct DOM element in content-script.js (not an iframe)
+    // The chrome.tabs.sendMessage above is the correct way to communicate with it
 
     // CONSOLE: Send finalized text only, with shorter debounce (500ms instead of 1500ms)
     // This provides smoother console updates while still being efficient

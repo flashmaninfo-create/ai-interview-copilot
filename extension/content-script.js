@@ -353,16 +353,22 @@
 
     // Update transcript
     function updateTranscript(data) {
-        console.log('[Content] updateTranscript called with:', data);
+        console.log('[Content] updateTranscript called with:', JSON.stringify(data));
+
+        // Ensure overlay exists
+        if (!overlay) {
+            console.log('[Content] Overlay not created yet, creating now...');
+            createOverlay();
+        }
+
+        // Get transcript container (may need to re-fetch after overlay creation)
+        if (!transcriptContainer) {
+            transcriptContainer = document.getElementById('ic-transcript');
+        }
 
         if (!transcriptContainer) {
-            console.error('[Content] transcriptContainer is null!');
-            // Try to get it again
-            transcriptContainer = document.getElementById('ic-transcript');
-            if (!transcriptContainer) {
-                console.error('[Content] Could not find ic-transcript element');
-                return;
-            }
+            console.error('[Content] Could not find ic-transcript element after creation');
+            return;
         }
 
         // Remove placeholder
@@ -380,11 +386,16 @@
             displayHTML += `<span class="ic-interim"> ${escapeHtml(data.interimText)}</span>`;
         }
 
+        // If we have displayText but not the individual components, use it
+        if (!displayHTML && data.displayText) {
+            displayHTML = `<span class="ic-final">${escapeHtml(data.displayText)}</span>`;
+        }
+
         if (displayHTML) {
             transcriptContainer.innerHTML = displayHTML;
             console.log('[Content] Transcript updated:', displayHTML.substring(0, 100));
         } else {
-            console.log('[Content] No text to display - data had no finalizedText or interimText');
+            console.log('[Content] No text to display - data:', data);
         }
 
         // Auto-scroll

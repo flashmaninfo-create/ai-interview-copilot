@@ -179,13 +179,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
                             }
 
                             if (mounted) {
-                                setState({
+                                setState((prev) => ({
                                     status: 'authenticated',
                                     user: session.user,
                                     session,
-                                    profile,
+                                    // IMPORTANT: Preserve existing profile if fetch failed
+                                    // This prevents admin panel from vanishing on token refresh
+                                    profile: profile ?? prev.profile,
                                     error: null,
-                                });
+                                }));
                             }
                         }
                         break;

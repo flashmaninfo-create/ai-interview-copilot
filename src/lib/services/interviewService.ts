@@ -22,13 +22,16 @@ export const interviewService = {
         payload: CreateSessionPayload
     ): Promise<{ data: InterviewSession | null; error: Error | null }> {
         // 1. Check Credit Balance
-        const balanceResult = await creditService.getBalance();
-        if (!balanceResult.success || !balanceResult.data) {
-            console.error("Credit check failed:", balanceResult.error);
+        try {
+            const balanceResult = await creditService.getBalance();
+            if (!balanceResult.success || !balanceResult.data || balanceResult.data.balance < 1) {
+                return { data: null, error: new Error('Insufficient credits. Please top up to start.') };
+            }
+        } catch (err) {
+            console.error("Credit check failed:", err);
+            // On error (e.g. network), we might want to block or allow loose. 
+            // Sticking to safe: block.
             return { data: null, error: new Error('Failed to verify credit balance.') };
-        }
-        if (balanceResult.data.balance < 1) {
-            return { data: null, error: new Error('Insufficient credits. Please top up to start.') };
         }
 
         // 2. Create Session

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { useConsoleSync } from '../../hooks/useConsoleSync';
 import { creditService } from '../../lib/services/creditService';
 import {
@@ -10,7 +11,8 @@ import {
     FileText,
     AlertTriangle,
     ArrowDown,
-    Info
+    Info,
+    ArrowLeft
 } from 'lucide-react';
 
 export function LiveConsolePage() {
@@ -89,22 +91,31 @@ export function LiveConsolePage() {
     };
 
     return (
-        <div className="min-h-screen bg-transparent flex flex-col">
+        <div className="min-h-screen bg-slate-950 flex flex-col p-4">
             {/* Header */}
             <header className="bg-gradient-to-r from-primary/90 to-primary/70 text-white shadow-lg rounded-xl mb-6 border border-white/10">
                 <div className="px-6 py-4 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <Mic className="w-6 h-6" />
-                        <div>
-                            <h1 className="text-lg font-bold">Interview Copilot Console</h1>
-                            <div className="flex items-center gap-2 text-sm opacity-90">
-                                <span className={`w-2 h-2 rounded-full ${sessionStatus === 'active' ? 'bg-green-400 animate-pulse' :
-                                    sessionStatus === 'session_found' ? 'bg-yellow-400 animate-pulse' :
-                                        'bg-slate-400'
-                                    }`}></span>
-                                {sessionStatus === 'active' ? '● Live - Receiving Data' :
-                                    sessionStatus === 'session_found' ? '◐ Session Found - Waiting for Data' :
-                                        'Waiting for Session'}
+                    <div className="flex items-center gap-4">
+                        <Link 
+                            to="/dashboard" 
+                            className="p-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors"
+                            title="Back to Dashboard"
+                        >
+                            <ArrowLeft className="w-5 h-5" />
+                        </Link>
+                        <div className="flex items-center gap-3">
+                            <Mic className="w-6 h-6" />
+                            <div>
+                                <h1 className="text-lg font-bold">Interview Copilot Console</h1>
+                                <div className="flex items-center gap-2 text-sm opacity-90">
+                                    <span className={`w-2 h-2 rounded-full ${sessionStatus === 'active' ? 'bg-green-400 animate-pulse' :
+                                        sessionStatus === 'session_found' ? 'bg-yellow-400 animate-pulse' :
+                                            'bg-slate-400'
+                                        }`}></span>
+                                    {sessionStatus === 'active' ? '● Live - Receiving Data' :
+                                        sessionStatus === 'session_found' ? '◐ Session Found - Waiting for Data' :
+                                            'Waiting for Session'}
+                                </div>
                             </div>
                         </div>
                     </div>

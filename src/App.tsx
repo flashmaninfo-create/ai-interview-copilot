@@ -93,6 +93,9 @@ function App() {
               {/* Protected User Dashboard Routes */}
               {/* ============================================ */}
               <Route element={<ProtectedRoute />}>
+                {/* Full Page Console (No Sidebar) */}
+                <Route path="/dashboard/console" element={<LiveConsolePage />} />
+
                 <Route element={<DashboardLayout />}>
                   {/* Main Dashboard */}
                   <Route path="/dashboard" element={<DashboardPage />} />
@@ -100,8 +103,7 @@ function App() {
                   {/* New Session */}
                   <Route path="/dashboard/new" element={<NewSessionPage />} />
 
-                  {/* Interview Session */}
-                  <Route path="/dashboard/console" element={<LiveConsolePage />} />
+
 
                   {/* History */}
                   <Route path="/dashboard/history" element={<InterviewHistoryPage />} />

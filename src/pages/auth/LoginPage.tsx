@@ -17,7 +17,7 @@ interface LocationState {
 }
 
 export function LoginPage() {
-    const { isAuthenticated, status, signIn, error, clearError } = useAuth();
+    const { isAuthenticated, isAdmin, status, signIn, signOut, error, clearError } = useAuth();
     const location = useLocation();
     const navigate = useNavigate();
     const state = location.state as LocationState | null;
@@ -42,10 +42,22 @@ export function LoginPage() {
 
     useEffect(() => {
         if (status !== 'loading' && isAuthenticated) {
+            // If user is admin, sign them out and redirect to admin login
+            if (isAdmin) {
+                signOut();
+                navigate('/admin', { 
+                    replace: true,
+                    state: { 
+                        message: 'Admins must use the admin portal to sign in.',
+                        type: 'warning'
+                    }
+                });
+                return;
+            }
             const destination = state?.from?.pathname || '/dashboard';
             navigate(destination, { replace: true });
         }
-    }, [isAuthenticated, status, navigate, state]);
+    }, [isAuthenticated, isAdmin, status, navigate, state, signOut]);
 
     useEffect(() => {
         return () => clearError();

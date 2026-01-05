@@ -39,6 +39,18 @@ export const adminService = {
         return data as Profile[];
     },
 
+    // Get only registered service users (excludes admins)
+    async getRegisteredUsers() {
+        const { data, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('role', 'user')
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        return data as Profile[];
+    },
+
     async updateUserRole(userId: string, role: 'user' | 'admin') {
         const { error } = await supabase
             .from('profiles')

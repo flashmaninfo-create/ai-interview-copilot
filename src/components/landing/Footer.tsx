@@ -19,7 +19,7 @@ const Icons = {
 
 export function Footer() {
     return (
-        <footer className="bg-primary text-white pt-20 pb-12 border-t border-primary/20">
+        <footer className="bg-[#0F172A] text-white pt-20 pb-12 border-t border-slate-800">
             <div className="container mx-auto px-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 text-sm">
                     {/* Brand Column */}

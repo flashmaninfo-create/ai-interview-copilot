@@ -10,7 +10,7 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 
 export function ProtectedRoute() {
-    const { status, isAuthenticated, error } = useAuth();
+    const { status, isAuthenticated, isAdmin, error } = useAuth();
     const location = useLocation();
 
     // Still loading - show loading state
@@ -47,6 +47,11 @@ export function ProtectedRoute() {
                 replace
             />
         );
+    }
+
+    // Admin users should use /admin portal, not user dashboard
+    if (isAdmin) {
+        return <Navigate to="/admin/dashboard" replace />;
     }
 
     // Authenticated - render children

@@ -24,12 +24,12 @@ export function UnauthorizedPage() {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-            <div className="max-w-md w-full bg-white rounded-2xl shadow-lg border border-slate-100 p-8 text-center">
+        <div className="min-h-screen bg-background flex items-center justify-center p-4">
+            <div className="max-w-md w-full bg-surface rounded-2xl shadow-lg border border-white/10 p-8 text-center">
                 {/* Icon */}
-                <div className="mx-auto w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-6">
+                <div className="mx-auto w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mb-6">
                     <svg
-                        className="w-8 h-8 text-red-600"
+                        className="w-8 h-8 text-red-400"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -44,31 +44,30 @@ export function UnauthorizedPage() {
                 </div>
 
                 {/* Title */}
-                <h1 className="text-2xl font-bold text-slate-900 mb-2">
+                <h1 className="text-2xl font-bold text-white mb-2">
                     Access Denied
                 </h1>
 
                 {/* Message */}
-                <p className="text-slate-600 mb-6">
+                <p className="text-slate-400 mb-6">
                     {state?.requiredRole === 'admin'
                         ? "You don't have administrator privileges to access this page."
                         : "You don't have permission to access this resource."}
                 </p>
 
                 {/* User Info */}
-                {/* User Info */}
                 {isAuthenticated && (
-                    <div className="bg-slate-50 rounded-lg p-4 mb-6">
+                    <div className="bg-background/50 rounded-lg p-4 mb-6 border border-white/5">
                         <p className="text-sm text-slate-500 mb-1">Signed in as:</p>
                         {profile ? (
                             <>
-                                <p className="font-medium text-slate-900">{profile.email}</p>
-                                <p className="text-xs text-slate-400 mt-1">
+                                <p className="font-medium text-white">{profile.email}</p>
+                                <p className="text-xs text-slate-500 mt-1">
                                     Role: <span className="capitalize">{profile.role}</span>
                                 </p>
                             </>
                         ) : (
-                            <p className="text-red-500 text-sm font-medium">
+                            <p className="text-red-400 text-sm font-medium">
                                 Error: Unable to load user profile.
                             </p>
                         )}
@@ -87,7 +86,7 @@ export function UnauthorizedPage() {
                     {isAuthenticated && (
                         <button
                             onClick={handleSignOut}
-                            className="block w-full py-3 px-4 border border-slate-200 text-slate-700 font-medium rounded-lg hover:bg-slate-50 transition-all"
+                            className="block w-full py-3 px-4 border border-white/10 text-slate-300 font-medium rounded-lg hover:bg-surface/80 transition-all"
                         >
                             Sign in with different account
                         </button>
@@ -102,7 +101,7 @@ export function UnauthorizedPage() {
                 </div>
 
                 {/* Help Text */}
-                <p className="mt-6 text-xs text-slate-400">
+                <p className="mt-6 text-xs text-slate-500">
                     If you believe this is an error, please contact your administrator.
                 </p>
             </div>

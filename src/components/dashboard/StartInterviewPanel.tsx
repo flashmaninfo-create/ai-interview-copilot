@@ -63,11 +63,11 @@ export function StartInterviewPanel({ credits, onSessionCreated }: StartIntervie
     };
 
     return (
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-            <h2 className="text-xl font-bold text-slate-900 mb-6">Start New Interview</h2>
+        <div className="bg-surface rounded-2xl shadow-sm border border-white/10 p-6">
+            <h2 className="text-xl font-bold text-white mb-6">Start New Interview</h2>
 
             {error && (
-                <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm mb-4 border border-red-100">
+                <div className="bg-red-500/10 text-red-500 p-3 rounded-lg text-sm mb-4 border border-red-500/20">
                     {error}
                 </div>
             )}
@@ -75,15 +75,15 @@ export function StartInterviewPanel({ credits, onSessionCreated }: StartIntervie
             <div className="space-y-4">
                 {/* Interview Type */}
                 <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">Interview Type</label>
+                    <label className="block text-sm font-medium text-slate-400 mb-2">Interview Type</label>
                     <div className="grid grid-cols-2 gap-3">
                         {interviewTypes.map((t) => (
                             <button
                                 key={t.value}
                                 onClick={() => setType(t.value)}
                                 className={`p-4 rounded-lg border-2 text-center transition-all ${type === t.value
-                                    ? 'border-primary bg-primary/5 text-primary'
-                                    : 'border-slate-200 hover:border-slate-300'
+                                    ? 'border-primary bg-primary/20 text-primary'
+                                    : 'border-slate-700 text-slate-400 hover:border-slate-500 hover:bg-white/5'
                                     }`}
                             >
                                 {t.label}
@@ -94,27 +94,27 @@ export function StartInterviewPanel({ credits, onSessionCreated }: StartIntervie
 
                 {/* Role */}
                 <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">Target Role</label>
+                    <label className="block text-sm font-medium text-slate-400 mb-2">Target Role</label>
                     <input
                         type="text"
                         value={role}
                         onChange={(e) => setRole(e.target.value)}
-                        className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:outline-primary bg-slate-50 focus:bg-white"
+                        className="w-full px-4 py-3 rounded-lg border border-slate-700 bg-background text-white focus:outline-primary placeholder-slate-500"
                         placeholder="e.g., Software Engineer, Product Manager"
                     />
                 </div>
 
                 {/* Difficulty */}
                 <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">Difficulty</label>
+                    <label className="block text-sm font-medium text-slate-400 mb-2">Difficulty</label>
                     <div className="flex gap-3">
                         {difficulties.map((d) => (
                             <button
                                 key={d.value}
                                 onClick={() => setDifficulty(d.value)}
                                 className={`flex-1 py-3 rounded-lg border-2 text-center transition-all ${difficulty === d.value
-                                    ? 'border-primary bg-primary/5 text-primary font-semibold'
-                                    : 'border-slate-200 hover:border-slate-300'
+                                    ? 'border-primary bg-primary/20 text-primary font-semibold'
+                                    : 'border-slate-700 text-slate-400 hover:border-slate-500 hover:bg-white/5'
                                     }`}
                             >
                                 {d.label}

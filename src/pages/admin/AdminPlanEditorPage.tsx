@@ -1,189 +1,277 @@
+/**
+ * Admin Plan Editor Page
+ *
+ * Create or edit credit packages.
+ */
 
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { planService } from '../../lib/services/planService';
-import { LoadingSpinner } from '../../components/common/LoadingSpinner';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { adminService, type CreditPlan } from '../../lib/services/adminService';
+import { 
+    ArrowLeft, 
+    Save, 
+    CreditCard, 
+    Plus, 
+    X,
+    CheckCircle
+} from 'lucide-react';
 
 export function AdminPlanEditorPage() {
     const { id } = useParams();
     const navigate = useNavigate();
-    const isEditing = id && id !== 'new';
+    const isNew = !id;
 
-    const [loading, setLoading] = useState(isEditing);
+    const [loading, setLoading] = useState(!isNew);
     const [saving, setSaving] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-
-    const [formData, setFormData] = useState({
+    
+    const [plan, setPlan] = useState<CreditPlan>({
+        id: crypto.randomUUID(),
         name: '',
-        slug: '',
-        price_monthly: 0,
-        credits_monthly: 0,
-        features: '' as string, // We'll manage as newline separated string
-        is_active: true
+        credits: 100,
+        price: 19.99,
+        currency: 'USD',
+        active: true,
+        popular: false,
+        features: ['Standard Support', 'All Interview Modes']
     });
 
     useEffect(() => {
-        if (isEditing) {
-            loadPlan(id!);
+        if (!isNew && id) {
+            loadPlan(id);
         }
-    }, [id]);
+    }, [id, isNew]);
 
-    async function loadPlan(planId: string) {
-        const { data, error } = await planService.getPlan(planId);
-        if (error || !data) {
-            setError(error?.message || 'Plan not found');
+    const loadPlan = async (planId: string) => {
+        try {
+            const data = await adminService.getCreditPlan(planId);
+            if (data) {
+                setPlan(data);
+            } else {
+                navigate('/admin/plans');
+            }
+        } catch (err) {
+            console.error('Failed to load plan:', err);
+        } finally {
             setLoading(false);
-            return;
         }
+    };
 
-        setFormData({
-            name: data.name,
-            slug: data.slug,
-            price_monthly: data.price_monthly / 100, // Convert cents to dollars for input
-            credits_monthly: data.credits_monthly,
-            features: Array.isArray(data.features) ? data.features.join('\n') : '',
-            is_active: data.is_active ?? true
-        });
-        setLoading(false);
-    }
-
-    async function handleSubmit(e: React.FormEvent) {
-        e.preventDefault();
-        setSaving(true);
-        setError(null);
-
-        const payload = {
-            name: formData.name,
-            slug: formData.slug || formData.name.toLowerCase().replace(/\s+/g, '-'),
-            price_monthly: Math.round(formData.price_monthly * 100), // Convert to cents
-            credits_monthly: Number(formData.credits_monthly),
-            features: formData.features.split('\n').filter(f => f.trim().length > 0),
-            is_active: formData.is_active
-        };
-
-        const { error } = isEditing
-            ? await planService.updatePlan(id!, payload)
-            : await planService.createPlan(payload);
-
-        setSaving(false);
-
-        if (error) {
-            setError(error.message);
-        } else {
+    const handleSave = async () => {
+        try {
+            setSaving(true);
+            await adminService.saveCreditPlan(plan);
             navigate('/admin/plans');
+        } catch (err) {
+            console.error('Failed to save plan:', err);
+            alert('Failed to save plan');
+        } finally {
+            setSaving(false);
         }
-    }
+    };
 
-    if (loading) return <div className="flex justify-center p-12"><LoadingSpinner /></div>;
+    const addFeature = () => {
+        setPlan(prev => ({
+            ...prev,
+            features: [...prev.features, 'New Feature']
+        }));
+    };
+
+    const updateFeature = (index: number, value: string) => {
+        const newFeatures = [...plan.features];
+        newFeatures[index] = value;
+        setPlan(prev => ({ ...prev, features: newFeatures }));
+    };
+
+    const removeFeature = (index: number) => {
+        setPlan(prev => ({
+            ...prev,
+            features: prev.features.filter((_, i) => i !== index)
+        }));
+    };
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center min-h-[50vh]">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            </div>
+        );
+    }
 
     return (
-        <div className="container mx-auto px-4 py-8 max-w-2xl">
-            <h1 className="text-3xl font-bold text-slate-900 mb-6">
-                {isEditing ? 'Edit Plan' : 'Create New Plan'}
-            </h1>
-
-            {error && (
-                <div className="bg-red-50 text-red-600 p-4 rounded mb-6">
-                    {error}
-                </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow border border-slate-200 space-y-6">
-
-                {/* Name */}
+        <div className="max-w-3xl mx-auto space-y-6">
+            {/* Header */}
+            <div className="flex items-center justify-between">
                 <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Plan Name</label>
-                    <input
-                        type="text"
-                        required
-                        className="w-full px-3 py-2 border border-slate-300 rounded focus:ring-primary focus:border-primary"
-                        value={formData.name}
-                        onChange={e => setFormData({ ...formData, name: e.target.value })}
-                    />
-                </div>
-
-                {/* Slug */}
-                <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Slug (URL friendly)</label>
-                    <input
-                        type="text"
-                        className="w-full px-3 py-2 border border-slate-300 rounded focus:ring-primary focus:border-primary"
-                        value={formData.slug}
-                        onChange={e => setFormData({ ...formData, slug: e.target.value })}
-                        placeholder="e.g. pro-plan"
-                    />
-                </div>
-
-                {/* Price */}
-                <div className="grid grid-cols-2 gap-4">
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Price (Monthly $)</label>
-                        <input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            required
-                            className="w-full px-3 py-2 border border-slate-300 rounded focus:ring-primary focus:border-primary"
-                            value={formData.price_monthly}
-                            onChange={e => setFormData({ ...formData, price_monthly: Number(e.target.value) })}
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Credits (Monthly)</label>
-                        <input
-                            type="number"
-                            min="0"
-                            required
-                            className="w-full px-3 py-2 border border-slate-300 rounded focus:ring-primary focus:border-primary"
-                            value={formData.credits_monthly}
-                            onChange={e => setFormData({ ...formData, credits_monthly: Number(e.target.value) })}
-                        />
+                    <div className="flex items-center gap-3 mb-2">
+                        <Link 
+                            to="/admin/plans" 
+                            className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+                        >
+                            <ArrowLeft className="w-5 h-5" />
+                        </Link>
+                        <h1 className="text-2xl font-bold text-white">
+                            {isNew ? 'Create Credit Plan' : 'Edit Plan'}
+                        </h1>
                     </div>
                 </div>
+            </div>
 
-                {/* Features */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Form */}
+                <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-6">
+                    <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-2">Plan Name</label>
+                        <input
+                            type="text"
+                            value={plan.name}
+                            onChange={e => setPlan(p => ({ ...p, name: e.target.value }))}
+                            placeholder="e.g. Starter Pack"
+                            className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-primary"
+                        />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-slate-300 mb-2">Credits</label>
+                            <input
+                                type="number"
+                                value={plan.credits}
+                                onChange={e => setPlan(p => ({ ...p, credits: parseInt(e.target.value) || 0 }))}
+                                className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-primary"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-300 mb-2">Price ({plan.currency})</label>
+                            <input
+                                type="number"
+                                step="0.01"
+                                value={plan.price}
+                                onChange={e => setPlan(p => ({ ...p, price: parseFloat(e.target.value) || 0 }))}
+                                className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-primary"
+                            />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-2">Features List</label>
+                        <div className="space-y-3">
+                            {plan.features.map((feature, i) => (
+                                <div key={i} className="flex gap-2">
+                                    <input
+                                        type="text"
+                                        value={feature}
+                                        onChange={e => updateFeature(i, e.target.value)}
+                                        className="flex-1 px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-primary"
+                                    />
+                                    <button
+                                        onClick={() => removeFeature(i)}
+                                        className="p-2 text-slate-500 hover:text-red-400 hover:bg-slate-800 rounded-lg"
+                                    >
+                                        <X className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            ))}
+                            <button
+                                onClick={addFeature}
+                                className="w-full py-2 bg-slate-800/50 hover:bg-slate-800 text-slate-400 hover:text-white rounded-lg text-sm border border-dashed border-slate-700 transition-colors flex items-center justify-center gap-2"
+                            >
+                                <Plus className="w-4 h-4" />
+                                Add Feature
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-4 pt-4 border-t border-slate-800">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                                type="checkbox"
+                                checked={plan.active}
+                                onChange={e => setPlan(p => ({ ...p, active: e.target.checked }))}
+                                className="rounded border-slate-700 bg-slate-800 text-primary focus:ring-primary/50"
+                            />
+                            <span className="text-sm text-slate-300">Active</span>
+                        </label>
+
+                        <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                                type="checkbox"
+                                checked={plan.popular}
+                                onChange={e => setPlan(p => ({ ...p, popular: e.target.checked }))}
+                                className="rounded border-slate-700 bg-slate-800 text-primary focus:ring-primary/50"
+                            />
+                            <span className="text-sm text-slate-300">Mark as Popular</span>
+                        </label>
+                    </div>
+
+                    <div className="pt-4">
+                        <button
+                            onClick={handleSave}
+                            disabled={saving}
+                            className="w-full py-3 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20 flex items-center justify-center gap-2 disabled:opacity-50"
+                        >
+                            {saving ? 'Saving...' : (
+                                <>
+                                    <Save className="w-5 h-5" />
+                                    Save Plan
+                                </>
+                            )}
+                        </button>
+                    </div>
+                </div>
+
+                {/* Preview */}
                 <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Features (One per line)</label>
-                    <textarea
-                        rows={5}
-                        className="w-full px-3 py-2 border border-slate-300 rounded focus:ring-primary focus:border-primary font-mono text-sm"
-                        value={formData.features}
-                        onChange={e => setFormData({ ...formData, features: e.target.value })}
-                        placeholder="Access to GPT-4&#10;Unlimited History&#10;Priority Support"
-                    />
-                </div>
+                    <h3 className="text-sm font-medium text-slate-400 mb-4 uppercase tracking-wider">Preview</h3>
+                    <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 relative group hover:border-primary/50 transition-all max-w-sm mx-auto shadow-2xl">
+                        {plan.popular && (
+                            <div className="absolute top-0 right-0 bg-primary text-white text-xs font-bold px-3 py-1 rounded-bl-xl rounded-tr-xl">
+                                POPULAR
+                            </div>
+                        )}
+                        
+                        <div className="flex justify-between items-start mb-6">
+                            <div>
+                                <h3 className="text-lg font-bold text-white mb-1">{plan.name || 'Plan Name'}</h3>
+                                <div className="flex items-baseline gap-1">
+                                    <span className="text-3xl font-bold text-white">
+                                        {plan.currency === 'USD' ? '$' : plan.currency} {plan.price}
+                                    </span>
+                                </div>
+                            </div>
+                            <div className="p-3 bg-primary/10 text-primary rounded-xl">
+                                <CreditCard className="w-6 h-6" />
+                            </div>
+                        </div>
 
-                {/* Status */}
-                <div className="flex items-center">
-                    <input
-                        type="checkbox"
-                        id="is_active"
-                        className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
-                        checked={formData.is_active}
-                        onChange={e => setFormData({ ...formData, is_active: e.target.checked })}
-                    />
-                    <label htmlFor="is_active" className="ml-2 block text-sm text-slate-900">
-                        Active (Visible to users)
-                    </label>
-                </div>
+                        <div className="mb-6 p-4 bg-slate-800/50 rounded-xl text-center border border-slate-800">
+                             <div className="text-4xl font-bold text-primary mb-1">
+                                {plan.credits}
+                             </div>
+                             <div className="text-xs text-slate-400 font-bold tracking-widest uppercase">
+                                CREDITS
+                             </div>
+                        </div>
 
-                <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
-                    <button
-                        type="button"
-                        onClick={() => navigate('/admin/plans')}
-                        className="px-4 py-2 border border-slate-300 rounded text-slate-700 hover:bg-slate-50"
-                    >
-                        Cancel
-                    </button>
-                    <button
-                        type="submit"
-                        disabled={saving}
-                        className="px-4 py-2 bg-primary text-white rounded hover:bg-primary/90 disabled:opacity-50"
-                    >
-                        {saving ? 'Saving...' : 'Save Plan'}
-                    </button>
+                        <div className="space-y-3 mb-8">
+                            {plan.features.map((feature, i) => (
+                                <div key={i} className="flex items-start gap-3 text-sm text-slate-300">
+                                    <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+                                    <span>{feature}</span>
+                                </div>
+                            ))}
+                            {plan.features.length === 0 && (
+                                <p className="text-slate-500 text-center text-sm italic">Add features to see them listed here</p>
+                            )}
+                        </div>
+
+                        <button className="w-full py-3 bg-white text-slate-900 font-bold rounded-xl hover:bg-slate-200 transition-colors">
+                            Buy Now
+                        </button>
+                    </div>
                 </div>
-            </form>
+            </div>
         </div>
     );
 }
+
+export default AdminPlanEditorPage;

@@ -24,14 +24,12 @@ export function SignupPage() {
     const [validationError, setValidationError] = useState<string | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-    // Redirect if already logged in
     useEffect(() => {
         if (status !== 'loading' && isAuthenticated) {
             navigate('/dashboard', { replace: true });
         }
     }, [isAuthenticated, status, navigate]);
 
-    // Clear errors when component unmounts
     useEffect(() => {
         return () => clearError();
     }, [clearError]);
@@ -65,12 +63,10 @@ export function SignupPage() {
         const result = await signUp(formData.email, formData.password, formData.fullName);
 
         if (result.error) {
-            // Error occurred - it will be shown via AuthError component
             setLoading(false);
             return;
         }
 
-        // Success - navigate to dashboard
         navigate('/dashboard');
         setLoading(false);
     };
@@ -81,26 +77,24 @@ export function SignupPage() {
         setValidationError(null);
     };
 
-    // Still checking auth status
     if (status === 'loading') {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-white">
+            <div className="min-h-screen flex items-center justify-center bg-background">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-white flex items-center justify-center p-4">
-            <div className="bg-white p-8 rounded-2xl shadow-lg border border-slate-100 w-full max-w-md">
+        <div className="min-h-screen bg-background flex items-center justify-center p-4">
+            <div className="bg-surface p-8 rounded-2xl shadow-lg border border-white/10 w-full max-w-md">
                 <div className="text-center mb-8">
-                    <h1 className="text-2xl font-bold text-slate-900">Create Account</h1>
-                    <p className="text-slate-500">Join to get your AI Interview Copilot</p>
+                    <h1 className="text-2xl font-bold text-white">Create Account</h1>
+                    <p className="text-slate-400">Join to get your AI Interview Copilot</p>
                 </div>
 
-                {/* Success Message */}
                 {successMessage && (
-                    <div className="bg-green-50 text-green-700 p-4 rounded-lg text-sm mb-4 border border-green-200">
+                    <div className="bg-green-500/20 text-green-300 p-4 rounded-lg text-sm mb-4 border border-green-500/30">
                         <p className="font-medium">{successMessage}</p>
                         <p className="text-xs mt-1 opacity-80">
                             Check your spam folder if you don't see it.
@@ -108,26 +102,24 @@ export function SignupPage() {
                     </div>
                 )}
 
-                {/* Validation Error */}
                 {validationError && (
-                    <div className="bg-red-50 text-red-700 p-3 rounded-lg text-sm mb-4 border border-red-200">
+                    <div className="bg-red-500/20 text-red-300 p-3 rounded-lg text-sm mb-4 border border-red-500/30">
                         {validationError}
                     </div>
                 )}
 
-                {/* Auth Error */}
                 <AuthError error={error} onDismiss={clearError} className="mb-4" />
 
                 <form onSubmit={handleSignup} className="space-y-4">
                     <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">
-                            Full Name <span className="text-slate-400">(optional)</span>
+                        <label className="block text-sm font-medium text-slate-300 mb-1">
+                            Full Name <span className="text-slate-500">(optional)</span>
                         </label>
                         <input
                             type="text"
                             name="fullName"
                             autoComplete="name"
-                            className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors bg-slate-50 focus:bg-white"
+                            className="w-full px-4 py-3 rounded-lg border border-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors bg-background text-white placeholder-slate-500"
                             placeholder="John Doe"
                             value={formData.fullName}
                             onChange={handleChange}
@@ -135,7 +127,7 @@ export function SignupPage() {
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">
+                        <label className="block text-sm font-medium text-slate-300 mb-1">
                             Email
                         </label>
                         <input
@@ -143,7 +135,7 @@ export function SignupPage() {
                             name="email"
                             required
                             autoComplete="email"
-                            className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors bg-slate-50 focus:bg-white"
+                            className="w-full px-4 py-3 rounded-lg border border-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors bg-background text-white placeholder-slate-500"
                             placeholder="you@example.com"
                             value={formData.email}
                             onChange={handleChange}
@@ -151,7 +143,7 @@ export function SignupPage() {
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">
+                        <label className="block text-sm font-medium text-slate-300 mb-1">
                             Password
                         </label>
                         <input
@@ -159,18 +151,18 @@ export function SignupPage() {
                             name="password"
                             required
                             autoComplete="new-password"
-                            className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors bg-slate-50 focus:bg-white"
+                            className="w-full px-4 py-3 rounded-lg border border-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors bg-background text-white placeholder-slate-500"
                             placeholder="••••••••"
                             value={formData.password}
                             onChange={handleChange}
                             disabled={loading}
                         />
-                        <p className="text-xs text-slate-400 mt-1">
+                        <p className="text-xs text-slate-500 mt-1">
                             Must be at least 6 characters
                         </p>
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">
+                        <label className="block text-sm font-medium text-slate-300 mb-1">
                             Confirm Password
                         </label>
                         <input
@@ -178,7 +170,7 @@ export function SignupPage() {
                             name="confirmPassword"
                             required
                             autoComplete="new-password"
-                            className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors bg-slate-50 focus:bg-white"
+                            className="w-full px-4 py-3 rounded-lg border border-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors bg-background text-white placeholder-slate-500"
                             placeholder="••••••••"
                             value={formData.confirmPassword}
                             onChange={handleChange}
@@ -202,7 +194,7 @@ export function SignupPage() {
                     </button>
                 </form>
 
-                <p className="mt-4 text-xs text-center text-slate-400">
+                <p className="mt-4 text-xs text-center text-slate-500">
                     By signing up, you agree to our{' '}
                     <a href="/terms" className="text-primary hover:underline">
                         Terms of Service
@@ -213,7 +205,7 @@ export function SignupPage() {
                     </a>
                 </p>
 
-                <div className="mt-6 text-center text-sm text-slate-500">
+                <div className="mt-6 text-center text-sm text-slate-400">
                     Already have an account?{' '}
                     <Link to="/login" className="text-primary font-semibold hover:underline">
                         Sign In

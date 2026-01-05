@@ -54,12 +54,12 @@ export function NewSessionPage() {
 
     return (
         <div className="container mx-auto px-4 py-8 max-w-xl">
-            <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-8">
-                <h1 className="text-2xl font-bold text-slate-900 mb-2">Start New Interview</h1>
-                <p className="text-slate-500 mb-6">Configure your practice session</p>
+            <div className="bg-surface rounded-2xl shadow-lg border border-white/10 p-8">
+                <h1 className="text-2xl font-bold text-white mb-2">Start New Interview</h1>
+                <p className="text-slate-400 mb-6">Configure your practice session</p>
 
                 {error && (
-                    <div className="bg-red-50 text-red-700 p-4 rounded-lg mb-6 border border-red-200">
+                    <div className="bg-red-500/10 text-red-500 p-4 rounded-lg mb-6 border border-red-500/20">
                         {error}
                     </div>
                 )}
@@ -67,7 +67,7 @@ export function NewSessionPage() {
                 <form onSubmit={handleSubmit} className="space-y-6">
                     {/* Role Input */}
                     <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                        <label className="block text-sm font-medium text-slate-400 mb-2">
                             Target Role
                         </label>
                         <input
@@ -76,14 +76,14 @@ export function NewSessionPage() {
                             value={formData.role}
                             onChange={handleChange}
                             placeholder="e.g., Software Engineer, Product Manager"
-                            className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors"
+                            className="w-full px-4 py-3 rounded-lg border border-slate-700 bg-background text-white focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors placeholder-slate-500"
                             disabled={loading}
                         />
                     </div>
 
                     {/* Interview Type */}
                     <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                        <label className="block text-sm font-medium text-slate-400 mb-2">
                             Interview Type
                         </label>
                         <div className="grid grid-cols-3 gap-3">
@@ -93,8 +93,8 @@ export function NewSessionPage() {
                                     type="button"
                                     onClick={() => setFormData(prev => ({ ...prev, type }))}
                                     className={`px-4 py-3 rounded-lg border-2 font-medium capitalize transition-all ${formData.type === type
-                                            ? 'border-primary bg-primary/5 text-primary'
-                                            : 'border-slate-200 text-slate-600 hover:border-slate-300'
+                                            ? 'border-primary bg-primary/20 text-primary'
+                                            : 'border-slate-700 text-slate-400 hover:border-slate-500 hover:bg-white/5'
                                         }`}
                                     disabled={loading}
                                 >
@@ -106,7 +106,7 @@ export function NewSessionPage() {
 
                     {/* Difficulty */}
                     <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                        <label className="block text-sm font-medium text-slate-400 mb-2">
                             Difficulty
                         </label>
                         <div className="grid grid-cols-3 gap-3">
@@ -120,16 +120,16 @@ export function NewSessionPage() {
                                     type="button"
                                     onClick={() => setFormData(prev => ({ ...prev, difficulty: option.value }))}
                                     className={`px-4 py-3 rounded-lg border-2 transition-all ${formData.difficulty === option.value
-                                            ? 'border-primary bg-primary/5'
-                                            : 'border-slate-200 hover:border-slate-300'
+                                            ? 'border-primary bg-primary/20'
+                                            : 'border-slate-700 hover:border-slate-500 hover:bg-white/5'
                                         }`}
                                     disabled={loading}
                                 >
-                                    <div className={`font-medium ${formData.difficulty === option.value ? 'text-primary' : 'text-slate-700'
+                                    <div className={`font-medium ${formData.difficulty === option.value ? 'text-primary' : 'text-slate-300'
                                         }`}>
                                         {option.label}
                                     </div>
-                                    <div className="text-xs text-slate-400">{option.desc}</div>
+                                    <div className="text-xs text-slate-500">{option.desc}</div>
                                 </button>
                             ))}
                         </div>
@@ -139,7 +139,7 @@ export function NewSessionPage() {
                     <button
                         type="submit"
                         disabled={loading || !formData.role.trim()}
-                        className="w-full py-4 bg-primary text-white font-bold rounded-lg hover:bg-opacity-90 transition-all shadow-md disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        className="w-full py-4 bg-primary text-white font-bold rounded-lg hover:bg-opacity-90 transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
                         {loading ? (
                             <>
@@ -158,7 +158,7 @@ export function NewSessionPage() {
                     </button>
                 </form>
 
-                <p className="mt-4 text-center text-xs text-slate-400">
+                <p className="mt-4 text-center text-xs text-slate-500">
                     This will use 1 credit when completed
                 </p>
             </div>

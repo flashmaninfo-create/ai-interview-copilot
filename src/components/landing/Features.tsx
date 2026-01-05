@@ -33,21 +33,21 @@ const features = [
 
 export function Features() {
     return (
-        <section id="features" className="py-24 bg-white">
+        <section id="features" className="py-24 bg-surface/30">
             <div className="container mx-auto px-4">
                 <div className="text-center mb-16">
-                    <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">Powerful Features</h2>
-                    <p className="text-slate-500 max-w-2xl mx-auto">Everything you need to ace your next remote interaction.</p>
+                    <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Powerful Features</h2>
+                    <p className="text-slate-400 max-w-2xl mx-auto">Everything you need to ace your next remote interaction.</p>
                 </div>
 
                 <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
                     {features.map((feature, index) => (
-                        <div key={index} className="bg-white p-6 rounded-xl border border-slate-200 hover:border-slate-300 transition-colors">
-                            <div className="w-12 h-12 bg-primary/10 text-primary rounded-lg flex items-center justify-center mb-4">
+                        <div key={index} className="bg-surface p-6 rounded-xl border border-white/5 hover:border-white/10 transition-colors">
+                            <div className="w-12 h-12 bg-primary/20 text-primary rounded-lg flex items-center justify-center mb-4">
                                 {feature.icon}
                             </div>
-                            <h3 className="text-lg font-bold text-slate-900 mb-2">{feature.title}</h3>
-                            <p className="text-sm text-slate-600 leading-relaxed">{feature.description}</p>
+                            <h3 className="text-lg font-bold text-white mb-2">{feature.title}</h3>
+                            <p className="text-sm text-slate-400 leading-relaxed">{feature.description}</p>
                         </div>
                     ))}
                 </div>

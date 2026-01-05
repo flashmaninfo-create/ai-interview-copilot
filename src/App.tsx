@@ -10,11 +10,17 @@ import { NotificationProvider } from './contexts/NotificationContext';
 import { GlobalErrorBoundary } from './components/common/GlobalErrorBoundary';
 
 // Layouts
-import { MainLayout } from './layouts/MainLayout';
 import { DashboardLayout } from './layouts/DashboardLayout';
+import { LandingLayout } from './layouts/LandingLayout';
+import { AdminLayout } from './layouts/AdminLayout';
+
+
 
 // Public Pages
 import { HomePage } from './pages/HomePage';
+import { FeaturesPage } from './pages/FeaturesPage';
+import { HowItWorksPage } from './pages/HowItWorksPage';
+import { AboutPage } from './pages/AboutPage';
 import { ContactPage } from './pages/ContactPage';
 import { PricingPage } from './pages/PricingPage';
 import { NotFoundPage } from './pages/NotFoundPage';
@@ -28,23 +34,27 @@ import { ResetPasswordPage } from './pages/auth/ResetPasswordPage';
 
 // Dashboard Pages
 import { DashboardPage } from './pages/dashboard/DashboardPage';
-
 import { LiveConsolePage } from './pages/dashboard/LiveConsolePage';
 import { InterviewHistoryPage } from './pages/dashboard/InterviewHistoryPage';
 import { SessionDetailsPage } from './pages/dashboard/SessionDetailsPage';
 import { SettingsPage } from './pages/dashboard/SettingsPage';
 import { CreditsPage } from './pages/dashboard/CreditsPage';
-import { AdminPage } from './pages/dashboard/AdminPage';
 import { NewSessionPage } from './pages/dashboard/NewSessionPage';
+
+// Admin Pages
+import { AdminLoginPage } from './pages/admin/AdminLoginPage';
+import { AdminDashboardPage } from './pages/admin/AdminDashboardPage';
+import { AdminUsersPage } from './pages/admin/AdminUsersPage';
+import { AdminAdminsPage } from './pages/admin/AdminAdminsPage';
 import { AdminPlansPage } from './pages/admin/AdminPlansPage';
 import { AdminPlanEditorPage } from './pages/admin/AdminPlanEditorPage';
 import { AdminProvidersPage } from './pages/admin/AdminProvidersPage';
-import { AdminProviderEditorPage } from './pages/admin/AdminProviderEditorPage';
-import { AdminUsersPage } from './pages/admin/AdminUsersPage';
+import { AdminPaymentsPage } from './pages/admin/AdminPaymentsPage';
+import { AdminCreditPage } from './pages/admin/AdminCreditPage';
 
 // Route Guards
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
-import { AdminRoute } from './components/auth/AdminRoute';
+import { AdminProtectedRoute } from './components/auth/AdminProtectedRoute';
 
 function App() {
   return (
@@ -54,13 +64,17 @@ function App() {
           <BrowserRouter>
             <Routes>
               {/* ============================================ */}
-              {/* Public Routes */}
+              {/* Public Routes with Light Theme */}
               {/* ============================================ */}
-              <Route element={<MainLayout />}>
+              <Route element={<LandingLayout />}>
                 <Route path="/" element={<HomePage />} />
+                <Route path="/features" element={<FeaturesPage />} />
+                <Route path="/how-it-works" element={<HowItWorksPage />} />
+                <Route path="/about" element={<AboutPage />} />
                 <Route path="/pricing" element={<PricingPage />} />
                 <Route path="/contact" element={<ContactPage />} />
               </Route>
+
 
               {/* ============================================ */}
               {/* Auth Routes (Public, but redirect if logged in) */}
@@ -76,9 +90,12 @@ function App() {
               <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
               {/* ============================================ */}
-              {/* Protected Dashboard Routes */}
+              {/* Protected User Dashboard Routes */}
               {/* ============================================ */}
               <Route element={<ProtectedRoute />}>
+                {/* Full Page Console (No Sidebar) */}
+                <Route path="/dashboard/console" element={<LiveConsolePage />} />
+
                 <Route element={<DashboardLayout />}>
                   {/* Main Dashboard */}
                   <Route path="/dashboard" element={<DashboardPage />} />
@@ -86,8 +103,6 @@ function App() {
                   {/* New Session */}
                   <Route path="/dashboard/new" element={<NewSessionPage />} />
 
-                  {/* Interview Session */}
-                  <Route path="/dashboard/console" element={<LiveConsolePage />} />
 
 
                   {/* History */}
@@ -99,22 +114,27 @@ function App() {
 
                   {/* Settings */}
                   <Route path="/dashboard/settings" element={<SettingsPage />} />
+                </Route>
+              </Route>
 
-                  {/* ======================================== */}
-                  {/* Admin Routes (Nested under Protected) */}
-                  {/* ======================================== */}
-                  <Route element={<AdminRoute />}>
-                    <Route path="/admin" element={<AdminPage />} />
-                    <Route path="/admin/users" element={<AdminUsersPage />} />
-                    <Route path="/admin/plans" element={<AdminPlansPage />} />
-                    <Route path="/admin/plans/new" element={<AdminPlanEditorPage />} />
-                    <Route path="/admin/plans/:id" element={<AdminPlanEditorPage />} />
+              {/* ============================================ */}
+              {/* Admin Portal (Separate from User Dashboard) */}
+              {/* ============================================ */}
+              {/* Admin Login - Public */}
+              <Route path="/admin" element={<AdminLoginPage />} />
 
-                    {/* Providers */}
-                    <Route path="/admin/providers" element={<AdminProvidersPage />} />
-                    <Route path="/admin/providers/new" element={<AdminProviderEditorPage />} />
-                    <Route path="/admin/providers/:id" element={<AdminProviderEditorPage />} />
-                  </Route>
+              {/* Admin Protected Routes */}
+              <Route element={<AdminProtectedRoute />}>
+                <Route element={<AdminLayout />}>
+                  <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
+                  <Route path="/admin/users" element={<AdminUsersPage />} />
+                  <Route path="/admin/admins" element={<AdminAdminsPage />} />
+                  <Route path="/admin/plans" element={<AdminPlansPage />} />
+                  <Route path="/admin/plans/new" element={<AdminPlanEditorPage />} />
+                  <Route path="/admin/plans/:id" element={<AdminPlanEditorPage />} />
+                  <Route path="/admin/providers" element={<AdminProvidersPage />} />
+                  <Route path="/admin/payments" element={<AdminPaymentsPage />} />
+                  <Route path="/admin/credit" element={<AdminCreditPage />} />
                 </Route>
               </Route>
 
@@ -131,3 +151,4 @@ function App() {
 }
 
 export default App;
+

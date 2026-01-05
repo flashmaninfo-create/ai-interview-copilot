@@ -32,11 +32,11 @@ export function ForgotPasswordPage() {
 
     if (success) {
         return (
-            <div className="min-h-screen bg-white flex items-center justify-center p-4">
-                <div className="bg-white p-8 rounded-2xl shadow-lg border border-slate-100 w-full max-w-md text-center">
-                    <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-6">
+            <div className="min-h-screen bg-background flex items-center justify-center p-4">
+                <div className="bg-surface p-8 rounded-2xl shadow-lg border border-white/10 w-full max-w-md text-center">
+                    <div className="mx-auto w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mb-6">
                         <svg
-                            className="w-8 h-8 text-green-600"
+                            className="w-8 h-8 text-green-400"
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
@@ -49,11 +49,11 @@ export function ForgotPasswordPage() {
                             />
                         </svg>
                     </div>
-                    <h1 className="text-2xl font-bold text-slate-900 mb-2">Check Your Email</h1>
-                    <p className="text-slate-600 mb-6">
+                    <h1 className="text-2xl font-bold text-white mb-2">Check Your Email</h1>
+                    <p className="text-slate-300 mb-6">
                         We've sent a password reset link to <strong>{email}</strong>
                     </p>
-                    <p className="text-sm text-slate-500 mb-6">
+                    <p className="text-sm text-slate-400 mb-6">
                         Didn't receive the email? Check your spam folder or{' '}
                         <button
                             onClick={() => setSuccess(false)}
@@ -74,11 +74,11 @@ export function ForgotPasswordPage() {
     }
 
     return (
-        <div className="min-h-screen bg-white flex items-center justify-center p-4">
-            <div className="bg-white p-8 rounded-2xl shadow-lg border border-slate-100 w-full max-w-md">
+        <div className="min-h-screen bg-background flex items-center justify-center p-4">
+            <div className="bg-surface p-8 rounded-2xl shadow-lg border border-white/10 w-full max-w-md">
                 <div className="text-center mb-8">
-                    <h1 className="text-2xl font-bold text-slate-900">Reset Password</h1>
-                    <p className="text-slate-500">
+                    <h1 className="text-2xl font-bold text-white">Reset Password</h1>
+                    <p className="text-slate-400">
                         Enter your email and we'll send you a reset link
                     </p>
                 </div>
@@ -87,14 +87,14 @@ export function ForgotPasswordPage() {
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">
+                        <label className="block text-sm font-medium text-slate-300 mb-1">
                             Email
                         </label>
                         <input
                             type="email"
                             required
                             autoComplete="email"
-                            className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors bg-slate-50 focus:bg-white"
+                            className="w-full px-4 py-3 rounded-lg border border-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors bg-background text-white placeholder-slate-500"
                             placeholder="you@example.com"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
@@ -118,7 +118,7 @@ export function ForgotPasswordPage() {
                     </button>
                 </form>
 
-                <div className="mt-6 text-center text-sm text-slate-500">
+                <div className="mt-6 text-center text-sm text-slate-400">
                     Remember your password?{' '}
                     <Link to="/login" className="text-primary font-semibold hover:underline">
                         Sign In

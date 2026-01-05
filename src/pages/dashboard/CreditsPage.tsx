@@ -68,16 +68,16 @@ export function CreditsPage() {
     const getTransactionIcon = (_type: CreditTransaction['reference_type'], amount: number) => {
         if (amount > 0) {
             return (
-                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                    <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="w-10 h-10 bg-green-500/20 rounded-full flex items-center justify-center">
+                    <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v12m6-6H6" />
                     </svg>
                 </div>
             );
         }
         return (
-            <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-                <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="w-10 h-10 bg-red-500/20 rounded-full flex items-center justify-center">
+                <svg className="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
                 </svg>
             </div>
@@ -98,12 +98,12 @@ export function CreditsPage() {
         <div className="container mx-auto px-4 py-8 max-w-4xl">
             {/* Header */}
             <div className="mb-8">
-                <h1 className="text-2xl font-bold text-slate-900">Credits</h1>
-                <p className="text-slate-500">Manage your interview credits</p>
+                <h1 className="text-2xl font-bold text-white">Credits</h1>
+                <p className="text-slate-400">Manage your interview credits</p>
             </div>
 
             {/* Balance Card */}
-            <div className="bg-gradient-to-br from-primary to-green-700 text-white rounded-2xl p-8 mb-8 shadow-lg">
+            <div className="bg-gradient-to-br from-primary to-green-800 text-white rounded-2xl p-8 mb-8 shadow-lg border border-white/10">
                 <div className="flex items-center justify-between">
                     <div>
                         <p className="text-white/80 text-sm font-medium mb-1">Available Credits</p>
@@ -133,52 +133,52 @@ export function CreditsPage() {
 
             {/* Quick Info */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                <div className="bg-white rounded-xl p-6 border border-slate-100 shadow-sm">
+                <div className="bg-surface rounded-xl p-6 border border-white/10 shadow-sm">
                     <div className="flex items-center gap-3 mb-2">
-                        <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                            <svg className="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                        <div className="w-8 h-8 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                            <svg className="w-4 h-4 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd" />
                             </svg>
                         </div>
-                        <span className="text-sm font-medium text-slate-600">Per Interview</span>
+                        <span className="text-sm font-medium text-slate-400">Per Interview</span>
                     </div>
-                    <p className="text-2xl font-bold text-slate-900">1 credit</p>
+                    <p className="text-2xl font-bold text-white">1 credit</p>
                 </div>
-                <div className="bg-white rounded-xl p-6 border border-slate-100 shadow-sm">
+                <div className="bg-surface rounded-xl p-6 border border-white/10 shadow-sm">
                     <div className="flex items-center gap-3 mb-2">
-                        <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
-                            <svg className="w-4 h-4 text-amber-600" fill="currentColor" viewBox="0 0 20 20">
+                        <div className="w-8 h-8 bg-amber-500/20 rounded-lg flex items-center justify-center">
+                            <svg className="w-4 h-4 text-amber-500" fill="currentColor" viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
                             </svg>
                         </div>
-                        <span className="text-sm font-medium text-slate-600">When Charged</span>
+                        <span className="text-sm font-medium text-slate-400">When Charged</span>
                     </div>
-                    <p className="text-sm text-slate-700">Only on completed interviews</p>
+                    <p className="text-sm text-slate-300">Only on completed interviews</p>
                 </div>
-                <div className="bg-white rounded-xl p-6 border border-slate-100 shadow-sm">
+                <div className="bg-surface rounded-xl p-6 border border-white/10 shadow-sm">
                     <div className="flex items-center gap-3 mb-2">
-                        <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                            <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                        <div className="w-8 h-8 bg-green-500/20 rounded-lg flex items-center justify-center">
+                            <svg className="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                             </svg>
                         </div>
-                        <span className="text-sm font-medium text-slate-600">No Charge</span>
+                        <span className="text-sm font-medium text-slate-400">No Charge</span>
                     </div>
-                    <p className="text-sm text-slate-700">Failed or cancelled sessions</p>
+                    <p className="text-sm text-slate-300">Failed or cancelled sessions</p>
                 </div>
             </div>
 
             {/* Error State */}
             {error && (
-                <div className="bg-red-50 text-red-700 p-4 rounded-lg mb-6 border border-red-200">
+                <div className="bg-red-500/10 text-red-400 p-4 rounded-lg mb-6 border border-red-500/20">
                     {error}
                 </div>
             )}
 
             {/* Transaction History */}
-            <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-                <div className="border-b border-slate-100 px-6 py-4">
-                    <h2 className="font-semibold text-slate-900">Transaction History</h2>
+            <div className="bg-surface rounded-xl shadow-sm border border-white/10 overflow-hidden">
+                <div className="border-b border-white/10 px-6 py-4">
+                    <h2 className="font-semibold text-white">Transaction History</h2>
                 </div>
 
                 {loading ? (
@@ -188,22 +188,22 @@ export function CreditsPage() {
                     </div>
                 ) : history.length === 0 ? (
                     <div className="p-12 text-center">
-                        <div className="mx-auto w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                            <svg className="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div className="mx-auto w-12 h-12 bg-white/5 rounded-full flex items-center justify-center mb-4">
+                            <svg className="w-6 h-6 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                             </svg>
                         </div>
-                        <p className="text-slate-600 font-medium">No transactions yet</p>
-                        <p className="text-slate-400 text-sm">Complete your first interview to see activity here</p>
+                        <p className="text-slate-400 font-medium">No transactions yet</p>
+                        <p className="text-slate-500 text-sm">Complete your first interview to see activity here</p>
                     </div>
                 ) : (
                     <>
-                        <div className="divide-y divide-slate-100">
+                        <div className="divide-y divide-white/5">
                             {history.map((tx) => (
-                                <div key={tx.id} className="flex items-center gap-4 px-6 py-4 hover:bg-slate-50 transition-colors">
+                                <div key={tx.id} className="flex items-center gap-4 px-6 py-4 hover:bg-white/5 transition-colors">
                                     {getTransactionIcon(tx.reference_type, tx.amount)}
                                     <div className="flex-1 min-w-0">
-                                        <p className="font-medium text-slate-900 truncate">
+                                        <p className="font-medium text-white truncate">
                                             {tx.description}
                                         </p>
                                         <p className="text-sm text-slate-500">
@@ -211,10 +211,10 @@ export function CreditsPage() {
                                         </p>
                                     </div>
                                     <div className="text-right">
-                                        <p className={`font-bold ${tx.amount > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                        <p className={`font-bold ${tx.amount > 0 ? 'text-green-500' : 'text-red-500'}`}>
                                             {tx.amount > 0 ? '+' : ''}{tx.amount}
                                         </p>
-                                        <p className="text-xs text-slate-400">
+                                        <p className="text-xs text-slate-500">
                                             Balance: {tx.balance_after}
                                         </p>
                                     </div>
@@ -224,7 +224,7 @@ export function CreditsPage() {
 
                         {/* Pagination */}
                         {total > limit && (
-                            <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100">
+                            <div className="flex items-center justify-between px-6 py-4 border-t border-white/10">
                                 <p className="text-sm text-slate-500">
                                     Showing {page * limit + 1} to {Math.min((page + 1) * limit, total)} of {total}
                                 </p>
@@ -232,14 +232,14 @@ export function CreditsPage() {
                                     <button
                                         onClick={() => setPage((p) => Math.max(0, p - 1))}
                                         disabled={page === 0}
-                                        className="px-3 py-1.5 border border-slate-200 rounded text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        className="px-3 py-1.5 border border-white/10 rounded text-sm text-slate-400 hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         Previous
                                     </button>
                                     <button
                                         onClick={() => setPage((p) => p + 1)}
                                         disabled={(page + 1) * limit >= total}
-                                        className="px-3 py-1.5 border border-slate-200 rounded text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        className="px-3 py-1.5 border border-white/10 rounded text-sm text-slate-400 hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         Next
                                     </button>

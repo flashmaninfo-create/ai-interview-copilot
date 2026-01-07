@@ -260,7 +260,23 @@
         overlay.style.display = isHidden ? 'none' : 'flex';
     }
 
+    // Check if overlay DOM is still valid (attached to document)
+    function ensureOverlayValid() {
+        if (!overlay || !document.contains(overlay)) {
+            console.log('[Content] Overlay detached or invalid, recreating...');
+            overlay = null;
+            transcriptContainer = null;
+            hintContainer = null;
+            createOverlay();
+            return true; // Was recreated
+        }
+        return false; // Still valid
+    }
+
     function showOverlay() {
+        // Ensure overlay is valid before showing
+        ensureOverlayValid();
+
         if (!overlay) createOverlay();
         overlay.style.display = 'flex';
         isHidden = false;
@@ -539,11 +555,13 @@
                 break;
 
             case 'TRANSCRIPTION_STATE':
+                ensureOverlayValid(); // Make sure overlay is attached
                 updateTranscript(message.data);
                 sendResponse({ success: true });
                 break;
 
             case 'HINT_RECEIVED':
+                ensureOverlayValid(); // Make sure overlay is attached
                 addHint(message.data);
                 sendResponse({ success: true });
                 break;

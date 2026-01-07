@@ -123,6 +123,21 @@ function showConnectedView(user, credits) {
         connectedPlatformIcon.textContent = platform.icon;
         connectedPlatformName.textContent = platform.name;
     }
+
+    // Block start if no credits
+    if ((credits || 0) <= 0) {
+        startBtn.disabled = true;
+        startBtn.textContent = '0 Credits - Please Top Up';
+        startBtn.classList.add('bg-slate-700', 'cursor-not-allowed', 'opacity-50');
+        startBtn.classList.remove('bg-primary', 'hover:bg-opacity-90');
+
+        // Add a link or message if needed, but changing button text is a good minimal change
+    } else {
+        startBtn.disabled = false;
+        startBtn.textContent = 'Start Session (1 Credit)';
+        startBtn.classList.remove('bg-slate-700', 'cursor-not-allowed', 'opacity-50');
+        startBtn.classList.add('bg-primary', 'hover:bg-opacity-90');
+    }
 }
 
 function showActiveView(sessionData) {

@@ -52,9 +52,17 @@ export function useConsoleSync() {
 
     // Track if we've received any real data from extension
     const activityTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const previousSessionIdRef = useRef<string | null>(null);
 
     useEffect(() => {
         console.log('[useConsoleSync] Hook mounted. Checking for session...');
+
+        // Clear all data on mount to ensure fresh state
+        setTranscripts([]);
+        setFinalizedText('');
+        setHints([]);
+        setConnected(false);
+        setSessionStatus('waiting');
 
         // 1. Check for token in URL (Legacy/Manual method)
         const params = new URLSearchParams(window.location.search);
@@ -164,6 +172,7 @@ export function useConsoleSync() {
             if (error) {
                 console.error('[useConsoleSync] DB Query Error:', error);
                 setSessionStatus('waiting');
+                setConnected(false);
                 return;
             }
 
@@ -173,32 +182,60 @@ export function useConsoleSync() {
                 const session = data[0];
                 console.log('[useConsoleSync] FOUND ACTIVE SESSION:', session);
 
+                // Check if this is a different session than before
+                const isNewSession = previousSessionIdRef.current !== session.id;
+                if (isNewSession) {
+                    console.log('[useConsoleSync] New session detected, clearing old data');
+                    // Clear old data before loading new session data
+                    setTranscripts([]);
+                    setFinalizedText('');
+                    setHints([]);
+                    previousSessionIdRef.current = session.id;
+                    setHasReceivedData(false);
+                }
+
                 if (!urlToken) {
                     console.log('[useConsoleSync] Auto-connecting to session:', session.id);
                     setSessionId(session.id);
                     setToken(session.console_token);
-                    setSessionStatus('session_found');
                     setConnected(true); // Set connected immediately so buttons work
 
-                    // Fetch existing data immediately
-                    fetchExistingData(session.id);
+                    // Only update status if we're not already receiving data
+                    // This prevents flickering from 'active' back to 'session_found'
+                    setSessionStatus(prev => {
+                        if (prev === 'active') return 'active'; // Don't downgrade
+                        return 'session_found';
+                    });
+
+                    // Only fetch existing data for NEW sessions
+                    if (isNewSession) {
+                        fetchExistingData(session.id);
+                    }
                 }
             } else {
                 console.log('[useConsoleSync] No recent active session found.');
+                // Reset ALL state when no active session found
                 setSessionStatus('waiting');
+                setConnected(false);
+                setHasReceivedData(false);
+                setSessionId(null);
+                setToken(null);
+                // Clear transcripts and hints when session ends
+                setTranscripts([]);
+                setFinalizedText('');
+                setHints([]);
+                previousSessionIdRef.current = null;
             }
         };
 
         // Initial check
         checkActiveSession();
 
-        // 3. Polling backup: Check every 2 seconds for faster initial connection
+        // 3. Polling backup: Check every 3 seconds (always poll, even if session was previously found)
         const pollInterval = setInterval(() => {
-            if (!sessionId) {
-                console.log('[useConsoleSync] Polling for sessions...');
-                checkActiveSession();
-            }
-        }, 2000);
+            console.log('[useConsoleSync] Polling for sessions...');
+            checkActiveSession();
+        }, 3000);
 
         // 4. Listen for NEW sessions and UPDATES (Realtime)
         console.log('[useConsoleSync] Subscribing to session changes...');
@@ -292,6 +329,14 @@ export function useConsoleSync() {
                             id: data.id || Date.now(),
                             timestamp: new Date().toLocaleTimeString()
                         }]);
+                    }
+
+                    // Handle SESSION_ACTIVE heartbeat from extension
+                    if (type === 'SESSION_ACTIVE') {
+                        console.log('[useConsoleSync] Received SESSION_ACTIVE heartbeat');
+                        setHasReceivedData(true);
+                        setConnected(true);
+                        setSessionStatus('active');
                     }
 
                     // New: Smooth transcription state (append-only)

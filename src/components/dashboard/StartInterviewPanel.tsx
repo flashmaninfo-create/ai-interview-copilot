@@ -72,6 +72,14 @@ export function StartInterviewPanel({ credits, onSessionCreated }: StartIntervie
                 </div>
             )}
 
+            {/* Low Credits Warning */}
+            {!error && credits < 2 && credits > 0 && (
+                <div className="bg-amber-500/10 text-amber-500 p-3 rounded-lg text-sm mb-4 border border-amber-500/20 flex items-center gap-2">
+                    <span className="font-bold">⚠️ Low Credits:</span>
+                    You have only {credits} credit{credits === 1 ? '' : 's'} remaining.
+                </div>
+            )}
+
             <div className="space-y-4">
                 {/* Interview Type */}
                 <div>

@@ -50,18 +50,16 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
             {/* Sidebar */}
             <aside className={`
-                fixed top-0 left-0 bottom-0 w-64 bg-surface border-r border-white/5 z-30
+                fixed top-0 left-0 bottom-0 w-64 bg-card border-r border-border z-30
                 transition-transform duration-300 ease-in-out
                 lg:translate-x-0
                 ${isOpen ? 'translate-x-0' : '-translate-x-full'}
             `}>
                 <div className="h-full flex flex-col">
                     {/* Logo */}
-                    <div className="h-16 flex items-center px-6 border-b border-white/5">
-                        <Link to="/dashboard" className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
-                             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white">
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                            </div>
+                    <div className="h-16 flex items-center px-6 border-b border-border">
+                        <Link to="/dashboard" className="text-xl font-bold text-primary tracking-tight flex items-center gap-2">
+                             <img src="/1.svg" alt="Logo" className="w-8 h-8 rounded-lg" />
                             Interview Copilot
                         </Link>
                     </div>
@@ -76,8 +74,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                                 className={`
                                     w-full px-4 py-3 text-sm font-medium rounded-xl flex items-center gap-3 transition-all
                                     ${isActive(item.path)
-                                        ? 'bg-primary text-white shadow-lg shadow-primary/20'
-                                        : 'text-slate-400 hover:text-white hover:bg-white/5'
+                                        ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20'
+                                        : 'text-muted-foreground hover:bg-muted hover:text-primary'
                                     }
                                 `}
                             >
@@ -88,10 +86,10 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                     </nav>
 
                     {/* User Profile */}
-                    <div className="p-4 border-t border-white/5">
+                    <div className="p-4 border-t border-border">
                          <button 
                             onClick={() => signOut()}
-                            className="w-full px-4 py-2 text-sm text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors text-left flex items-center gap-2"
+                            className="w-full px-4 py-2 text-sm text-muted-foreground hover:bg-destructive/10 hover:text-destructive rounded-lg transition-colors text-left flex items-center gap-2"
                         >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
                             Sign Out

@@ -87,19 +87,19 @@ export function LoginPage() {
 
     return (
         <div className="min-h-screen bg-background flex items-center justify-center p-4">
-            <div className="bg-surface p-8 rounded-2xl shadow-lg border border-white/10 w-full max-w-md">
+            <div className="bg-card p-8 rounded-2xl shadow-lg border border-border w-full max-w-md">
                 <div className="text-center mb-8">
-                    <h1 className="text-2xl font-bold text-white">Welcome Back</h1>
-                    <p className="text-slate-400">Sign in to access your dashboard</p>
+                    <h1 className="text-2xl font-bold text-foreground">Welcome Back</h1>
+                    <p className="text-muted-foreground">Sign in to access your dashboard</p>
                 </div>
 
                 {redirectMessage && (
                     <div
                         className={`p-3 rounded-lg text-sm mb-4 border ${redirectMessage.type === 'warning'
-                                ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                                ? 'bg-warning/10 text-warning border-warning/20'
                                 : redirectMessage.type === 'success'
-                                    ? 'bg-green-500/20 text-green-300 border-green-500/30'
-                                    : 'bg-blue-500/20 text-blue-300 border-blue-500/30'
+                                    ? 'bg-success/10 text-success border-success/20'
+                                    : 'bg-primary/10 text-primary border-primary/20'
                             }`}
                     >
                         {redirectMessage.message}
@@ -114,14 +114,14 @@ export function LoginPage() {
 
                 <form onSubmit={handleLogin} className="space-y-4">
                     <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-1">
+                        <label className="block text-sm font-medium text-muted-foreground mb-1">
                             Email
                         </label>
                         <input
                             type="email"
                             required
                             autoComplete="email"
-                            className="w-full px-4 py-3 rounded-lg border border-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors bg-background text-white placeholder-slate-500"
+                            className="w-full px-4 py-3 rounded-lg border border-input focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors bg-background text-foreground placeholder-muted-foreground"
                             placeholder="you@example.com"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
@@ -130,7 +130,7 @@ export function LoginPage() {
                     </div>
                     <div>
                         <div className="flex items-center justify-between mb-1">
-                            <label className="block text-sm font-medium text-slate-300">
+                            <label className="block text-sm font-medium text-muted-foreground">
                                 Password
                             </label>
                             <Link
@@ -144,7 +144,7 @@ export function LoginPage() {
                             type="password"
                             required
                             autoComplete="current-password"
-                            className="w-full px-4 py-3 rounded-lg border border-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors bg-background text-white placeholder-slate-500"
+                            className="w-full px-4 py-3 rounded-lg border border-input focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors bg-background text-foreground placeholder-muted-foreground"
                             placeholder="••••••••"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
@@ -155,11 +155,11 @@ export function LoginPage() {
                     <button
                         type="submit"
                         disabled={loading}
-                        className="w-full py-3 bg-primary text-white font-bold rounded-lg hover:bg-opacity-90 transition-all shadow-md disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        className="w-full py-3 bg-primary text-primary-foreground font-bold rounded-lg hover:bg-primary/90 transition-all shadow-md disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
                         {loading ? (
                             <>
-                                <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                                <div className="animate-spin rounded-full h-5 w-5 border-2 border-primary-foreground border-t-transparent"></div>
                                 Signing In...
                             </>
                         ) : (
@@ -168,7 +168,7 @@ export function LoginPage() {
                     </button>
                 </form>
 
-                <div className="mt-6 text-center text-sm text-slate-400">
+                <div className="mt-6 text-center text-sm text-muted-foreground">
                     Don't have an account?{' '}
                     <Link to="/signup" className="text-primary font-semibold hover:underline">
                         Sign Up

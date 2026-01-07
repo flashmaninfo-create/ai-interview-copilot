@@ -17,7 +17,7 @@ import { AdminLayout } from './layouts/AdminLayout';
 
 
 // Public Pages
-import { HomePage } from './pages/HomePage';
+import LandingPage from './pages/LandingPage/LandingPage';
 import { FeaturesPage } from './pages/FeaturesPage';
 import { HowItWorksPage } from './pages/HowItWorksPage';
 import { AboutPage } from './pages/AboutPage';
@@ -67,8 +67,8 @@ function App() {
               {/* ============================================ */}
               {/* Public Routes with Light Theme */}
               {/* ============================================ */}
+              <Route path="/" element={<LandingPage />} />
               <Route element={<LandingLayout />}>
-                <Route path="/" element={<HomePage />} />
                 <Route path="/features" element={<FeaturesPage />} />
                 <Route path="/how-it-works" element={<HowItWorksPage />} />
                 <Route path="/about" element={<AboutPage />} />

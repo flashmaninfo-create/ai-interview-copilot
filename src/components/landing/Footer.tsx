@@ -24,7 +24,10 @@ export function Footer() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 text-sm">
                     {/* Brand Column */}
                     <div>
-                        <div className="text-3xl font-extrabold text-white mb-2">Smart AI<br />Assistant<span className="text-xs align-top ml-1">TM</span></div>
+                        <div className="flex items-center gap-3 mb-4">
+                            <img src="/1.svg" alt="Logo" className="w-10 h-10 rounded-lg" />
+                            <div className="text-xl font-extrabold text-white">Smart AI<br /><span className="text-lg font-bold">Assistant</span><span className="text-xs align-top ml-1">TM</span></div>
+                        </div>
                         <p className="text-white/60 mb-6">&copy; {new Date().getFullYear()} Smart AI Assistant™ - All rights reserved.</p>
 
                         <div>

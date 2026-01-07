@@ -9,7 +9,6 @@ import {
   Code2,
   BookOpen,
   FileText,
-  AlertTriangle,
   ArrowDown,
   Info,
   ArrowLeft
@@ -87,37 +86,41 @@ export function LiveConsolePage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col p-4">
+    <div className="min-h-screen bg-background flex flex-col p-4">
       {/* Header */}
-      <header className="bg-gradient-to-r from-primary/90 to-primary/70 text-white shadow-lg rounded-xl mb-6 border border-white/10">
+      <header className="bg-card text-foreground shadow-sm rounded-xl mb-6 border border-border">
         <div className="px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Link
               to="/dashboard"
-              className="p-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors"
+              className="p-2 bg-muted rounded-lg hover:bg-muted/80 transition-colors text-muted-foreground hover:text-foreground"
             >
               <ArrowLeft className="w-5 h-5" />
             </Link>
 
             <div className="flex items-center gap-3">
-              <Mic className="w-6 h-6" />
+              <div className="p-2 bg-primary/10 rounded-lg text-primary">
+                <Mic className="w-6 h-6" />
+              </div>
               <div>
-                <h1 className="text-lg font-bold">Interview Copilot Console</h1>
-                <div className="flex items-center gap-2 text-sm opacity-90">
+                <h1 className="text-lg font-bold text-foreground">Interview Copilot Console</h1>
+                <div className="flex items-center gap-2 text-sm font-medium">
                   <span
                     className={`w-2 h-2 rounded-full ${
                       sessionStatus === 'active'
-                        ? 'bg-green-400 animate-pulse'
+                        ? 'bg-success animate-pulse'
                         : sessionStatus === 'session_found'
-                        ? 'bg-yellow-400 animate-pulse'
-                        : 'bg-slate-400'
+                        ? 'bg-warning animate-pulse'
+                        : 'bg-muted-foreground'
                     }`}
                   />
-                  {sessionStatus === 'active'
-                    ? 'Live - Receiving Data'
-                    : sessionStatus === 'session_found'
-                    ? 'Session Found - Waiting for Data'
-                    : 'Waiting for Session'}
+                  <span className="text-muted-foreground">
+                    {sessionStatus === 'active'
+                      ? 'Live - Receiving Data'
+                      : sessionStatus === 'session_found'
+                      ? 'Session Found - Waiting for Data'
+                      : 'Waiting for Session'}
+                  </span>
                 </div>
               </div>
             </div>
@@ -127,8 +130,8 @@ export function LiveConsolePage() {
 
       {/* Connection banner */}
       {!connected && (
-        <div className="bg-amber-500/10 border border-amber-500/20 px-4 py-3 rounded-xl mb-6">
-          <div className="flex items-center justify-center gap-2 text-amber-200 text-sm">
+        <div className="bg-warning/10 border border-warning/20 px-4 py-3 rounded-xl mb-6">
+          <div className="flex items-center justify-center gap-2 text-warning font-medium text-sm">
             <Info className="w-4 h-4" />
             Open meeting → Click extension → “Open Console”
           </div>
@@ -136,38 +139,38 @@ export function LiveConsolePage() {
       )}
 
       {/* Main Layout */}
-      <div className="grid grid-cols-[1fr_20%] gap-6 flex-1">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 flex-1">
         {/* Transcript + Hints */}
         <div className="flex flex-col h-[calc(100vh-200px)]">
           {/* Tabs */}
-          <div className="flex bg-surface rounded-lg p-1 mb-4 border border-white/5">
+          <div className="flex bg-card rounded-lg p-1 mb-4 border border-border">
             <button
               onClick={() => setActivePanel('transcript')}
-              className={`flex-1 py-1.5 rounded-md text-xs font-medium ${
+              className={`flex-1 py-2.5 rounded-md text-sm font-medium transition-all ${
                 activePanel === 'transcript'
-                  ? 'bg-primary text-white'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted'
               }`}
             >
-              <FileText className="w-3.5 h-3.5 inline mr-1" />
+              <FileText className="w-4 h-4 inline mr-2" />
               Transcript ({transcripts.length})
             </button>
 
             <button
               onClick={() => setActivePanel('hints')}
-              className={`flex-1 py-1.5 rounded-md text-xs font-medium ${
+              className={`flex-1 py-2.5 rounded-md text-sm font-medium transition-all ${
                 activePanel === 'hints'
-                  ? 'bg-primary text-white'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted'
               }`}
             >
-              <Lightbulb className="w-3.5 h-3.5 inline mr-1" />
+              <Lightbulb className="w-4 h-4 inline mr-2" />
               AI Hints ({hints.length})
             </button>
           </div>
 
           {/* Content */}
-          <div className="bg-surface rounded-xl flex-1 overflow-hidden border border-white/10 relative">
+          <div className="bg-card rounded-xl flex-1 overflow-hidden border border-border relative shadow-sm">
             {activePanel === 'transcript' && (
               <div
                 ref={transcriptRef}
@@ -175,12 +178,15 @@ export function LiveConsolePage() {
                 className="absolute inset-0 overflow-y-auto p-6"
               >
                 {!finalizedText && transcripts.length === 0 ? (
-                  <div className="text-center py-16 text-slate-500">
-                    <Mic className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                    Listening for audio...
+                  <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+                    <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
+                        <Mic className="w-8 h-8 opacity-50" />
+                    </div>
+                    <p className="font-medium">Listening for audio...</p>
+                    <p className="text-sm opacity-70">Speak clearly to see transcription</p>
                   </div>
                 ) : (
-                  <p className="text-slate-300 leading-7 whitespace-pre-wrap">
+                  <p className="text-foreground leading-7 whitespace-pre-wrap text-lg">
                     {finalizedText ||
                       transcripts.map((t, i) => (
                         <span key={i} className="mr-1">
@@ -192,15 +198,15 @@ export function LiveConsolePage() {
 
                 {userScrolledUp && (
                   <button
-                    className="sticky bottom-2 mx-auto bg-primary text-white text-xs px-3 py-1 rounded-full flex items-center gap-1"
+                    className="sticky bottom-4 mx-auto bg-primary text-primary-foreground text-sm font-medium px-4 py-2 rounded-full flex items-center gap-2 shadow-lg hover:bg-primary/90 transition-all"
                     onClick={() => {
                       setUserScrolledUp(false);
                       transcriptRef.current!.scrollTop =
                         transcriptRef.current!.scrollHeight;
                     }}
                   >
-                    <ArrowDown className="w-3 h-3" />
-                    New text
+                    <ArrowDown className="w-4 h-4" />
+                    Jump to Latest
                   </button>
                 )}
               </div>
@@ -209,19 +215,33 @@ export function LiveConsolePage() {
             {activePanel === 'hints' && (
               <div className="absolute inset-0 overflow-y-auto p-4 space-y-4">
                 {loading && (
-                  <div className="text-center text-slate-500">AI is thinking…</div>
+                  <div className="flex items-center justify-center py-8 text-muted-foreground animate-pulse">
+                    <Sparkles className="w-5 h-5 mr-2" />
+                    AI is analyzing...
+                  </div>
+                )}
+
+                {!loading && hints.length === 0 && (
+                    <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+                        <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
+                            <Lightbulb className="w-8 h-8 opacity-50" />
+                        </div>
+                        <p className="font-medium">No hints yet</p>
+                        <p className="text-sm opacity-70">Ask for help or wait for AI insights</p>
+                    </div>
                 )}
 
                 {!loading &&
                   hints.map((h, i) => (
                     <div
                       key={i}
-                      className="bg-background border-l-4 border-primary rounded p-4"
+                      className="bg-muted/30 border border-border rounded-lg p-5 shadow-sm"
                     >
-                      <div className="text-xs text-slate-400 mb-2">
-                        {h.timestamp}
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Insight</span>
+                        <span className="text-xs text-muted-foreground">{h.timestamp}</span>
                       </div>
-                      <div className="text-slate-300 whitespace-pre-wrap">
+                      <div className="text-foreground whitespace-pre-wrap leading-relaxed">
                         {h.hint || h.text}
                       </div>
                     </div>
@@ -231,70 +251,82 @@ export function LiveConsolePage() {
           </div>
         </div>
 
-        {/* Actions */}
-        <div className="space-y-4 min-w-[200px]">
-          <div className="bg-surface rounded-xl p-3 border border-white/10">
-            <h2 className="text-[10px] text-slate-400 uppercase mb-2">
+        {/* Actions Sidebar */}
+        <div className="space-y-6 min-w-[300px]">
+          {/* Quick Actions */}
+          <div className="bg-card rounded-xl p-5 border border-border shadow-sm">
+            <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-4 border-b border-border pb-2">
               Quick Actions
             </h2>
 
-            <div className="space-y-2">
+            <div className="space-y-3">
               <button
                 onClick={() => requestHint('help')}
                 disabled={!connected || loading}
-                className="action-btn"
+                className="w-full flex items-center justify-center gap-3 px-4 py-4 rounded-lg font-semibold text-foreground bg-background border border-input hover:bg-muted hover:border-primary/30 transition-all shadow-sm disabled:opacity-50"
               >
-                <Sparkles className="w-3 h-3" /> Help Me
+                <Sparkles className="w-5 h-5 text-amber-500" /> 
+                <span>Help Me</span>
               </button>
 
-              {/* ✅ ANSWER BUTTON PRESERVED */}
               <button
                 onClick={() => requestHint('answer')}
                 disabled={!connected || loading}
-                className="action-btn"
+                className="w-full flex items-center justify-center gap-3 px-4 py-4 rounded-lg font-bold text-primary-foreground bg-primary hover:bg-primary/90 transition-all shadow-md shadow-primary/20 disabled:opacity-50"
               >
-                <Sparkles className="w-3 h-3" /> Answer
+                <Sparkles className="w-5 h-5" /> 
+                <span>Generate Answer</span>
               </button>
 
-              <button
-                onClick={() => requestHint('code')}
-                disabled={!connected || loading}
-                className="action-btn"
-              >
-                <Code2 className="w-3 h-3" /> Gen Code
-              </button>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                    onClick={() => requestHint('code')}
+                    disabled={!connected || loading}
+                    className="flex flex-col items-center justify-center gap-2 px-3 py-4 rounded-lg font-medium text-foreground bg-background border border-input hover:bg-muted transition-all shadow-sm disabled:opacity-50"
+                >
+                    <Code2 className="w-5 h-5 text-blue-500" />
+                    <span>Code</span>
+                </button>
 
-              <button
-                onClick={() => requestHint('explain')}
-                disabled={!connected || loading}
-                className="action-btn border border-primary text-primary bg-transparent"
-              >
-                <BookOpen className="w-3 h-3" /> Explain
-              </button>
+                <button
+                    onClick={() => requestHint('explain')}
+                    disabled={!connected || loading}
+                    className="flex flex-col items-center justify-center gap-2 px-3 py-4 rounded-lg font-medium text-foreground bg-background border border-input hover:bg-muted transition-all shadow-sm disabled:opacity-50"
+                >
+                    <BookOpen className="w-5 h-5 text-purple-500" />
+                    <span>Explain</span>
+                </button>
+              </div>
             </div>
           </div>
 
           {/* Quick Prompt */}
-          <div className="bg-surface rounded-xl p-3 border border-white/10">
+          <div className="bg-card rounded-xl p-5 border border-border shadow-sm">
+            <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-4 border-b border-border pb-2">
+              Custom Prompt
+            </h2>
             <textarea
               value={quickPrompt}
               onChange={(e) => setQuickPrompt(e.target.value)}
-              placeholder="Ask…"
-              className="w-full h-16 text-xs bg-background border border-white/10 rounded p-2 text-white"
+              placeholder="Ask a specific question..."
+              className="w-full h-24 text-sm bg-muted/50 border border-input rounded-lg p-3 text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none resize-none placeholder-muted-foreground"
             />
             <button
               onClick={handleQuickPrompt}
               disabled={!connected || loading}
-              className="action-btn mt-2"
+              className="w-full mt-3 bg-primary text-primary-foreground font-bold py-3 rounded-lg hover:bg-primary/90 transition-all shadow disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              Send
+              <span>Send Request</span>
             </button>
           </div>
 
           {/* Credits */}
-          <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-3 text-center">
-            <div className="text-xl font-bold text-green-400">{credits}</div>
-            <div className="text-[10px] text-green-300">Credits</div>
+          <div className="bg-card border border-border rounded-xl p-4 flex items-center justify-between shadow-sm">
+            <span className="text-sm font-medium text-muted-foreground">Available Credits</span>
+            <div className="flex items-center gap-1.5">
+                <span className="text-xl font-bold text-foreground">{credits}</span>
+                <span className="text-xs text-muted-foreground">left</span>
+            </div>
           </div>
         </div>
       </div>

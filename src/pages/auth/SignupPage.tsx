@@ -87,14 +87,14 @@ export function SignupPage() {
 
     return (
         <div className="min-h-screen bg-background flex items-center justify-center p-4">
-            <div className="bg-surface p-8 rounded-2xl shadow-lg border border-white/10 w-full max-w-md">
+            <div className="bg-card p-8 rounded-2xl shadow-lg border border-border w-full max-w-md">
                 <div className="text-center mb-8">
-                    <h1 className="text-2xl font-bold text-white">Create Account</h1>
-                    <p className="text-slate-400">Join to get your AI Interview Copilot</p>
+                    <h1 className="text-2xl font-bold text-foreground">Create Account</h1>
+                    <p className="text-muted-foreground">Join to get your AI Interview Copilot</p>
                 </div>
 
                 {successMessage && (
-                    <div className="bg-green-500/20 text-green-300 p-4 rounded-lg text-sm mb-4 border border-green-500/30">
+                    <div className="bg-success/10 text-success p-4 rounded-lg text-sm mb-4 border border-success/20">
                         <p className="font-medium">{successMessage}</p>
                         <p className="text-xs mt-1 opacity-80">
                             Check your spam folder if you don't see it.
@@ -103,7 +103,7 @@ export function SignupPage() {
                 )}
 
                 {validationError && (
-                    <div className="bg-red-500/20 text-red-300 p-3 rounded-lg text-sm mb-4 border border-red-500/30">
+                    <div className="bg-destructive/10 text-destructive p-3 rounded-lg text-sm mb-4 border border-destructive/20">
                         {validationError}
                     </div>
                 )}
@@ -112,14 +112,14 @@ export function SignupPage() {
 
                 <form onSubmit={handleSignup} className="space-y-4">
                     <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-1">
-                            Full Name <span className="text-slate-500">(optional)</span>
+                        <label className="block text-sm font-medium text-muted-foreground mb-1">
+                            Full Name <span className="text-muted-foreground/70">(optional)</span>
                         </label>
                         <input
                             type="text"
                             name="fullName"
                             autoComplete="name"
-                            className="w-full px-4 py-3 rounded-lg border border-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors bg-background text-white placeholder-slate-500"
+                            className="w-full px-4 py-3 rounded-lg border border-input focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors bg-background text-foreground placeholder-muted-foreground"
                             placeholder="John Doe"
                             value={formData.fullName}
                             onChange={handleChange}
@@ -127,7 +127,7 @@ export function SignupPage() {
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-1">
+                        <label className="block text-sm font-medium text-muted-foreground mb-1">
                             Email
                         </label>
                         <input
@@ -135,7 +135,7 @@ export function SignupPage() {
                             name="email"
                             required
                             autoComplete="email"
-                            className="w-full px-4 py-3 rounded-lg border border-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors bg-background text-white placeholder-slate-500"
+                            className="w-full px-4 py-3 rounded-lg border border-input focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors bg-background text-foreground placeholder-muted-foreground"
                             placeholder="you@example.com"
                             value={formData.email}
                             onChange={handleChange}
@@ -143,7 +143,7 @@ export function SignupPage() {
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-1">
+                        <label className="block text-sm font-medium text-muted-foreground mb-1">
                             Password
                         </label>
                         <input
@@ -151,18 +151,18 @@ export function SignupPage() {
                             name="password"
                             required
                             autoComplete="new-password"
-                            className="w-full px-4 py-3 rounded-lg border border-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors bg-background text-white placeholder-slate-500"
+                            className="w-full px-4 py-3 rounded-lg border border-input focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors bg-background text-foreground placeholder-muted-foreground"
                             placeholder="••••••••"
                             value={formData.password}
                             onChange={handleChange}
                             disabled={loading}
                         />
-                        <p className="text-xs text-slate-500 mt-1">
+                        <p className="text-xs text-muted-foreground mt-1">
                             Must be at least 6 characters
                         </p>
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-1">
+                        <label className="block text-sm font-medium text-muted-foreground mb-1">
                             Confirm Password
                         </label>
                         <input
@@ -170,7 +170,7 @@ export function SignupPage() {
                             name="confirmPassword"
                             required
                             autoComplete="new-password"
-                            className="w-full px-4 py-3 rounded-lg border border-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors bg-background text-white placeholder-slate-500"
+                            className="w-full px-4 py-3 rounded-lg border border-input focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors bg-background text-foreground placeholder-muted-foreground"
                             placeholder="••••••••"
                             value={formData.confirmPassword}
                             onChange={handleChange}
@@ -181,11 +181,11 @@ export function SignupPage() {
                     <button
                         type="submit"
                         disabled={loading}
-                        className="w-full py-3 bg-primary text-white font-bold rounded-lg hover:bg-opacity-90 transition-all shadow-md disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        className="w-full py-3 bg-primary text-primary-foreground font-bold rounded-lg hover:bg-primary/90 transition-all shadow-md disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
                         {loading ? (
                             <>
-                                <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                                <div className="animate-spin rounded-full h-5 w-5 border-2 border-primary-foreground border-t-transparent"></div>
                                 Creating Account...
                             </>
                         ) : (
@@ -194,7 +194,7 @@ export function SignupPage() {
                     </button>
                 </form>
 
-                <p className="mt-4 text-xs text-center text-slate-500">
+                <p className="mt-4 text-xs text-center text-muted-foreground">
                     By signing up, you agree to our{' '}
                     <a href="/terms" className="text-primary hover:underline">
                         Terms of Service
@@ -205,7 +205,7 @@ export function SignupPage() {
                     </a>
                 </p>
 
-                <div className="mt-6 text-center text-sm text-slate-400">
+                <div className="mt-6 text-center text-sm text-muted-foreground">
                     Already have an account?{' '}
                     <Link to="/login" className="text-primary font-semibold hover:underline">
                         Sign In

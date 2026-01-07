@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { NavLink, Link, useLocation } from 'react-router-dom';
-import { Menu, X, Sparkles } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { cn } from '../../lib/utils';
 import { useAuth } from '../../contexts/AuthContext';
@@ -52,9 +52,11 @@ export function Navbar({ variant = 'dark' }: NavbarProps) {
         <div className="flex items-center justify-between">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 group">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white shadow-lg group-hover:shadow-primary/25 transition-all">
-              <Sparkles className="w-5 h-5 fill-white/20" />
-            </div>
+            <img 
+              src="/1.svg" 
+              alt="Interview Copilot" 
+              className="w-8 h-8 rounded-lg shadow-lg group-hover:shadow-primary/25 transition-all"
+            />
             <span className={cn("font-bold text-lg", isLight && !isScrolled ? "text-slate-900" : isLight && isScrolled ? "text-slate-900" : "text-white")}>
               Interview Copilot
             </span>

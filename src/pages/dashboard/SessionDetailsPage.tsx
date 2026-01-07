@@ -139,7 +139,7 @@ export function SessionDetailsPage() {
             {/* Back Link */}
             <Link
                 to="/dashboard/history"
-                className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-primary mb-6"
+                className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary mb-6"
             >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -148,15 +148,15 @@ export function SessionDetailsPage() {
             </Link>
 
             {/* Header */}
-            <div className="bg-surface rounded-2xl shadow-sm border border-white/10 p-8 mb-6">
+            <div className="bg-card rounded-2xl shadow-sm border border-border p-8 mb-6">
                 <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
                     <div>
                         <div className="flex items-center gap-3 mb-2">
-                            <h1 className="text-2xl font-bold text-white">{session.role}</h1>
+                            <h1 className="text-2xl font-bold text-foreground">{session.role}</h1>
                             {getStatusBadge(session.status)}
                         </div>
-                        <p className="text-slate-400 capitalize">{session.type} Interview • {session.difficulty} Difficulty</p>
-                        <p className="text-sm text-slate-500 mt-1">{formatDate(session.created_at)}</p>
+                        <p className="text-muted-foreground capitalize">{session.type} Interview • {session.difficulty} Difficulty</p>
+                        <p className="text-sm text-muted-foreground mt-1">{formatDate(session.created_at)}</p>
                     </div>
 
                     {/* Score */}
@@ -175,42 +175,42 @@ export function SessionDetailsPage() {
 
             {/* Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                <div className="bg-surface rounded-xl p-4 border border-white/10 shadow-sm">
-                    <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Duration</p>
-                    <p className="text-lg font-semibold text-white">
+                <div className="bg-card rounded-xl p-4 border border-border shadow-sm">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Duration</p>
+                    <p className="text-lg font-semibold text-foreground">
                         {formatDuration(session.started_at, session.ended_at)}
                     </p>
                 </div>
-                <div className="bg-surface rounded-xl p-4 border border-white/10 shadow-sm">
-                    <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Transcript</p>
-                    <p className="text-lg font-semibold text-white">
+                <div className="bg-card rounded-xl p-4 border border-border shadow-sm">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Transcript</p>
+                    <p className="text-lg font-semibold text-foreground">
                         {session.transcript?.length || 0} entries
                     </p>
                 </div>
-                <div className="bg-surface rounded-xl p-4 border border-white/10 shadow-sm">
-                    <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">AI Assists</p>
-                    <p className="text-lg font-semibold text-white">
+                <div className="bg-card rounded-xl p-4 border border-border shadow-sm">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">AI Assists</p>
+                    <p className="text-lg font-semibold text-foreground">
                         {session.ai_responses?.length || 0} used
                     </p>
                 </div>
-                <div className="bg-surface rounded-xl p-4 border border-white/10 shadow-sm">
-                    <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Credits</p>
-                    <p className="text-lg font-semibold text-white">
+                <div className="bg-card rounded-xl p-4 border border-border shadow-sm">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Credits</p>
+                    <p className="text-lg font-semibold text-foreground">
                         {session.credit_deducted ? '1 used' : 'None'}
                     </p>
                 </div>
             </div>
 
             {/* Tabs */}
-            <div className="bg-surface rounded-xl shadow-sm border border-white/10 overflow-hidden">
-                <div className="border-b border-white/5 flex">
+            <div className="bg-card rounded-xl shadow-sm border border-border overflow-hidden">
+                <div className="border-b border-border flex">
                     {(['summary', 'transcript', 'ai'] as const).map((tab) => (
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
                             className={`flex-1 px-6 py-4 text-sm font-medium transition-colors ${activeTab === tab
                                     ? 'text-primary border-b-2 border-primary bg-primary/10'
-                                    : 'text-slate-400 hover:text-slate-200'
+                                    : 'text-muted-foreground hover:text-foreground'
                                 }`}
                         >
                             {tab === 'summary' && 'Summary & Insights'}
@@ -225,31 +225,31 @@ export function SessionDetailsPage() {
                     {activeTab === 'summary' && (
                         <div className="space-y-6">
                             {session.summary ? (
-                                <div className="bg-background/50 rounded-lg p-6 border border-white/5">
-                                    <h3 className="text-lg font-semibold text-white mb-3">AI Summary</h3>
-                                    <p className="text-slate-300 leading-relaxed whitespace-pre-line">
+                                <div className="bg-muted/30 rounded-lg p-6 border border-border">
+                                    <h3 className="text-lg font-semibold text-foreground mb-3">AI Summary</h3>
+                                    <p className="text-muted-foreground leading-relaxed whitespace-pre-line">
                                         {session.summary}
                                     </p>
                                 </div>
                             ) : (
-                                <div className="text-center py-8 text-slate-500">
+                                <div className="text-center py-8 text-muted-foreground">
                                     No summary available for this session.
                                 </div>
                             )}
 
                             {/* Placeholder insights */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="bg-green-500/10 rounded-lg p-4 border border-green-500/20">
-                                    <h4 className="text-sm font-semibold text-green-400 mb-2">💪 Strengths</h4>
-                                    <ul className="text-sm text-green-300 space-y-1">
+                                <div className="bg-success/10 rounded-lg p-4 border border-success/20">
+                                    <h4 className="text-sm font-semibold text-success mb-2">💪 Strengths</h4>
+                                    <ul className="text-sm text-success/80 space-y-1">
                                         <li>• Clear communication style</li>
                                         <li>• Structured problem-solving approach</li>
                                         <li>• Good use of AI assistance</li>
                                     </ul>
                                 </div>
-                                <div className="bg-amber-500/10 rounded-lg p-4 border border-amber-500/20">
-                                    <h4 className="text-sm font-semibold text-amber-400 mb-2">📈 Areas for Improvement</h4>
-                                    <ul className="text-sm text-amber-300 space-y-1">
+                                <div className="bg-warning/10 rounded-lg p-4 border border-warning/20">
+                                    <h4 className="text-sm font-semibold text-warning mb-2">📈 Areas for Improvement</h4>
+                                    <ul className="text-sm text-warning/80 space-y-1">
                                         <li>• Elaborate more on implementations</li>
                                         <li>• Provide concrete examples</li>
                                         <li>• Consider edge cases earlier</li>
@@ -270,11 +270,11 @@ export function SessionDetailsPage() {
                                     >
                                         <div
                                             className={`max-w-[80%] rounded-2xl px-5 py-3 ${entry.speaker === 'user'
-                                                    ? 'bg-primary text-white'
-                                                    : 'bg-background text-slate-200 border border-white/10'
+                                                    ? 'bg-primary text-primary-foreground'
+                                                    : 'bg-muted text-foreground border border-border'
                                                 }`}
                                         >
-                                            <div className={`text-xs font-medium mb-1 ${entry.speaker === 'user' ? 'text-white/70' : 'text-slate-500'
+                                            <div className={`text-xs font-medium mb-1 ${entry.speaker === 'user' ? 'text-primary-foreground/70' : 'text-muted-foreground'
                                                 }`}>
                                                 {entry.speaker === 'user' ? 'You' : 'Interviewer'}
                                                 <span className="ml-2">
@@ -286,7 +286,7 @@ export function SessionDetailsPage() {
                                     </div>
                                 ))
                             ) : (
-                                <div className="text-center py-8 text-slate-500">
+                                <div className="text-center py-8 text-muted-foreground">
                                     No transcript available for this session.
                                 </div>
                             )}
@@ -300,25 +300,25 @@ export function SessionDetailsPage() {
                                 session.ai_responses.map((response) => (
                                     <div
                                         key={response.id}
-                                        className="bg-background/50 rounded-lg p-4 border border-white/5"
+                                        className="bg-muted/30 rounded-lg p-4 border border-border"
                                     >
                                         <div className="flex items-center gap-2 mb-2">
-                                            <span className={`px-2 py-0.5 rounded text-xs font-medium uppercase ${response.type === 'hint' ? 'bg-amber-500/20 text-amber-400' :
-                                                    response.type === 'code' ? 'bg-blue-500/20 text-blue-400' :
-                                                        response.type === 'explain' ? 'bg-purple-500/20 text-purple-400' :
-                                                            'bg-slate-700 text-slate-300'
+                                            <span className={`px-2 py-0.5 rounded text-xs font-medium uppercase ${response.type === 'hint' ? 'bg-warning/20 text-warning' :
+                                                    response.type === 'code' ? 'bg-blue-500/20 text-blue-500' :
+                                                        response.type === 'explain' ? 'bg-purple-500/20 text-purple-500' :
+                                                            'bg-muted text-muted-foreground'
                                                 }`}>
                                                 {response.type}
                                             </span>
-                                            <span className="text-xs text-slate-500">
+                                            <span className="text-xs text-muted-foreground">
                                                 {new Date(response.timestamp).toLocaleTimeString()}
                                             </span>
                                         </div>
-                                        <p className="text-slate-300 whitespace-pre-wrap">{response.text}</p>
+                                        <p className="text-muted-foreground whitespace-pre-wrap">{response.text}</p>
                                     </div>
                                 ))
                             ) : (
-                                <div className="text-center py-8 text-slate-500">
+                                <div className="text-center py-8 text-muted-foreground">
                                     No AI responses were used in this session.
                                 </div>
                             )}
@@ -331,13 +331,13 @@ export function SessionDetailsPage() {
             <div className="flex items-center justify-center gap-4 mt-8">
                 <Link
                     to="/dashboard/new"
-                    className="px-6 py-3 bg-primary text-white font-semibold rounded-lg hover:bg-opacity-90 transition-all"
+                    className="px-6 py-3 bg-primary text-primary-foreground font-semibold rounded-lg hover:bg-primary/90 transition-all"
                 >
                     Start New Interview
                 </Link>
                 <Link
                     to="/dashboard/history"
-                    className="px-6 py-3 border border-white/10 text-slate-400 font-medium rounded-lg hover:bg-white/5 transition-all"
+                    className="px-6 py-3 border border-border text-muted-foreground font-medium rounded-lg hover:bg-muted transition-all"
                 >
                     View All Sessions
                 </Link>

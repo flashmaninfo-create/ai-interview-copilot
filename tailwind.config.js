@@ -1,44 +1,86 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: ["class"],
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
+    container: {
+      center: true,
+      padding: "2rem",
+      screens: {
+        "2xl": "1400px",
+      },
+    },
     extend: {
       colors: {
+        border: "var(--color-border)",
+        input: "var(--color-input)",
+        ring: "var(--color-ring)",
+        background: "var(--color-background)",
+        foreground: "var(--color-foreground)",
         primary: {
-          DEFAULT: '#6366F1',
-          foreground: '#FFFFFF',
+          DEFAULT: "var(--color-primary)",
+          foreground: "var(--color-primary-foreground)",
         },
         secondary: {
-          DEFAULT: '#3B82F6',
-          foreground: '#FFFFFF',
+          DEFAULT: "var(--color-secondary)",
+          foreground: "var(--color-secondary-foreground)",
         },
-        background: '#0F172A',
-        surface: '#1E293B',
-        success: '#10B981',
-        text: {
-          primary: '#F8FAFC',
-          secondary: '#94A3B8',
-        }
+        destructive: {
+          DEFAULT: "var(--color-destructive)",
+          foreground: "var(--color-destructive-foreground)",
+        },
+        muted: {
+          DEFAULT: "var(--color-muted)",
+          foreground: "var(--color-muted-foreground)",
+        },
+        accent: {
+          DEFAULT: "var(--color-accent)",
+          foreground: "var(--color-accent-foreground)",
+        },
+        popover: {
+          DEFAULT: "var(--color-popover)",
+          foreground: "var(--color-popover-foreground)",
+        },
+        card: {
+          DEFAULT: "var(--color-card)",
+          foreground: "var(--color-card-foreground)",
+        },
+        success: {
+          DEFAULT: "var(--color-success)",
+          foreground: "var(--color-success-foreground)",
+        },
+        warning: {
+          DEFAULT: "var(--color-warning)",
+          foreground: "var(--color-warning-foreground)",
+        },
+        error: {
+          DEFAULT: "var(--color-error)",
+          foreground: "var(--color-error-foreground)",
+        },
+      },
+      borderRadius: {
+        lg: "var(--radius)",
+        md: "calc(var(--radius) - 2px)",
+        sm: "calc(var(--radius) - 4px)",
       },
       fontFamily: {
-        sans: ['Inter', 'sans-serif'],
+        headline: ['Crimson Text', 'serif'],
+        body: ['Source Sans 3', 'sans-serif'],
+        cta: ['Nunito Sans', 'sans-serif'],
+        accent: ['Playfair Display', 'serif'],
       },
-      animation: {
-        'fade-in': 'fadeIn 0.5s ease-out',
-        'slide-up': 'slideUp 0.5s ease-out',
+      boxShadow: {
+        'cta': '0 4px 12px rgba(27, 54, 93, 0.15)',
+        'card': '0 2px 8px rgba(27, 54, 93, 0.08)',
       },
-      keyframes: {
-        fadeIn: {
-          '0%': { opacity: '0' },
-          '100%': { opacity: '1' },
-        },
-        slideUp: {
-          '0%': { transform: 'translateY(20px)', opacity: '0' },
-          '100%': { transform: 'translateY(0)', opacity: '1' },
-        },
+      transitionDuration: {
+        '250': '250ms',
+      },
+      transitionTimingFunction: {
+        'ease-out': 'ease-out',
       },
     },
   },

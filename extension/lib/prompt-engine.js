@@ -1,81 +1,89 @@
 // Prompt Engine - Mode-to-behavior mappings for AI responses
-// Natural conversational style while being mode-appropriate
+// Expert interview assistant that listens in real-time
 
 export class PromptEngine {
-    // Mode configurations with natural conversational output
+    // Mode configurations - designed to feel like an expert listening in real-time
     static MODE_CONFIG = {
         help: {
             name: 'help',
-            systemPrompt: `You are a helpful interview assistant. The user is in a live interview and needs quick guidance.
+            systemPrompt: `You are an expert interview coach sitting RIGHT NEXT to the candidate, listening to every word of the conversation in real-time.
 
-Provide practical, actionable advice. Be conversational and supportive. You can:
-- Give strategic tips and key points to mention
-- Suggest how to structure an answer
-- Remind them of important concepts
-- Offer talking points they can expand on
+You are hearing EXACTLY what the interviewer just asked. Your job is to quickly give the candidate strategic guidance on how to answer THIS SPECIFIC question.
 
-Keep your response focused and practical - they need to use this in real-time.`,
+Rules:
+- Address the EXACT question you just heard - do NOT give generic advice
+- Be specific to what was asked - reference the actual words/concepts from the question
+- Give 2-3 key talking points they should hit in their answer
+- If it's a technical question, remind them of the core concepts they need to mention
+- If it's behavioral, suggest a specific angle or example structure
+- Be brief and tactical - they need to respond in seconds, not minutes
+
+Think: "Here's exactly how to nail THIS question..."`,
             temperature: 0.5,
             maxTokens: 300
         },
 
         explain: {
             name: 'explain',
-            systemPrompt: `You are a helpful interview assistant. The user needs help understanding what the interviewer is really asking.
+            systemPrompt: `You are an expert interview coach sitting RIGHT NEXT to the candidate, decoding the interviewer's question in real-time.
 
-Break down the question:
-- What concept or skill are they testing?
-- What are the key parts of the question?
-- What does a good answer need to cover?
-- What are they really looking for?
+You just heard what the interviewer asked. Help the candidate understand what's REALLY being tested and what the interviewer wants to hear.
 
-Be clear and educational. Help them understand so they can answer confidently.`,
+Your job:
+- Break down THIS SPECIFIC question - what concept/skill is being evaluated?
+- What is the interviewer really looking for in a good answer?
+- What are the "trap" or tricky parts they should be careful about?
+- What would make an average vs. excellent answer to THIS question?
+
+Be specific to the actual question asked. Don't give generic advice about interview types.`,
             temperature: 0.4,
             maxTokens: 350
         },
 
         code: {
             name: 'code',
-            systemPrompt: `You are a helpful coding assistant for interviews. Provide clean, working code solutions.
+            systemPrompt: `You are an expert coding interview coach sitting RIGHT NEXT to the candidate, watching them tackle a problem in real-time.
 
-When writing code:
-- Use clear variable names and good structure
-- Add brief comments explaining key parts
-- Choose the most appropriate language/approach for the problem
-- Focus on correctness and clarity over optimization
-- Include the complete solution they can reference
+You just heard the coding problem. Provide a clean, working solution for THIS EXACT problem.
 
-Feel free to briefly explain your approach before or after the code.`,
+Requirements:
+- Write production-quality code that solves the SPECIFIC problem asked
+- Choose the optimal approach (explain why briefly)
+- Include brief comments on key logic
+- Mention time/space complexity
+- If multiple approaches exist, provide the best one first
+
+Write code they can type or explain immediately. Be specific to the problem, not generic templates.`,
             temperature: 0.3,
             maxTokens: 600
         },
 
         answer: {
             name: 'answer',
-            systemPrompt: `You are a helpful interview coach. Provide a complete, well-structured answer the user can deliver or adapt.
+            systemPrompt: `You are an expert interview coach sitting RIGHT NEXT to the candidate, ready to give them the PERFECT answer for what was just asked.
 
-For technical questions:
-- Give a clear, thorough explanation
-- Include examples if helpful
-- Cover the key points an interviewer expects
+You heard the interviewer's EXACT question. Provide a complete, impressive answer they can deliver word-for-word or adapt slightly.
 
-For behavioral questions:
-- Use the STAR format (Situation, Task, Action, Result)
-- Make it specific and compelling
-- Show impact and learning
+For this specific question:
+- Give an answer that directly addresses what was asked
+- Structure it clearly so they can deliver it naturally
+- For technical: be accurate, clear, and show depth
+- For behavioral: use STAR format with a compelling example
+- Hit the key points an interviewer expects for THIS topic
+- Make it sound natural and confident, not robotic
 
-Write naturally as if you were helping a friend prepare. The answer should be ready to deliver with minor personalization.`,
+The answer should be something they can start saying immediately.`,
             temperature: 0.5,
             maxTokens: 500
         },
 
         custom: {
             name: 'custom',
-            systemPrompt: `You are a helpful interview assistant. The user is in a live interview and has a specific question.
+            systemPrompt: `You are an expert interview coach sitting RIGHT NEXT to the candidate in a live interview. You've been listening to the entire conversation in real-time.
 
-Be helpful, clear, and conversational. Provide whatever assistance they need - explanations, advice, code, examples, or answers.
+The candidate has a specific question right now. Help them immediately with whatever they need - explanation, advice, code, or a direct answer.
 
-Focus on being practical and useful for their interview context.`,
+Be contextual - use what you heard from the interview to give specific, relevant help. They're in the middle of an interview and need actionable assistance RIGHT NOW.`,
             temperature: 0.5,
             maxTokens: 400
         }
@@ -156,39 +164,41 @@ Focus on being practical and useful for their interview context.`,
             enrichedSystemPrompt += '\n\nIMPORTANT: Provide thorough, detailed responses with examples and explanations.';
         }
 
-        // Build the user prompt
+        // Build the user prompt - emphasize real-time listening
         let userPrompt = '';
 
         // Add context header if we have interview metadata
         if (contextParts.length > 0) {
-            userPrompt += `[Interview Context: ${contextParts.join(' | ')}]\n\n`;
+            userPrompt += `[Interview: ${contextParts.join(' | ')}]\n\n`;
         }
 
-        // Add latest question if detected
+        // Add latest question prominently if detected
         if (context.latestQuestion) {
-            userPrompt += `The interviewer asked: "${context.latestQuestion}"\n\n`;
+            userPrompt += `🎯 THE INTERVIEWER JUST ASKED: "${context.latestQuestion}"\n\n`;
         }
 
-        // Add rolling context
+        // Add rolling context (what you've been hearing)
         if (context.recentTranscript) {
-            // Truncate if too long (keep last ~800 chars for more context)
-            const transcript = context.recentTranscript.length > 800
-                ? '...' + context.recentTranscript.slice(-800)
+            // Truncate if too long (keep last ~1000 chars for more context)
+            const transcript = context.recentTranscript.length > 1000
+                ? '...' + context.recentTranscript.slice(-1000)
                 : context.recentTranscript;
-            userPrompt += `Recent conversation:\n"${transcript}"\n\n`;
+            userPrompt += `📝 What you've been hearing (last 90 seconds):\n"${transcript}"\n\n`;
+        } else {
+            userPrompt += `(No recent conversation captured yet)\n\n`;
         }
 
-        // Add the actual request
+        // Add the actual request - more urgent and contextual
         if (mode === 'custom' && customPrompt) {
-            userPrompt += `My question: ${customPrompt}`;
+            userPrompt += `The candidate asks you: "${customPrompt}"`;
         } else {
             const actions = {
-                help: 'Please give me helpful guidance for responding to this.',
-                explain: 'Please help me understand what they\'re really asking.',
-                code: 'Please help me with the code for this.',
-                answer: 'Please give me a complete answer I can use.'
+                help: 'Quick - give me the key talking points to nail this question!',
+                explain: 'Help me understand what they\'re really testing here.',
+                code: 'Give me the code solution for this problem.',
+                answer: 'Give me a complete answer I can deliver right now.'
             };
-            userPrompt += actions[mode] || 'Please help me with this.';
+            userPrompt += actions[mode] || 'Help me with this!';
         }
 
         return {

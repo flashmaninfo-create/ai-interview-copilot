@@ -368,6 +368,59 @@ export const creditService = {
     },
 
     /**
+     * Purchase credits (Plan Subscription)
+     */
+    async purchaseCredits(
+        planId: string,
+        amount: number,
+        credits: number
+    ): Promise<CreditResult<{ newBalance: number; paymentId: string }>> {
+        try {
+            const { data, error } = await supabase.rpc('purchase_credits', {
+                p_plan_id: planId,
+                p_amount: amount,
+                p_credits: credits
+            });
+
+            if (error) {
+                return {
+                    success: false,
+                    error: { code: 'RPC_ERROR', message: error.message }
+                };
+            }
+
+            const result = data as {
+                success: boolean;
+                new_balance?: number;
+                payment_id?: string;
+                error?: string;
+            };
+
+            if (!result.success) {
+                return {
+                    success: false,
+                    error: { code: 'PURCHASE_FAILED', message: result.error || 'Unknown error' }
+                };
+            }
+
+            return {
+                success: true,
+                data: {
+                    newBalance: result.new_balance ?? 0,
+                    paymentId: result.payment_id ?? ''
+                }
+            };
+
+        } catch (err) {
+            console.error('Purchase error:', err);
+            return {
+                success: false,
+                error: { code: 'NETWORK_ERROR', message: 'Failed to process purchase' }
+            };
+        }
+    },
+
+    /**
      * Spend credit (Deduct)
      */
     async spendCredit(userId: string, description: string): Promise<void> {

@@ -37,7 +37,15 @@ class BackgroundService {
 
     // Setup message listeners
     chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-      this.handleMessage(msg, sender, sendResponse);
+      // Wrap in async IIFE to handle errors properly
+      (async () => {
+        try {
+          await this.handleMessage(msg, sender, sendResponse);
+        } catch (error) {
+          console.error('[Background] Unhandled error in message handler:', error);
+          sendResponse({ success: false, error: error.message || 'Unknown error' });
+        }
+      })();
       return true; // Keep channel open for async response
     });
 
@@ -337,6 +345,13 @@ class BackgroundService {
 
       console.log('[Background] Starting session for tab:', tabId, 'URL:', meetingUrl);
 
+      // CRITICAL: Block if no credits (Server-side enforcement)
+      if ((this.state.data.credits || 0) <= 0) {
+        console.warn('[Background] Blocked session start due to 0 credits');
+        sendResponse({ success: false, error: 'Insufficient credits. Please top up your account.' });
+        return;
+      }
+
       // Clear any previous session's transcripts from storage
       await chrome.storage.local.set({ overlayTranscripts: [], lastTranscriptTime: 0 });
       console.log('[Background] Cleared previous transcripts from storage');
@@ -418,6 +433,17 @@ class BackgroundService {
 
       await this.consoleSync.connect(consoleToken, sessionId);
 
+      // Send immediate SESSION_ACTIVE heartbeat to help console page detect session faster
+      await this.consoleSync.send({
+        type: 'SESSION_ACTIVE',
+        data: {
+          sessionId: sessionId,
+          timestamp: Date.now(),
+          interviewContext: data?.interviewContext || {}
+        }
+      });
+      console.log('[Background] Sent SESSION_ACTIVE heartbeat to console');
+
       // Notify content script to show overlay (content-script.js is the single overlay authority)
       await this.notifyContentScript(tabId);
 
@@ -479,27 +505,43 @@ class BackgroundService {
         });
         console.log('[Background] Content script injected manually');
 
-        // Wait for initialization
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Wait longer for initialization (increased from 500ms to 1000ms)
+        await new Promise(resolve => setTimeout(resolve, 1000));
       } catch (error) {
         console.error('[Background] Failed to inject content script:', error.message);
         return;
       }
     }
 
-    // Send the session started message
-    try {
-      await chrome.tabs.sendMessage(tabId, {
-        type: 'SESSION_STARTED',
-        data: {
-          sessionId: this.state.data.activeSession?.id,
-          showOverlay: true
+    // Send the session started message with retry logic
+    await this.sendSessionStartedWithRetry(tabId, 3);
+  }
+
+  // Helper function to send SESSION_STARTED with retries
+  async sendSessionStartedWithRetry(tabId, maxRetries = 3) {
+    const sessionData = {
+      sessionId: this.state.data.activeSession?.id,
+      showOverlay: true
+    };
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        await chrome.tabs.sendMessage(tabId, {
+          type: 'SESSION_STARTED',
+          data: sessionData
+        });
+        console.log('[Background] Content script notified successfully on attempt', attempt);
+        return true;
+      } catch (err) {
+        console.log(`[Background] SESSION_STARTED attempt ${attempt}/${maxRetries} failed:`, err.message);
+        if (attempt < maxRetries) {
+          // Wait before retrying (exponential backoff: 500ms, 1000ms, 2000ms)
+          await new Promise(resolve => setTimeout(resolve, 500 * attempt));
         }
-      });
-      console.log('[Background] Content script notified successfully');
-    } catch (err) {
-      console.error('[Background] Failed to notify content script:', err.message);
+      }
     }
+    console.error('[Background] Failed to notify content script after', maxRetries, 'attempts');
+    return false;
   }
 
   // Removed: directInjectOverlay - content-script.js now handles overlay creation

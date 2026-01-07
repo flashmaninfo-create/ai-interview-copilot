@@ -15,33 +15,14 @@ import {
 } from 'lucide-react';
 
 export function LiveConsolePage() {
-  const {
-    connected,
-    transcripts,
-    finalizedText,
-    hints,
-    sessionStatus,
-    sendCommand
-  } = useConsoleSync();
-
-  const [credits, setCredits] = useState<number>(0);
-  const [loading, setLoading] = useState(false);
-  const [activePanel, setActivePanel] = useState<'transcript' | 'hints'>('transcript');
-  const [quickPrompt, setQuickPrompt] = useState('');
-  const [userScrolledUp, setUserScrolledUp] = useState(false);
-
-  const transcriptRef = useRef<HTMLDivElement>(null);
-
-  /* ---------------- Credits ---------------- */
-  useEffect(() => {
-    const fetchCredits = async () => {
-      const result = await creditService.getBalance();
-      if (result.success && result.data) {
-        setCredits(result.data.balance);
-      }
-    };
-    fetchCredits();
-  }, [sessionStatus]);
+    const {
+        connected,
+        transcripts,
+        finalizedText,
+        hints,
+        sessionStatus,
+        sendCommand
+    } = useConsoleSync();
 
   /* ---------------- Auto scroll ---------------- */
   useEffect(() => {
@@ -122,7 +103,6 @@ export function LiveConsolePage() {
                       : 'Waiting for Session'}
                   </span>
                 </div>
-              </div>
             </div>
           </div>
         </div>
@@ -245,11 +225,8 @@ export function LiveConsolePage() {
                         {h.hint || h.text}
                       </div>
                     </div>
-                  ))}
-              </div>
-            )}
-          </div>
-        </div>
+                </div>
+            </header>
 
         {/* Actions Sidebar */}
         <div className="space-y-6 min-w-[300px]">
@@ -329,7 +306,5 @@ export function LiveConsolePage() {
             </div>
           </div>
         </div>
-      </div>
-    </div>
-  );
+    );
 }

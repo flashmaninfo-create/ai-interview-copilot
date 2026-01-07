@@ -138,7 +138,7 @@ export function DashboardPage() {
             </div>
 
             {/* Quick Actions */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                 <Link
                     to="/dashboard/new"
                     className={`bg-primary text-primary-foreground p-6 rounded-xl shadow-lg hover:bg-primary/90 transition-all group ${credits === 0 ? 'opacity-60 pointer-events-none' : ''
@@ -176,6 +176,25 @@ export function DashboardPage() {
                     <h3 className="text-lg font-semibold text-foreground mb-1">View History</h3>
                     <p className="text-muted-foreground text-sm">Review past sessions and scores</p>
                 </Link>
+
+                <a
+                    href="/extension.zip"
+                    download="interview-copilot-extension.zip"
+                    className="bg-surface border border-white/5 p-6 rounded-xl shadow-sm hover:border-purple-500/30 transition-all group"
+                >
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="w-12 h-12 bg-purple-500/10 rounded-lg flex items-center justify-center">
+                            <svg className="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                        </div>
+                        <svg className="w-5 h-5 text-slate-500 group-hover:translate-y-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                        </svg>
+                    </div>
+                    <h3 className="text-lg font-semibold text-white mb-1">Download Extension</h3>
+                    <p className="text-slate-400 text-sm">Get Chrome Extension (v0.1)</p>
+                </a>
             </div>
 
             {/* Recent Sessions */}

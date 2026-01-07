@@ -1,33 +1,64 @@
-// AI Service - Real LLM Integration
-// Calls OpenAI/Anthropic APIs using admin-configured provider from Supabase
+// AI Service - Real LLM Integration with Mode-Specific Prompts
+// Uses PromptEngine for strict behavior control per button mode
 
 import { supabaseREST } from './supabase-config.js';
+import { PromptEngine } from './prompt-engine.js';
 
 export class AIService {
     constructor() {
         this.cachedConfig = null;
         this.configCacheTime = 0;
-        this.CONFIG_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+        this.CONFIG_CACHE_TTL = 60 * 1000; // 1 minute - shorter TTL for faster admin updates
+        this.contextManager = null; // Set externally by BackgroundService
+    }
+
+    /**
+     * Set the InterviewContextManager reference for cached context
+     */
+    setContextManager(manager) {
+        this.contextManager = manager;
+    }
+
+    /**
+     * Pre-warm the LLM config cache (call on session start)
+     */
+    async warmup() {
+        try {
+            await this.getLLMConfig();
+            console.log('[AIService] Config pre-warmed');
+        } catch (e) {
+            console.log('[AIService] Warmup failed:', e.message);
+        }
     }
 
     async getHint(context) {
-        try {
-            // Get LLM configuration from database
-            const config = await this.getLLMConfig();
+        let configError = null;
 
-            if (!config) {
-                console.log('[AIService] No LLM configured, using fallback');
-                return this.generateFallbackHint(context);
+        try {
+            // Get LLM configuration from database (cached)
+            const configResult = await this.getLLMConfigWithError();
+
+            if (!configResult.config) {
+                console.log('[AIService] No LLM configured, using fallback. Reason:', configResult.error);
+                return this.generateFallbackHint(context, configResult.error);
             }
 
-            // Build the prompt
+            const config = configResult.config;
+
+            // Build the prompt using PromptEngine
             const prompt = this.buildPrompt(context);
 
-            // Call the appropriate LLM API
+            // Call the appropriate LLM API with mode-specific settings
             const response = await this.callLLM(config, prompt);
 
+            // Apply stealth formatting
+            const formattedResponse = PromptEngine.formatResponse(
+                response,
+                context.requestType || 'help'
+            );
+
             return {
-                hint: response,
+                hint: formattedResponse,
                 type: context.requestType || 'hint',
                 timestamp: new Date().toISOString(),
                 model: config.model.model_id,
@@ -36,84 +67,78 @@ export class AIService {
         } catch (error) {
             console.error('[AIService] Error getting hint:', error);
             // Fall back to simulated hints on error
-            return this.generateFallbackHint(context);
+            return this.generateFallbackHint(context, error.message);
         }
     }
 
-    async getLLMConfig() {
-        // Check cache first
+    async getLLMConfigWithError() {
+        // Check cache first (1 minute TTL for quicker updates after admin changes)
         if (this.cachedConfig && Date.now() - this.configCacheTime < this.CONFIG_CACHE_TTL) {
-            return this.cachedConfig;
+            console.log('[AIService] Using cached LLM config');
+            return { config: this.cachedConfig, error: null };
         }
 
         try {
+            console.log('[AIService] Fetching fresh LLM config from database...');
             const result = await supabaseREST.getLLMConfig();
 
-            if (result.success) {
+            console.log('[AIService] LLM config result:', JSON.stringify(result));
+
+            // The RPC returns { success: true/false, provider: {...}, model: {...}, error: '...' }
+            if (result && result.success === true && result.provider && result.model) {
                 this.cachedConfig = result;
                 this.configCacheTime = Date.now();
-                console.log('[AIService] Loaded LLM config:', result.provider?.name, result.model?.model_id);
-                return result;
+                console.log('[AIService] ✅ Loaded LLM config:', result.provider?.name, result.model?.model_id);
+                return { config: result, error: null };
             } else {
-                console.warn('[AIService] Failed to get LLM config:', result.error);
-                return null;
+                // Clear cache on failure so next request tries again
+                this.cachedConfig = null;
+                this.configCacheTime = 0;
+                const errorMsg = result?.error || 'NO_PROVIDER_ENABLED';
+                console.warn('[AIService] ❌ LLM config not available:', errorMsg);
+                return { config: null, error: errorMsg };
             }
         } catch (error) {
-            console.error('[AIService] Error fetching LLM config:', error);
-            return null;
+            // Clear cache on error
+            this.cachedConfig = null;
+            this.configCacheTime = 0;
+            console.error('[AIService] ❌ Error fetching LLM config:', error);
+            return { config: null, error: error.message };
         }
     }
 
+    // Legacy method for backward compatibility
+    async getLLMConfig() {
+        const result = await this.getLLMConfigWithError();
+        return result.config;
+    }
+
+    /**
+     * Force refresh the LLM config cache
+     */
+    clearConfigCache() {
+        this.cachedConfig = null;
+        this.configCacheTime = 0;
+        console.log('[AIService] Config cache cleared');
+    }
+
     buildPrompt(context) {
-        const { interviewContext = {}, requestType, transcripts, customPrompt } = context;
-        const {
-            role = 'Software Engineer',
-            experienceLevel = 'mid',
-            interviewType = 'technical',
-            techStack = 'general'
-        } = interviewContext;
+        const { requestType = 'help', customPrompt } = context;
 
-        // Get recent transcript for context
-        const recentText = transcripts?.slice(-5).map(t => t.text).join(' ') || '';
+        // Get cached interview context from InterviewContextManager
+        const cachedContext = this.contextManager?.getContext() || {};
 
-        // System message for interview assistant
-        const systemMessage = `You are an AI interview assistant helping a ${experienceLevel}-level ${role} candidate during a ${interviewType} interview. 
-Your responses should be:
-- Concise (max 2-3 sentences for hints, more for code)
-- Directly actionable
-- Tailored to ${techStack} technology stack
-- Professional but encouraging
+        // Merge with any context passed directly
+        const mergedContext = {
+            ...cachedContext,
+            role: context.interviewContext?.role || cachedContext.role,
+            experienceLevel: context.interviewContext?.experienceLevel || cachedContext.experienceLevel,
+            interviewType: context.interviewContext?.interviewType || cachedContext.interviewType,
+            techStack: context.interviewContext?.techStack || cachedContext.techStack
+        };
 
-DO NOT provide full answers - give hints and guidance that help the candidate think through the problem themselves.`;
-
-        // Build user prompt based on request type
-        let userPrompt = '';
-
-        if (requestType === 'custom' && customPrompt) {
-            userPrompt = `The candidate asks: "${customPrompt}"
-
-Recent interview context: "${recentText}"
-
-Provide helpful guidance.`;
-        } else if (requestType === 'code') {
-            userPrompt = `The candidate needs help with code. 
-Recent discussion: "${recentText}"
-
-Provide a code snippet or pseudocode that helps them understand the approach. Include brief comments.`;
-        } else if (requestType === 'explain') {
-            userPrompt = `The candidate needs an explanation.
-Topic from discussion: "${recentText}"
-
-Provide a clear, concise explanation suitable for an interview setting.`;
-        } else {
-            // Default: smart hint
-            userPrompt = `The candidate needs a hint.
-Current discussion: "${recentText}"
-
-Provide a strategic hint that helps them think through the problem without giving away the full answer.`;
-        }
-
-        return { systemMessage, userPrompt };
+        // Use PromptEngine for strict mode-based prompts
+        return PromptEngine.buildPrompt(requestType, mergedContext, customPrompt);
     }
 
     async callLLM(config, prompt) {
@@ -124,20 +149,24 @@ Provide a strategic hint that helps them think through the problem without givin
             throw new Error('No API key configured for provider');
         }
 
+        // Use prompt's temperature and maxTokens (mode-specific)
+        const temperature = prompt.temperature || 0.3;
+        const maxTokens = prompt.maxTokens || 200;
+
         switch (provider.slug) {
             case 'openai':
-                return await this.callOpenAI(apiKey, model.model_id, prompt, model.max_tokens);
+                return await this.callOpenAI(apiKey, model.model_id, prompt, maxTokens, temperature);
             case 'anthropic':
-                return await this.callAnthropic(apiKey, model.model_id, prompt, model.max_tokens);
+                return await this.callAnthropic(apiKey, model.model_id, prompt, maxTokens, temperature);
             case 'google':
-                return await this.callGoogle(apiKey, model.model_id, prompt, model.max_tokens);
+                return await this.callGoogle(apiKey, model.model_id, prompt, maxTokens, temperature);
             default:
                 throw new Error(`Unsupported provider: ${provider.slug}`);
         }
     }
 
-    async callOpenAI(apiKey, modelId, prompt, maxTokens = 500) {
-        console.log('[AIService] Calling OpenAI:', modelId);
+    async callOpenAI(apiKey, modelId, prompt, maxTokens = 200, temperature = 0.3) {
+        console.log('[AIService] Calling OpenAI:', modelId, 'temp:', temperature, 'tokens:', maxTokens);
 
         const response = await fetch('https://api.openai.com/v1/chat/completions', {
             method: 'POST',
@@ -152,7 +181,7 @@ Provide a strategic hint that helps them think through the problem without givin
                     { role: 'user', content: prompt.userPrompt }
                 ],
                 max_tokens: maxTokens,
-                temperature: 0.7
+                temperature: temperature
             })
         });
 
@@ -166,8 +195,8 @@ Provide a strategic hint that helps them think through the problem without givin
         return data.choices[0]?.message?.content || 'No response generated';
     }
 
-    async callAnthropic(apiKey, modelId, prompt, maxTokens = 500) {
-        console.log('[AIService] Calling Anthropic:', modelId);
+    async callAnthropic(apiKey, modelId, prompt, maxTokens = 200, temperature = 0.3) {
+        console.log('[AIService] Calling Anthropic:', modelId, 'temp:', temperature, 'tokens:', maxTokens);
 
         const response = await fetch('https://api.anthropic.com/v1/messages', {
             method: 'POST',
@@ -196,8 +225,8 @@ Provide a strategic hint that helps them think through the problem without givin
         return data.content[0]?.text || 'No response generated';
     }
 
-    async callGoogle(apiKey, modelId, prompt, maxTokens = 500) {
-        console.log('[AIService] Calling Google AI:', modelId);
+    async callGoogle(apiKey, modelId, prompt, maxTokens = 200, temperature = 0.3) {
+        console.log('[AIService] Calling Google AI:', modelId, 'temp:', temperature, 'tokens:', maxTokens);
 
         const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/${modelId}:generateContent?key=${apiKey}`, {
             method: 'POST',
@@ -212,7 +241,7 @@ Provide a strategic hint that helps them think through the problem without givin
                 }],
                 generationConfig: {
                     maxOutputTokens: maxTokens,
-                    temperature: 0.7
+                    temperature: temperature
                 }
             })
         });
@@ -228,31 +257,46 @@ Provide a strategic hint that helps them think through the problem without givin
     }
 
     // Fallback hints when no LLM is configured or on error
-    generateFallbackHint(context) {
-        const { requestType, transcripts, customPrompt } = context;
-        const recentText = transcripts?.slice(-4).map(t => t.text).join(' ').toLowerCase() || '';
+    generateFallbackHint(context, errorReason = null) {
+        const { requestType, customPrompt } = context;
+        const cachedContext = this.contextManager?.getContext() || {};
+        const recentText = cachedContext.recentTranscript?.toLowerCase() || '';
 
         let hint = '';
 
-        if (requestType === 'custom' && customPrompt) {
-            hint = `I received your question: "${customPrompt}". Please configure an LLM provider in the admin panel to get AI-powered responses.`;
-        } else if (requestType === 'code') {
-            hint = `// Code generation requires an LLM provider
-// Please configure OpenAI or Anthropic in the admin panel
-// Steps:
-// 1. Go to Admin > LLM Providers
-// 2. Add your API key
-// 3. Enable the provider`;
-        } else if (requestType === 'explain') {
-            hint = 'Explanation feature requires an LLM provider. Please configure one in the admin panel.';
-        } else {
-            // Smart fallback hints based on keywords
-            if (recentText.includes('complexity') || recentText.includes('big o')) {
-                hint = "Tip: Mention time vs space tradeoffs. If using a hash map, it's O(1) time but O(n) space.";
-            } else if (recentText.includes('scale')) {
-                hint = "Tip: Focus on horizontal scaling - Load Balancers, Caching (Redis), Database Sharding.";
+        // If we have a specific error reason, include it
+        if (errorReason) {
+            if (errorReason === 'NO_PROVIDER_ENABLED') {
+                hint = '⚠️ No LLM provider is enabled.\n\nGo to Admin Panel → Providers and enable OpenAI, Anthropic, or Google.';
+            } else if (errorReason === 'NO_MODEL_AVAILABLE') {
+                hint = '⚠️ Provider enabled but no model selected.\n\nGo to Admin Panel → Providers, expand the provider, and enable at least one model.';
+            } else if (errorReason === 'UNAUTHORIZED') {
+                hint = '⚠️ Please log in to use AI assistance.';
+            } else if (errorReason.includes('API')) {
+                hint = `⚠️ API Error: ${errorReason}\n\nCheck your API key in Admin Panel → Providers.`;
             } else {
-                hint = "💡 Hint: Clarify the problem first. Ask: 'Just to make sure I understand, the goal is to...' This buys thinking time.";
+                hint = `⚠️ ${errorReason}`;
+            }
+        } else if (requestType === 'custom' && customPrompt) {
+            hint = `⚠️ LLM not configured.\n\nGo to Admin Panel → Providers to enable an LLM.`;
+        } else if (requestType === 'code') {
+            hint = `// ⚠️ LLM not configured
+// Go to Admin Panel → Providers
+// Enable OpenAI or Anthropic with an API key`;
+        } else if (requestType === 'explain') {
+            hint = '⚠️ LLM not configured.\n\nEnable a provider in Admin Panel to get explanations.';
+        } else if (requestType === 'answer') {
+            hint = '⚠️ LLM not configured.\n\nEnable a provider in Admin Panel to get answers.';
+        } else {
+            // Smart fallback hints based on keywords (when no error, just no config)
+            if (recentText.includes('complexity') || recentText.includes('big o')) {
+                hint = "• Hash map: O(1) lookup\n• Array: O(n) search\n• Mention space trade-offs";
+            } else if (recentText.includes('scale') || recentText.includes('system')) {
+                hint = "• Horizontal scaling\n• Load balancers\n• Caching (Redis)\n• DB sharding";
+            } else if (recentText.includes('react') || recentText.includes('component')) {
+                hint = "• useState/useEffect\n• Props vs State\n• Memoization";
+            } else {
+                hint = "⚠️ LLM not configured.\n\nGo to Admin Panel → Providers to enable AI assistance.";
             }
         }
 
@@ -260,7 +304,8 @@ Provide a strategic hint that helps them think through the problem without givin
             hint,
             type: requestType || 'hint',
             timestamp: new Date().toISOString(),
-            fallback: true
+            fallback: true,
+            error: errorReason
         };
     }
 }

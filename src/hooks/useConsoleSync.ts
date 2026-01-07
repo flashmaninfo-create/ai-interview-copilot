@@ -67,6 +67,76 @@ export function useConsoleSync() {
             setSessionId(urlSessionId);
         }
 
+        // Fetch existing data from sync_messages for a session (transcripts, hints)
+        const fetchExistingData = async (sid: string) => {
+            console.log('[useConsoleSync] Fetching existing data for session:', sid);
+            try {
+                const { data, error } = await supabase
+                    .from('sync_messages')
+                    .select('*')
+                    .eq('session_id', sid)
+                    .eq('source', 'extension')
+                    .order('created_at', { ascending: true });
+
+                if (error) {
+                    console.error('[useConsoleSync] Error fetching existing data:', error);
+                    return;
+                }
+
+                if (data && data.length > 0) {
+                    console.log('[useConsoleSync] Found', data.length, 'existing messages');
+
+                    let accumulatedText = '';
+                    const existingTranscripts: Transcript[] = [];
+                    const existingHints: Hint[] = [];
+
+                    for (const msg of data) {
+                        if (msg.message_type === 'TRANSCRIPTION_STATE' && msg.payload) {
+                            if (msg.payload.finalizedText) {
+                                accumulatedText = msg.payload.finalizedText;
+                            }
+                            if (msg.payload.isFinal && msg.payload.text) {
+                                existingTranscripts.push({
+                                    text: msg.payload.text,
+                                    id: msg.id || Date.now(),
+                                    timestamp: new Date(msg.created_at).toLocaleTimeString(),
+                                    confidence: msg.payload.confidence
+                                });
+                            }
+                        }
+                        if (msg.message_type === 'TRANSCRIPTION' && msg.payload) {
+                            existingTranscripts.push({
+                                ...msg.payload,
+                                id: msg.payload.id || msg.id || Date.now(),
+                                timestamp: new Date(msg.created_at).toLocaleTimeString()
+                            });
+                        }
+                        if ((msg.message_type === 'HINT_RECEIVED' || msg.message_type === 'EXTENSION_HINT') && msg.payload) {
+                            existingHints.push(msg.payload);
+                        }
+                    }
+
+                    if (accumulatedText) {
+                        setFinalizedText(accumulatedText);
+                        setHasReceivedData(true);
+                        setSessionStatus('active');
+                    }
+                    if (existingTranscripts.length > 0) {
+                        setTranscripts(existingTranscripts);
+                        setHasReceivedData(true);
+                        setSessionStatus('active');
+                    }
+                    if (existingHints.length > 0) {
+                        setHints(existingHints.reverse()); // Most recent first
+                    }
+
+                    console.log('[useConsoleSync] Loaded existing data - transcripts:', existingTranscripts.length, 'hints:', existingHints.length);
+                }
+            } catch (err) {
+                console.error('[useConsoleSync] fetchExistingData error:', err);
+            }
+        };
+
         // 2. Automatic Session Discovery (no user_id filter to avoid auth mismatch)
         const checkActiveSession = async () => {
             console.log('[useConsoleSync] Checking for active sessions...');
@@ -108,6 +178,10 @@ export function useConsoleSync() {
                     setSessionId(session.id);
                     setToken(session.console_token);
                     setSessionStatus('session_found');
+                    setConnected(true); // Set connected immediately so buttons work
+
+                    // Fetch existing data immediately
+                    fetchExistingData(session.id);
                 }
             } else {
                 console.log('[useConsoleSync] No recent active session found.');
@@ -118,13 +192,13 @@ export function useConsoleSync() {
         // Initial check
         checkActiveSession();
 
-        // 3. Polling backup: Check every 5 seconds in case realtime doesn't work
+        // 3. Polling backup: Check every 2 seconds for faster initial connection
         const pollInterval = setInterval(() => {
             if (!sessionId) {
                 console.log('[useConsoleSync] Polling for sessions...');
                 checkActiveSession();
             }
-        }, 5000);
+        }, 2000);
 
         // 4. Listen for NEW sessions and UPDATES (Realtime)
         console.log('[useConsoleSync] Subscribing to session changes...');
@@ -235,7 +309,18 @@ export function useConsoleSync() {
                         }
                     }
                     if (type === 'HINT_RECEIVED' || type === 'EXTENSION_HINT') {
-                        setHints(prev => [data, ...prev]);
+                        // Add unique ID and deduplicate
+                        const newHint = {
+                            ...data,
+                            id: data.id || payload.new.id || Date.now()
+                        };
+                        setHints(prev => {
+                            // Prevent duplicates by checking existing ids
+                            if (prev.some(h => h.id === newHint.id)) {
+                                return prev;
+                            }
+                            return [newHint, ...prev];
+                        });
                     }
                     if (type === 'SCREENSHOT_ADDED' || type === 'EXTENSION_SCREENSHOT') {
                         setScreenshots(prev => [data, ...prev]);

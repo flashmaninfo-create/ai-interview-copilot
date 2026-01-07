@@ -96,8 +96,8 @@ export function LiveConsolePage() {
             <header className="bg-gradient-to-r from-primary/90 to-primary/70 text-white shadow-lg rounded-xl mb-6 border border-white/10">
                 <div className="px-6 py-4 flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                        <Link 
-                            to="/dashboard" 
+                        <Link
+                            to="/dashboard"
                             className="p-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors"
                             title="Back to Dashboard"
                         >
@@ -147,12 +147,21 @@ export function LiveConsolePage() {
 
                         <div className="space-y-3">
                             <button
-                                onClick={() => requestHint('hint')}
+                                onClick={() => requestHint('help')}
                                 disabled={loading || !connected}
                                 className="w-full py-3 px-4 bg-primary text-white rounded-lg font-medium hover:bg-opacity-90 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
                             >
                                 <Sparkles className="w-4 h-4" />
                                 Help Me
+                            </button>
+
+                            <button
+                                onClick={() => requestHint('answer')}
+                                disabled={loading || !connected}
+                                className="w-full py-3 px-4 bg-primary text-white rounded-lg font-medium hover:bg-opacity-90 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+                            >
+                                <Sparkles className="w-4 h-4" />
+                                Answer
                             </button>
 
                             <button

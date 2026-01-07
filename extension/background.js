@@ -6,6 +6,7 @@ import { AIService } from './lib/ai-service.js';
 import { ConsoleSync } from './lib/console-sync.js';
 import { supabaseREST } from './lib/supabase-config.js';
 import { TranscriptionManager } from './lib/transcription-manager.js';
+import { InterviewContextManager } from './lib/interview-context-manager.js';
 
 class BackgroundService {
   constructor() {
@@ -17,6 +18,10 @@ class BackgroundService {
 
     // Single source of truth for transcription state (append-only, no flicker)
     this.transcriptionManager = new TranscriptionManager();
+
+    // Rolling interview context for instant AI responses
+    this.interviewContext = new InterviewContextManager();
+    this.aiService.setContextManager(this.interviewContext);
 
     this.sessionActive = false;
     this.tabId = null;
@@ -338,19 +343,37 @@ class BackgroundService {
 
       this.sessionActive = true;
 
+      // Initialize interview context for this session
+      this.interviewContext.setMeta(data?.interviewContext || {});
+      this.interviewContext.clear(); // Clear any previous session context
+
+      // Pre-warm AI config for instant button responses
+      this.aiService.warmup();
+
       // Initialize session state will be done after DB creation attempt to ensure ID consistency
       // Old initialization removed from here to avoid overwriting IDs
 
 
       await this.state.save();
 
-      // Start real audio capture with Deepgram (fallback to mock if fails)
+      // Start real audio capture with Deepgram (NO mock fallback - expose real errors)
       try {
         await this.startRealAudioCapture(tabId);
         console.log('[Background] Real audio capture started');
       } catch (error) {
-        console.log('[Background] Real audio capture failed, using mock:', error.message);
-        this.startMockTranscription();
+        console.error('[Background] Real audio capture failed:', error.message);
+        // Show error in overlay instead of silently using mock data
+        setTimeout(() => {
+          this.sendToOverlay({
+            type: 'TRANSCRIPTION_STATE',
+            data: {
+              finalizedText: '',
+              interimText: '',
+              displayText: '⚠️ Audio capture failed: ' + error.message + '. Please ensure you have granted permissions.'
+            }
+          });
+        }, 1000);
+        // Do NOT start mock transcription - let user see the real error
       }
 
       // Connect console sync
@@ -664,6 +687,9 @@ class BackgroundService {
       // Clear TranscriptionManager state (single source of truth cleanup)
       this.transcriptionManager.clear();
 
+      // Clear InterviewContextManager (rolling context window cleanup)
+      this.interviewContext.clear();
+
       // Cancel any pending console debounce timer
       if (this.consoleTranscriptTimeout) {
         clearTimeout(this.consoleTranscriptTimeout);
@@ -722,6 +748,9 @@ class BackgroundService {
       // Clear TranscriptionManager state
       this.transcriptionManager.clear();
 
+      // Clear InterviewContextManager
+      this.interviewContext.clear();
+
       // Cancel any pending console debounce timer
       if (this.consoleTranscriptTimeout) {
         clearTimeout(this.consoleTranscriptTimeout);
@@ -752,8 +781,38 @@ class BackgroundService {
       return;
     }
 
+    // Debounce: Prevent multiple requests within 2 seconds
+    const now = Date.now();
+    if (this.lastHintRequestTime && now - this.lastHintRequestTime < 2000) {
+      console.log('[Background] Debouncing hint request - too soon after last request');
+      if (sendResponse) sendResponse({ error: 'Please wait before requesting another hint' });
+      return;
+    }
+    this.lastHintRequestTime = now;
+
+    // Prevent concurrent requests
+    if (this.hintRequestPending) {
+      console.log('[Background] Hint request already pending');
+      if (sendResponse) sendResponse({ error: 'Request already in progress' });
+      return;
+    }
+    this.hintRequestPending = true;
+
     try {
-      // Check credits
+      // Fetch fresh credits from Supabase before checking
+      try {
+        const creditsResult = await supabaseREST.getCredits();
+        if (creditsResult.success) {
+          this.state.data.credits = creditsResult.balance;
+          console.log('[Background] Fresh credits from DB:', creditsResult.balance);
+        } else {
+          console.warn('[Background] Could not fetch credits, using cached:', this.state.data.credits);
+        }
+      } catch (creditError) {
+        console.warn('[Background] Credit fetch error, using cached:', creditError.message);
+      }
+
+      // Check credits (now using potentially refreshed value)
       if (this.state.data.credits <= 0) {
         throw new Error('No credits remaining');
       }
@@ -781,8 +840,8 @@ class BackgroundService {
       this.state.data.credits--;
       await this.state.save();
 
-      // Update overlay
-      await this.updateOverlay({ loading: false, hint: response.hint });
+      // Update overlay with response and type
+      await this.updateOverlay({ loading: false, hint: response.hint, type: response.type });
 
       // Send to console
       await this.consoleSync.send({
@@ -802,6 +861,9 @@ class BackgroundService {
       if (sendResponse) {
         sendResponse({ success: false, error: error.message });
       }
+    } finally {
+      // Clear pending flag so next request can proceed
+      this.hintRequestPending = false;
     }
   }
 
@@ -901,6 +963,13 @@ class BackgroundService {
       isFinal: transcript.isFinal
     };
     this.transcriptionBuffer.push(transcriptEntry);
+
+    // Feed to InterviewContextManager for rolling 90-second context window
+    this.interviewContext.addTranscript(
+      transcript.text,
+      Date.now(),
+      transcript.isFinal
+    );
 
     // Auto-trigger in auto mode (only on final results)
     if (transcript.isFinal && this.state.data.settings.mode === 'auto') {
@@ -1005,25 +1074,17 @@ class BackgroundService {
   }
 
   async sendToOverlay(message) {
-    if (!this.tabId) return;
+    if (!this.tabId) {
+      console.log('[Background] sendToOverlay: No tabId');
+      return;
+    }
 
     try {
-      // Method 1: Direct postMessage to iframe
-      await chrome.scripting.executeScript({
-        target: { tabId: this.tabId },
-        func: (msg) => {
-          const overlay = document.getElementById('interview-copilot-overlay');
-          if (overlay && overlay.contentWindow) {
-            console.log('[Injected] Forwarding message to overlay iframe:', msg.type);
-            overlay.contentWindow.postMessage(msg, '*');
-            return { success: true };
-          }
-          return { success: false, reason: 'no overlay' };
-        },
-        args: [message]
-      });
+      // Send directly to content script (overlay is a direct DOM element, not iframe)
+      await chrome.tabs.sendMessage(this.tabId, message);
+      console.log('[Background] Sent to overlay:', message.type);
     } catch (error) {
-      console.log('[Background] Could not send to overlay via injection:', error.message);
+      console.log('[Background] Could not send to overlay:', error.message);
     }
   }
 
@@ -1064,11 +1125,19 @@ class BackgroundService {
   }
 
   async updateOverlay(data) {
-    // Send to overlay iframe using postMessage
-    await this.sendToOverlay({
-      type: 'UPDATE_OVERLAY',
-      data
-    });
+    // For hints, send HINT_RECEIVED message
+    if (data.hint) {
+      await this.sendToOverlay({
+        type: 'HINT_RECEIVED',
+        data: { hint: data.hint, type: data.type || 'help' }
+      });
+    } else if (data.error) {
+      await this.sendToOverlay({
+        type: 'HINT_RECEIVED',
+        data: { hint: data.error, type: 'error' }
+      });
+    }
+    // Loading states are handled by the overlay itself
   }
 
   async toggleOverlay() {

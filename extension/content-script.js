@@ -18,6 +18,7 @@
     let hintContainer = null;
     let sessionId = null;
     let consoleToken = null;
+    let sessionActive = false; // Track if session is active - prevents overlay showing without session
 
     // Create the overlay matching console dashboard
     function createOverlay() {
@@ -34,8 +35,12 @@
           Interview Copilot
         </div>
         <div class="ic-controls">
-          <button class="ic-btn ic-btn-icon" id="ic-minimize" title="Minimize">−</button>
-          <button class="ic-btn ic-btn-icon" id="ic-hide" title="Hide (Ctrl+Shift+O)">×</button>
+          <button class="ic-btn ic-btn-icon" id="ic-minimize" title="Minimize">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          </button>
+          <button class="ic-btn ic-btn-icon" id="ic-hide" title="Hide (Ctrl+Shift+O)">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
         </div>
       </div>
       
@@ -43,19 +48,33 @@
         <!-- Sidebar with Action Buttons (Left Side) -->
         <div class="ic-sidebar">
           <button class="ic-sidebar-btn" id="ic-help-btn" title="Help Me">
-            <span class="ic-sidebar-icon">💡</span>
+            <span class="ic-sidebar-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></svg>
+            </span>
             <span class="ic-sidebar-label">Help</span>
           </button>
+          <button class="ic-sidebar-btn ic-btn-answer" id="ic-answer-btn" title="Full Answer">
+            <span class="ic-sidebar-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6V2H8"/><path d="m8 18-4 4V8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2Z"/><path d="M2 12h2"/><path d="M9 11v2"/><path d="M15 11v2"/><path d="M20 12h2"/></svg>
+            </span>
+            <span class="ic-sidebar-label">Answer</span>
+          </button>
           <button class="ic-sidebar-btn" id="ic-code-btn" title="Generate Code">
-            <span class="ic-sidebar-icon">💻</span>
+            <span class="ic-sidebar-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+            </span>
             <span class="ic-sidebar-label">Code</span>
           </button>
           <button class="ic-sidebar-btn" id="ic-explain-btn" title="Explain">
-            <span class="ic-sidebar-icon">📖</span>
+            <span class="ic-sidebar-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
+            </span>
             <span class="ic-sidebar-label">Explain</span>
           </button>
           <button class="ic-sidebar-btn" id="ic-screenshot-btn" title="Screenshot">
-            <span class="ic-sidebar-icon">📸</span>
+            <span class="ic-sidebar-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+            </span>
             <span class="ic-sidebar-label">Snap</span>
           </button>
         </div>
@@ -65,10 +84,12 @@
           <!-- Tab Navigation -->
           <div class="ic-tabs">
             <button class="ic-tab ic-tab-active" id="ic-tab-transcript" data-tab="transcript">
-              📝 Transcript
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+              Transcript
             </button>
             <button class="ic-tab" id="ic-tab-ai" data-tab="ai">
-              🤖 AI Hints
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+              AI Hints
             </button>
           </div>
           
@@ -76,14 +97,20 @@
             <!-- Transcript Panel -->
             <div class="ic-panel ic-panel-active" id="ic-panel-transcript">
               <div class="ic-transcript" id="ic-transcript">
-                <div class="ic-placeholder">🎤 Listening for audio...</div>
+                <div class="ic-placeholder">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+                  Listening for audio...
+                </div>
               </div>
             </div>
 
             <!-- AI Hints Panel -->
             <div class="ic-panel" id="ic-panel-ai" style="display: none;">
               <div class="ic-hints" id="ic-hints">
-                <div class="ic-placeholder">Click a button to get AI assistance</div>
+                <div class="ic-placeholder">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+                  Click a button to get AI assistance
+                </div>
               </div>
             </div>
           </div>
@@ -93,7 +120,9 @@
       <div class="ic-footer">
         <div class="ic-prompt-box">
           <input type="text" id="ic-quick-prompt" placeholder="Ask AI anything..." class="ic-prompt-input">
-          <button id="ic-send-prompt" class="ic-prompt-btn" title="Send">➤</button>
+          <button id="ic-send-prompt" class="ic-prompt-btn" title="Send">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" x2="11" y1="2" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+          </button>
         </div>
         <a href="#" id="ic-open-console" class="ic-console-link">
           Open Full Console →
@@ -129,7 +158,11 @@
         // Event Listeners - Action Buttons
         document.getElementById('ic-help-btn').addEventListener('click', (e) => {
             e.stopPropagation();
-            requestAI('hint');
+            requestAI('help');
+        });
+        document.getElementById('ic-answer-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            requestAI('answer');
         });
         document.getElementById('ic-code-btn').addEventListener('click', (e) => {
             e.stopPropagation();
@@ -402,9 +435,32 @@
         transcriptContainer.scrollTop = transcriptContainer.scrollHeight;
     }
 
+    // Track last hint to prevent duplicates
+    let lastHintTimestamp = 0;
+    let lastHintText = '';
+
     // Add hint
     function addHint(hint) {
+        if (!hintContainer) {
+            hintContainer = document.getElementById('ic-hints');
+        }
         if (!hintContainer) return;
+
+        // Deduplicate: prevent same hint from being added multiple times
+        const hintText = hint.hint || hint.text || '';
+        const now = Date.now();
+
+        // Skip if same hint text within 3 seconds
+        if (hintText === lastHintText && (now - lastHintTimestamp) < 3000) {
+            console.log('[Content] Skipping duplicate hint');
+            return;
+        }
+
+        lastHintTimestamp = now;
+        lastHintText = hintText;
+
+        // Auto-switch to hints tab
+        switchTab('ai');
 
         // Remove placeholder and loading
         const placeholder = hintContainer.querySelector('.ic-placeholder');
@@ -413,12 +469,28 @@
         const loading = hintContainer.querySelector('.ic-loading');
         if (loading) loading.remove();
 
-        const icon = hint.type === 'code' ? '💻' : hint.type === 'explain' ? '📖' : '💡';
+        // Choose icon and class based on type
+        let iconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>';
+        let iconClass = '';
+
+        if (hint.type === 'code') {
+            iconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>';
+            iconClass = 'ic-hint-code';
+        } else if (hint.type === 'explain') {
+            iconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>';
+            iconClass = 'ic-hint-explain';
+        } else if (hint.type === 'answer') {
+            iconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6V2H8"/><path d="m8 18-4 4V8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2Z"/></svg>';
+            iconClass = 'ic-hint-answer';
+        } else if (hint.type === 'error') {
+            iconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>';
+            iconClass = 'ic-hint-error';
+        }
 
         const hintEl = document.createElement('div');
         hintEl.className = 'ic-hint';
         hintEl.innerHTML = `
-      <span class="ic-hint-icon">${icon}</span>
+      <span class="ic-hint-icon ${iconClass}">${iconSvg}</span>
       <div class="ic-hint-content">${formatHintContent(hint.hint || hint.text)}</div>
     `;
 
@@ -450,11 +522,13 @@
 
             case 'SESSION_STARTED':
                 sessionId = message.data?.sessionId;
+                sessionActive = true;
                 showOverlay();
                 sendResponse({ success: true });
                 break;
 
             case 'SESSION_STOPPED':
+                sessionActive = false;
                 // Keep overlay visible but update status
                 if (overlay) {
                     const statusDot = overlay.querySelector('.ic-status-dot');
@@ -485,6 +559,11 @@
                 else showOverlay();
                 sendResponse({ success: true });
                 break;
+
+            case 'SHOW_OVERLAY':
+                showOverlay();
+                sendResponse({ success: true });
+                break;
         }
 
         return true;
@@ -503,6 +582,36 @@
             if (overlay && !isHidden) requestAI('hint');
         }
     });
+
+    // FALLBACK: Listen for storage changes (in case direct messages fail)
+    // GUARD: Only process if session is active to prevent overlay appearing without session
+    chrome.storage.onChanged.addListener((changes, area) => {
+        if (!sessionActive) return; // Skip if no active session
+
+        if (area === 'local' && changes.overlayTranscripts) {
+            const transcripts = changes.overlayTranscripts.newValue || [];
+            if (transcripts.length > 0) {
+                const latest = transcripts[transcripts.length - 1];
+                console.log('[Content] Fallback: Got transcript from storage:', latest.text?.substring(0, 50));
+
+                // Build finalized text from all transcripts
+                const finalizedText = transcripts
+                    .filter(t => t.isFinal)
+                    .map(t => t.text)
+                    .join(' ');
+
+                updateTranscript({
+                    finalizedText: finalizedText || latest.finalizedText || '',
+                    interimText: latest.isFinal ? '' : latest.text,
+                    displayText: finalizedText || latest.text || ''
+                });
+            }
+        }
+    });
+
+    // Initial check removed - we no longer auto-show overlay from stored transcripts
+    // Overlay only appears when SESSION_STARTED message is received
+    // This prevents the overlay from appearing repeatedly on page load
 
     console.log('[Content] Content script ready');
 })();

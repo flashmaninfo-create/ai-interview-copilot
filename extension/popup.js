@@ -2,47 +2,85 @@
 
 const CONSOLE_URL = 'http://localhost:5173/dashboard/console';
 
-// Elements
+// Elements - Views
 const loginView = document.getElementById('loginView');
-const setupView = document.getElementById('setupView');
+const connectView = document.getElementById('connectView');
+const connectedView = document.getElementById('connectedView');
 const activeView = document.getElementById('activeView');
 
+// Login elements
 const emailInput = document.getElementById('email');
 const passwordInput = document.getElementById('password');
 const loginBtn = document.getElementById('loginBtn');
 const signupBtn = document.getElementById('signupBtn');
-const logoutBtn = document.getElementById('logoutBtn');
 const authError = document.getElementById('authError');
 
-const userEmailSpan = document.getElementById('userEmail');
-const creditsCountSpan = document.getElementById('creditsCount');
-const meetingUrlInput = document.getElementById('meetingUrl');
-const startBtn = document.getElementById('startBtn');
+// Connect view elements
+const userEmailConnect = document.getElementById('userEmailConnect');
+const logoutBtnConnect = document.getElementById('logoutBtnConnect');
+const meetingUrlConnect = document.getElementById('meetingUrlConnect');
+const connectBtn = document.getElementById('connectBtn');
+const creditsCountConnect = document.getElementById('creditsCountConnect');
 
+// Connected view elements
+const userEmailConnected = document.getElementById('userEmailConnected');
+const logoutBtnConnected = document.getElementById('logoutBtnConnected');
+const connectedPlatformIcon = document.getElementById('connectedPlatformIcon');
+const connectedPlatformName = document.getElementById('connectedPlatformName');
+const startBtn = document.getElementById('startBtn');
+const disconnectFromConnectedBtn = document.getElementById('disconnectFromConnectedBtn');
+const creditsCountConnected = document.getElementById('creditsCountConnected');
+
+// Active view elements
 const sessionTimer = document.getElementById('sessionTimer');
 const sessionPlatform = document.getElementById('sessionPlatform');
 const openConsoleBtn = document.getElementById('openConsoleBtn');
-const cancelBtn = document.getElementById('cancelBtn');
-const stopBtn = document.getElementById('stopBtn');
+const showOverlayBtn = document.getElementById('showOverlayBtn');
+const disconnectBtn = document.getElementById('disconnectBtn');
+const finishBtn = document.getElementById('finishBtn');
 
+// State
 let timerInterval = null;
+let connectedMeeting = null; // { tabId, url, platform }
 
 // Initialize popup
 document.addEventListener('DOMContentLoaded', async () => {
     await checkSessionStatus();
+
+    // Auto-detect meeting URL from current tab
+    try {
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (tab?.url && isMeetingUrl(tab.url)) {
+            meetingUrlConnect.value = tab.url;
+            meetingUrlConnect.placeholder = 'Meeting detected!';
+        }
+    } catch (e) {
+        console.log('Could not auto-detect meeting URL:', e);
+    }
 });
+
+function isMeetingUrl(url) {
+    return url.includes('meet.google.com') ||
+        url.includes('zoom.us') ||
+        url.includes('teams.microsoft.com') ||
+        url.includes('webex.com');
+}
 
 async function checkSessionStatus() {
     try {
         const response = await chrome.runtime.sendMessage({ type: 'GET_SESSION_STATUS' });
-
-        // Check stored auth
-        const stored = await chrome.storage.local.get(['user', 'credits']);
+        const stored = await chrome.storage.local.get(['user', 'credits', 'connectedMeeting']);
 
         if (response.active) {
+            // Session is actively running
             showActiveView(response);
+        } else if (stored.connectedMeeting) {
+            // Meeting connected but session not started
+            connectedMeeting = stored.connectedMeeting;
+            showConnectedView(stored.user, stored.credits || response.credits);
         } else if (stored.user) {
-            showSetupView(stored.user, stored.credits || response.credits);
+            // Logged in but no meeting connected
+            showConnectView(stored.user, stored.credits || response.credits);
         } else {
             showLoginView();
         }
@@ -52,36 +90,61 @@ async function checkSessionStatus() {
     }
 }
 
+// View Functions
 function showLoginView() {
     loginView.style.display = 'block';
-    setupView.style.display = 'none';
+    connectView.style.display = 'none';
+    connectedView.style.display = 'none';
     activeView.style.display = 'none';
 }
 
-function showSetupView(user, credits) {
+function showConnectView(user, credits) {
     loginView.style.display = 'none';
-    setupView.style.display = 'block';
+    connectView.style.display = 'block';
+    connectedView.style.display = 'none';
     activeView.style.display = 'none';
 
-    userEmailSpan.textContent = user.email;
-    creditsCountSpan.textContent = credits || 10;
+    userEmailConnect.textContent = user.email;
+    creditsCountConnect.textContent = credits || 0;
+}
+
+function showConnectedView(user, credits) {
+    loginView.style.display = 'none';
+    connectView.style.display = 'none';
+    connectedView.style.display = 'block';
+    activeView.style.display = 'none';
+
+    userEmailConnected.textContent = user.email;
+    creditsCountConnected.textContent = credits || 0;
+
+    // Show meeting platform info
+    if (connectedMeeting) {
+        const platform = detectPlatformInfo(connectedMeeting.url);
+        connectedPlatformIcon.textContent = platform.icon;
+        connectedPlatformName.textContent = platform.name;
+    }
 }
 
 function showActiveView(sessionData) {
     loginView.style.display = 'none';
-    setupView.style.display = 'none';
+    connectView.style.display = 'none';
+    connectedView.style.display = 'none';
     activeView.style.display = 'block';
 
-    sessionPlatform.textContent = detectPlatformName(sessionData.meetingUrl || '');
+    sessionPlatform.textContent = detectPlatformName(sessionData.meetingUrl || connectedMeeting?.url || '');
     startTimer(sessionData.sessionTime || 0);
 }
 
+function detectPlatformInfo(url) {
+    if (url.includes('meet.google.com')) return { name: 'Google Meet', icon: '📹' };
+    if (url.includes('zoom.us')) return { name: 'Zoom', icon: '🎥' };
+    if (url.includes('teams.microsoft.com')) return { name: 'Microsoft Teams', icon: '💼' };
+    if (url.includes('webex.com')) return { name: 'Webex', icon: '🌐' };
+    return { name: 'Meeting', icon: '🎤' };
+}
+
 function detectPlatformName(url) {
-    if (url.includes('meet.google.com')) return 'Google Meet';
-    if (url.includes('zoom.us')) return 'Zoom';
-    if (url.includes('teams.microsoft.com')) return 'Microsoft Teams';
-    if (url.includes('webex.com')) return 'Webex';
-    return 'Meeting';
+    return detectPlatformInfo(url).name;
 }
 
 function startTimer(elapsedSeconds = 0) {
@@ -92,7 +155,6 @@ function startTimer(elapsedSeconds = 0) {
         const mins = Math.floor((totalSeconds % 3600) / 60);
         const secs = totalSeconds % 60;
 
-        // Format: show hours only if > 0, otherwise just minutes and seconds
         if (hours > 0) {
             sessionTimer.textContent = `${hours}h ${mins}m ${secs}s`;
         } else if (mins > 0) {
@@ -139,7 +201,7 @@ loginBtn.addEventListener('click', async () => {
 
         if (response.success) {
             await chrome.storage.local.set({ user: response.user, credits: response.user.credits });
-            showSetupView(response.user, response.user.credits);
+            showConnectView(response.user, response.user.credits);
         } else {
             authError.textContent = response.error || 'Login failed';
         }
@@ -175,7 +237,7 @@ signupBtn.addEventListener('click', async () => {
 
         if (response.success) {
             await chrome.storage.local.set({ user: response.user, credits: response.user.credits });
-            showSetupView(response.user, response.user.credits);
+            showConnectView(response.user, response.user.credits);
         } else {
             authError.textContent = response.error || 'Signup failed';
         }
@@ -186,26 +248,96 @@ signupBtn.addEventListener('click', async () => {
     }
 });
 
-logoutBtn.addEventListener('click', async () => {
+// Logout handlers for both views
+async function handleLogout() {
     await chrome.runtime.sendMessage({ type: 'LOGOUT' });
-    await chrome.storage.local.remove(['user', 'credits']);
+    await chrome.storage.local.remove(['user', 'credits', 'connectedMeeting']);
+    connectedMeeting = null;
     showLoginView();
-});
+}
 
-// Session Handlers
-startBtn.addEventListener('click', async () => {
-    startBtn.disabled = true;
+logoutBtnConnect.addEventListener('click', handleLogout);
+logoutBtnConnected.addEventListener('click', handleLogout);
+
+// Connect Meeting Handler
+connectBtn.addEventListener('click', async () => {
+    connectBtn.disabled = true;
 
     try {
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-        const meetingUrl = meetingUrlInput.value || tab?.url || '';
+        const meetingUrl = meetingUrlConnect.value || tab?.url || '';
 
+        if (!meetingUrl) {
+            alert('Please enter a meeting URL or open a meeting tab');
+            return;
+        }
+
+        // Store connected meeting info
+        connectedMeeting = {
+            tabId: tab?.id,
+            url: meetingUrl,
+            platform: detectPlatformName(meetingUrl)
+        };
+
+        await chrome.storage.local.set({ connectedMeeting });
+
+        const stored = await chrome.storage.local.get(['user', 'credits']);
+        showConnectedView(stored.user, stored.credits);
+
+    } catch (error) {
+        alert('Error connecting to meeting: ' + error.message);
+    } finally {
+        connectBtn.disabled = false;
+    }
+});
+
+// Disconnect from Connected View (before session starts)
+disconnectFromConnectedBtn.addEventListener('click', async () => {
+    connectedMeeting = null;
+    await chrome.storage.local.remove(['connectedMeeting']);
+
+    const stored = await chrome.storage.local.get(['user', 'credits']);
+    showConnectView(stored.user, stored.credits);
+});
+
+// Start Session Handler
+startBtn.addEventListener('click', async () => {
+    // Validate required fields for proper LLM context
+    const roleInput = document.getElementById('roleInput');
+    const techStackInput = document.getElementById('techStack');
+
+    let hasError = false;
+
+    // Clear previous error states
+    roleInput.classList.remove('error');
+    techStackInput.classList.remove('error');
+
+    if (!roleInput.value.trim()) {
+        roleInput.classList.add('error');
+        roleInput.focus();
+        hasError = true;
+    }
+
+    if (!techStackInput.value.trim()) {
+        techStackInput.classList.add('error');
+        if (!hasError) techStackInput.focus();
+        hasError = true;
+    }
+
+    if (hasError) {
+        alert('Please fill in the required fields (Role and Tech Stack) for better AI assistance.');
+        return;
+    }
+
+    startBtn.disabled = true;
+
+    try {
         // Collect interview context from form
         const interviewContext = {
-            role: document.getElementById('roleInput')?.value || '',
+            role: roleInput.value || '',
             experienceLevel: document.getElementById('experienceLevel')?.value || 'mid',
             interviewType: document.getElementById('interviewType')?.value || 'technical',
-            techStack: document.getElementById('techStack')?.value || '',
+            techStack: techStackInput.value || '',
             companyType: document.getElementById('companyType')?.value || 'startup',
             responseStyle: document.querySelector('input[name="responseStyle"]:checked')?.value || 'balanced',
             weakAreas: document.getElementById('weakAreas')?.value || ''
@@ -217,14 +349,14 @@ startBtn.addEventListener('click', async () => {
         const response = await chrome.runtime.sendMessage({
             type: 'START_SESSION',
             data: {
-                tabId: tab?.id,
-                meetingUrl: meetingUrl,
+                tabId: connectedMeeting?.tabId,
+                meetingUrl: connectedMeeting?.url || '',
                 interviewContext: interviewContext
             }
         });
 
         if (response.success) {
-            showActiveView({ meetingUrl });
+            showActiveView({ meetingUrl: connectedMeeting?.url });
         } else {
             alert('Failed to start session: ' + (response.error || 'Unknown error'));
         }
@@ -235,8 +367,57 @@ startBtn.addEventListener('click', async () => {
     }
 });
 
-stopBtn.addEventListener('click', async () => {
-    stopBtn.disabled = true;
+// Show Overlay (re-open if closed)
+showOverlayBtn.addEventListener('click', async () => {
+    try {
+        if (connectedMeeting?.tabId) {
+            await chrome.tabs.sendMessage(connectedMeeting.tabId, { type: 'SHOW_OVERLAY' });
+        } else {
+            // Try to find the active tab
+            const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+            if (tab?.id) {
+                await chrome.tabs.sendMessage(tab.id, { type: 'SHOW_OVERLAY' });
+            }
+        }
+    } catch (error) {
+        console.error('Error showing overlay:', error);
+        alert('Could not show overlay. Please refresh the meeting page.');
+    }
+});
+
+// Disconnect Handler (no credit deduction)
+disconnectBtn.addEventListener('click', async () => {
+    if (!confirm('Disconnect from meeting? No credit will be deducted.')) {
+        return;
+    }
+
+    disconnectBtn.disabled = true;
+    stopTimer();
+
+    try {
+        await chrome.runtime.sendMessage({ type: 'CANCEL_SESSION' });
+
+        // Clear connected meeting
+        connectedMeeting = null;
+        await chrome.storage.local.remove(['connectedMeeting']);
+
+        // Go back to connect view
+        const stored = await chrome.storage.local.get(['user', 'credits']);
+        showConnectView(stored.user, stored.credits);
+    } catch (error) {
+        console.error('Error disconnecting:', error);
+    } finally {
+        disconnectBtn.disabled = false;
+    }
+});
+
+// Finish Meeting Handler (completes session, deducts credit)
+finishBtn.addEventListener('click', async () => {
+    if (!confirm('Finish this meeting? One credit will be used.')) {
+        return;
+    }
+
+    finishBtn.disabled = true;
     stopTimer();
 
     try {
@@ -249,34 +430,17 @@ stopBtn.addEventListener('click', async () => {
         // Update local storage with fresh credits
         await chrome.storage.local.set({ credits: newCredits });
 
+        // Clear connected meeting
+        connectedMeeting = null;
+        await chrome.storage.local.remove(['connectedMeeting']);
+
+        // Go back to connect view
         const stored = await chrome.storage.local.get(['user']);
-        showSetupView(stored.user, newCredits);
+        showConnectView(stored.user, newCredits);
     } catch (error) {
-        console.error('Error stopping session:', error);
+        console.error('Error finishing meeting:', error);
     } finally {
-        stopBtn.disabled = false;
-    }
-});
-
-// Cancel Interview Handler - does NOT deduct credits
-cancelBtn.addEventListener('click', async () => {
-    if (!confirm('Cancel this interview? No credit will be deducted.')) {
-        return;
-    }
-
-    cancelBtn.disabled = true;
-    stopTimer();
-
-    try {
-        await chrome.runtime.sendMessage({ type: 'CANCEL_SESSION' });
-
-        // Credits stay the same since cancelled
-        const stored = await chrome.storage.local.get(['user', 'credits']);
-        showSetupView(stored.user, stored.credits);
-    } catch (error) {
-        console.error('Error cancelling session:', error);
-    } finally {
-        cancelBtn.disabled = false;
+        finishBtn.disabled = false;
     }
 });
 

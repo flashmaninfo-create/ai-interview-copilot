@@ -192,7 +192,9 @@ export const supabaseREST = {
 
     // Get active LLM configuration (provider + model + API key)
     async getLLMConfig() {
+        console.log('[SupabaseREST] Fetching LLM config...');
         const result = await this.rpcCall('get_active_llm_config');
+        console.log('[SupabaseREST] LLM config result:', JSON.stringify(result));
         return result;
     }
 };

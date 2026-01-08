@@ -34,7 +34,7 @@ export function Navbar({ variant = 'dark' }: NavbarProps) {
     { name: 'Features', path: '/features' },
     { name: 'How It Works', path: '/how-it-works' },
     { name: 'Pricing', path: '/pricing' },
-    { name: 'About', path: '/about' },
+    { name: 'Contact', path: '/#contact' },
   ];
 
   return (

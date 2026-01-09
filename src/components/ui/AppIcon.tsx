@@ -46,6 +46,14 @@ import {
     Share2,
     ExternalLink,
     Hand,
+    ChevronLeft,
+    SlidersHorizontal,
+    DollarSign,
+    Mic,
+    Monitor,
+    Tablet,
+    Smartphone,
+    Puzzle,
 } from 'lucide-react';
 
 type IconVariant = 'outline' | 'solid';
@@ -147,6 +155,16 @@ const iconMap: Record<string, React.ComponentType<any>> = {
     'ArrowTopRightOnSquareIcon': ExternalLink,
     'QuestionMarkCircleIcon': HelpCircle,
     'HandRaisedIcon': Hand,
+    
+    // Missing mappings added
+    'ChevronLeftIcon': ChevronLeft,
+    'AdjustmentsHorizontalIcon': SlidersHorizontal,
+    'CurrencyDollarIcon': DollarSign,
+    'MicrophoneIcon': Mic,
+    'ComputerDesktopIcon': Monitor,
+    'DeviceTabletIcon': Tablet,
+    'DevicePhoneMobileIcon': Smartphone,
+    'PuzzlePieceIcon': Puzzle,
 };
 
 /**

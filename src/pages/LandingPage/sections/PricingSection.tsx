@@ -68,7 +68,7 @@ const PricingSection = () => {
       <div className="max-w-7xl mx-auto px-6">
         <div className="text-center mb-16">
           <div className="inline-flex items-center gap-2 bg-accent/10 px-4 py-2 rounded-full mb-6">
-            <Icon name="CurrencyDollarIcon" size={20} className="text-accent" />
+            <Icon name="CurrencyRupeeIcon" size={20} className="text-accent" />
             <span className="text-sm font-medium text-accent">Simple & Honest Pricing</span>
           </div>
           <h2 className="font-headline text-4xl lg:text-5xl font-bold text-foreground mb-6">
@@ -102,7 +102,7 @@ const PricingSection = () => {
 
                 <div className="mb-6">
                   <div className="flex items-baseline gap-2">
-                    <span className="text-4xl font-bold text-foreground">{typeof tier?.price === 'number' ? `$${tier?.price}` : tier?.price}</span>
+                    <span className="text-4xl font-bold text-foreground">{typeof tier?.price === 'number' ? `₹${tier?.price}` : tier?.price}</span>
                     {typeof tier?.price === 'number' && tier?.price > 0 && (
                       <span className="text-muted-foreground">/ month</span>
                     )}

@@ -29,7 +29,7 @@ export function AdminPlanEditorPage() {
         name: '',
         credits: 100,
         price: 19.99,
-        currency: 'USD',
+        currency: 'INR',
         active: true,
         popular: false,
         features: ['Standard Support', 'All Interview Modes']
@@ -234,7 +234,7 @@ export function AdminPlanEditorPage() {
                                 <h3 className="text-lg font-bold text-white mb-1">{plan.name || 'Plan Name'}</h3>
                                 <div className="flex items-baseline gap-1">
                                     <span className="text-3xl font-bold text-white">
-                                        {plan.currency === 'USD' ? '$' : plan.currency} {plan.price}
+                                        {plan.currency === 'INR' ? '₹' : plan.currency} {plan.price}
                                     </span>
                                 </div>
                             </div>

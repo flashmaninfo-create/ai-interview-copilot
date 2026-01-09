@@ -343,7 +343,7 @@ export const adminService = {
             active: p.is_active ?? false,
             // Defaults as these aren't in DB yet
             popular: false,
-            currency: 'USD'
+            currency: 'INR'
         }));
     },
 
@@ -368,7 +368,7 @@ export const adminService = {
             features: Array.isArray(p.features) ? p.features.map(String) : [],
             active: p.is_active ?? false,
             popular: false,
-            currency: 'USD'
+            currency: 'INR'
         };
     },
 

@@ -102,7 +102,7 @@ const BlogPage = () => {
     {
       id: '4',
       title: 'Career Transition: From Bootcamp to Six-Figure Salary',
-      excerpt: 'How Emma leveraged AI coaching to transition from a coding bootcamp graduate to landing a $120K role.',
+      excerpt: 'How Emma leveraged AI coaching to transition from a coding bootcamp graduate to landing a ₹80 Lakh role.',
       category: 'Career Growth',
       author: {
         name: 'Emma Thompson',

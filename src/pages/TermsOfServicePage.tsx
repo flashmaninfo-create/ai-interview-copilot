@@ -107,7 +107,7 @@ const TermsOfServicePage = () => {
         'THE SERVICE IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY KIND.',
         'AI-generated responses may contain errors. You are solely responsible for evaluating and using AI outputs.',
         'We do NOT guarantee: Interview success, specific outcomes, uninterrupted service, or compatibility with all platforms.',
-        'Our total liability for any claim shall not exceed the amount you paid us in the 12 months preceding the claim, or $100.'
+        'Our total liability for any claim shall not exceed the amount you paid us in the 12 months preceding the claim, or ₹10,000.'
       ]
     },
     {

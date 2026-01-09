@@ -194,7 +194,7 @@ const TrialModal = ({ isOpen, onClose }: TrialModalProps) => {
               <div className="text-xs text-muted-foreground">Days Free Access</div>
             </div>
             <div>
-              <div className="text-2xl font-bold text-accent mb-1">$0</div>
+              <div className="text-2xl font-bold text-accent mb-1">₹0</div>
               <div className="text-xs text-muted-foreground">No Credit Card</div>
             </div>
           </div>

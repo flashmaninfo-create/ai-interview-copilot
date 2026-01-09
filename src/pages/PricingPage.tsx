@@ -157,8 +157,7 @@ export function PricingPage() {
                     <p className="text-sm text-slate-400 h-10">{plan.desc}</p>
                     <div className="flex items-baseline gap-1 mt-4">
                       <span className="text-4xl font-bold text-white">
-                        {plan.price.monthly === "Custom" ? "Custom" : `$${isAnnual ? plan.price.annual : plan.price.monthly}`}
-                      </span>
+                        {plan.price.monthly === "Custom" ? "Custom" : `₹${isAnnual ? plan.price.annual : plan.price.monthly}`}{" "}                     </span>
                       {plan.price.monthly !== "Custom" && (
                         <span className="text-slate-500">/mo</span>
                       )}

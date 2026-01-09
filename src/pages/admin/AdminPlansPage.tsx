@@ -92,7 +92,7 @@ export function AdminPlansPage() {
                                 <h3 className="text-lg font-bold text-white mb-1">{plan.name}</h3>
                                 <div className="flex items-baseline gap-1">
                                     <span className="text-2xl font-bold text-white">
-                                        {plan.currency === 'USD' ? '$' : plan.currency} {plan.price}
+                                        {plan.currency === 'INR' ? '₹' : plan.currency} {plan.price}
                                     </span>
                                     <span className="text-slate-500 text-sm">/ pack</span>
                                 </div>

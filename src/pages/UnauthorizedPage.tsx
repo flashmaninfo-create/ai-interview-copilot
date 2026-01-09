@@ -25,7 +25,7 @@ export function UnauthorizedPage() {
 
     return (
         <div className="min-h-screen bg-background flex items-center justify-center p-4">
-            <div className="max-w-md w-full bg-surface rounded-2xl shadow-lg border border-white/10 p-8 text-center">
+            <div className="max-w-md w-full bg-card rounded-2xl shadow-card border border-border p-8 text-center">
                 {/* Icon */}
                 <div className="mx-auto w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mb-6">
                     <svg
@@ -44,12 +44,12 @@ export function UnauthorizedPage() {
                 </div>
 
                 {/* Title */}
-                <h1 className="text-2xl font-bold text-white mb-2">
+                <h1 className="text-2xl font-bold text-foreground mb-2">
                     Access Denied
                 </h1>
 
                 {/* Message */}
-                <p className="text-slate-400 mb-6">
+                <p className="text-muted-foreground mb-6">
                     {state?.requiredRole === 'admin'
                         ? "You don't have administrator privileges to access this page."
                         : "You don't have permission to access this resource."}
@@ -57,12 +57,12 @@ export function UnauthorizedPage() {
 
                 {/* User Info */}
                 {isAuthenticated && (
-                    <div className="bg-background/50 rounded-lg p-4 mb-6 border border-white/5">
-                        <p className="text-sm text-slate-500 mb-1">Signed in as:</p>
+                    <div className="bg-muted/30 rounded-lg p-4 mb-6 border border-border">
+                        <p className="text-sm text-muted-foreground mb-1">Signed in as:</p>
                         {profile ? (
                             <>
-                                <p className="font-medium text-white">{profile.email}</p>
-                                <p className="text-xs text-slate-500 mt-1">
+                                <p className="font-medium text-foreground">{profile.email}</p>
+                                <p className="text-xs text-muted-foreground mt-1">
                                     Role: <span className="capitalize">{profile.role}</span>
                                 </p>
                             </>
@@ -86,7 +86,7 @@ export function UnauthorizedPage() {
                     {isAuthenticated && (
                         <button
                             onClick={handleSignOut}
-                            className="block w-full py-3 px-4 border border-white/10 text-slate-300 font-medium rounded-lg hover:bg-surface/80 transition-all"
+                            className="block w-full py-3 px-4 border border-border text-foreground font-medium rounded-lg hover:bg-muted transition-all"
                         >
                             Sign in with different account
                         </button>
@@ -94,14 +94,14 @@ export function UnauthorizedPage() {
 
                     <Link
                         to="/"
-                        className="block text-sm text-slate-500 hover:text-primary transition-colors"
+                        className="block text-sm text-muted-foreground hover:text-primary transition-colors"
                     >
                         Return to Home
                     </Link>
                 </div>
 
                 {/* Help Text */}
-                <p className="mt-6 text-xs text-slate-500">
+                <p className="mt-6 text-xs text-muted-foreground">
                     If you believe this is an error, please contact your administrator.
                 </p>
             </div>

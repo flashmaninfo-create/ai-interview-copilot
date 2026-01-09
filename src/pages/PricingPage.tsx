@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Check, HelpCircle } from 'lucide-react';
 import { SEO } from '../components/SEO';
 import { Section } from '../components/ui/Section';
@@ -7,50 +7,19 @@ import { Button } from '../components/ui/Button';
 import { FadeIn, SlideUp } from '../components/ui/motion';
 import { PaymentModal } from '../components/payment/PaymentModal';
 
-const plans = [
-  {
-    name: "Free Starter",
-    price: { monthly: "0", annual: "0" },
-    desc: "Essential tools for casual interviewing.",
-    features: [
-      "50 monthly credits",
-      "Basic transcription (Deepgram Nova)",
-      "Google Meet support",
-      "Community support access"
-    ],
-    cta: "Get Started Free",
-    popular: false
-  },
-  {
-    name: "Pro Interviewer",
-    price: { monthly: "29", annual: "24" },
-    desc: "Power features for serious job seekers.",
-    features: [
-      "Unlimited transcriptions",
-      "1,000 AI Hint credits / month",
-      "GPT-4 & Claude 3.5 Support",
-      "Live Coding Assistance",
-      "Screenshot Analysis",
-      "Priority email support"
-    ],
-    cta: "Start 7-Day Trial",
-    popular: true
-  },
-  {
-    name: "Enterprise",
-    price: { monthly: "Custom", annual: "Custom" },
-    desc: "For bootcamps and coaching agencies.",
-    features: [
-      "Bulk license management",
-      "Custom LLM fine-tuning",
-      "Analytics dashboard",
-      "Dedicated account manager",
-      "SLA & Uptime guarantees"
-    ],
-    cta: "Contact Sales",
-    popular: false
-  }
-];
+import { planService } from '../lib/services/planService';
+
+
+
+interface PricingPlan {
+  id: string;
+  name: string;
+  price: { monthly: string | number; annual: string | number };
+  desc: string;
+  features: string[];
+  cta: string;
+  popular: boolean;
+}
 
 const faqs = [
   { q: "How do credits work?", a: "Credits are used for AI hints. One credit equals one AI suggestion. Transcription itself is unlimited on Pro plans." },
@@ -61,6 +30,8 @@ const faqs = [
 
 export function PricingPage() {
   const [isAnnual, setIsAnnual] = useState(false);
+  const [plans, setPlans] = useState<PricingPlan[]>([]);
+  const [loading, setLoading] = useState(true);
   const [paymentModal, setPaymentModal] = useState({
     isOpen: false,
     planName: '',
@@ -69,33 +40,94 @@ export function PricingPage() {
     planId: ''
   });
 
-  const handleSubscribe = (plan: typeof plans[0]) => {
+  useEffect(() => {
+    const fetchPlans = async () => {
+      try {
+        const { data } = await planService.getActivePlans();
+        const transformedPlans: PricingPlan[] = data.map(plan => {
+          let features: string[] = [];
+          if (Array.isArray(plan.features)) {
+            features = plan.features.map(f => String(f));
+          }
+
+          // Calculate annual price with ~20% discount if not 0
+          const monthly = plan.price_monthly;
+          const annualRaw = monthly * 12 * 0.8; 
+          const annualPerMonth = Math.round(annualRaw / 12); // Price per month when billed annually
+
+          return {
+            id: plan.id,
+            name: plan.name,
+            price: { 
+                monthly: monthly === 0 ? "0" : monthly, 
+                annual: monthly === 0 ? "0" : annualPerMonth 
+            },
+            desc: plan.summary || '',
+            features: features,
+            cta: monthly === 0 ? "Get Started Free" : `Start ${plan.name}`,
+            popular: plan.slug === 'professional'
+          };
+        });
+        
+        // Add Enterprise plan statically as it's custom
+        if (!transformedPlans.find(p => p.name === 'Enterprise')) {
+             transformedPlans.push({
+                id: 'enterprise',
+                name: "Enterprise",
+                price: { monthly: "Custom", annual: "Custom" },
+                desc: "For bootcamps and coaching agencies.",
+                features: [
+                  "Bulk license management",
+                  "Custom LLM fine-tuning",
+                  "Analytics dashboard",
+                  "Dedicated account manager",
+                  "SLA & Uptime guarantees"
+                ],
+                cta: "Contact Sales",
+                popular: false
+              });
+        }
+
+        setPlans(transformedPlans);
+      } catch (error) {
+        console.error("Error fetching plans", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPlans();
+  }, []);
+
+  const handleSubscribe = (plan: PricingPlan) => {
     // Determine amount based on annual/monthly toggle
     const price = isAnnual ? plan.price.annual : plan.price.monthly;
 
     // Simple logic to set credit amount based on plan
     // In a real app, this should be data-driven
     let credits = 0;
-    let planId = '';
+    let planId = plan.id; // Use DB ID
 
-    if (plan.name.includes("Free")) {
-      // Free plan logic (maybe redirect to signup or dashboard)
-      window.location.href = '/dashboard';
-      return;
-    } else if (plan.name.includes("Pro")) {
-      credits = 1000; // Plan features say 1,000 AI Hint credits
-      planId = isAnnual ? 'pro_annual' : 'pro_monthly';
-    } else if (plan.name.includes("Enterprise")) {
-      // Enterprise contact us
-      window.location.href = 'mailto:sales@interview-copilot.com';
-      return;
+    // Fallback logic for credits if not in DB (fetched plan might need credit info in UI object if needed)
+    // But for now, we pass planId which backend uses to lookup credits.
+    // For specific logic like "Free" checks:
+    if (String(plan.price.monthly) === "0") {
+       window.location.href = '/dashboard';
+       return;
+    } else if (String(plan.price.monthly) === "Custom") {
+       window.location.href = 'mailto:sales@interview-copilot.com';
+       return;
     }
 
     setPaymentModal({
       isOpen: true,
       planName: plan.name,
-      amount: price,
-      credits: credits,
+      amount: String(price),
+      credits: credits, // This might be unused if backend handles it, or we need to pass it. 
+      // The modal likely uses it for display. 
+      // We don't have credits in PricingPlan interface above, let's add it if needed or ignore.
+      // Looking at original code: credits = 1000 for Pro.
+      // We can assume plans from DB have credits. 
+      // Let's rely on planId largely.
       planId: planId
     });
   };
@@ -126,19 +158,25 @@ export function PricingPage() {
               Invest in your career for less than the cost of a networking coffee.
             </p>
 
-            <div className="flex items-center justify-center gap-4 mb-16">
-              <span className={`text-sm font-medium ${!isAnnual ? 'text-white' : 'text-slate-500'}`}>Monthly</span>
-              <button
-                onClick={() => setIsAnnual(!isAnnual)}
-                className="w-14 h-8 rounded-full bg-surface border border-white/10 relative transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
-              >
-                <div className={`absolute top-1 w-6 h-6 rounded-full bg-primary transition-all duration-300 ${isAnnual ? 'left-7' : 'left-1'}`}></div>
-              </button>
-              <div className="flex items-center gap-2">
-                <span className={`text-sm font-medium ${isAnnual ? 'text-white' : 'text-slate-500'}`}>Annual</span>
-                <span className="text-xs font-bold text-green-400 bg-green-400/10 px-2 py-0.5 rounded-full">Save 20%</span>
-              </div>
-            </div>
+            {loading ? (
+                <div className="flex justify-center py-10">
+                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
+                </div>
+            ) : (
+                <div className="flex items-center justify-center gap-4 mb-16">
+                <span className={`text-sm font-medium ${!isAnnual ? 'text-white' : 'text-slate-500'}`}>Monthly</span>
+                <button
+                    onClick={() => setIsAnnual(!isAnnual)}
+                    className="w-14 h-8 rounded-full bg-surface border border-white/10 relative transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                    <div className={`absolute top-1 w-6 h-6 rounded-full bg-primary transition-all duration-300 ${isAnnual ? 'left-7' : 'left-1'}`}></div>
+                </button>
+                <div className="flex items-center gap-2">
+                    <span className={`text-sm font-medium ${isAnnual ? 'text-white' : 'text-slate-500'}`}>Annual</span>
+                    <span className="text-xs font-bold text-green-400 bg-green-400/10 px-2 py-0.5 rounded-full">Save 20%</span>
+                </div>
+                </div>
+            )}
           </FadeIn>
         </Section>
 

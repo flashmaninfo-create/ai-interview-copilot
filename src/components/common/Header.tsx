@@ -10,10 +10,9 @@ const Header = () => {
   const [activeSection, setActiveSection] = useState('');
 
   const navigationItems = [
-    { label: 'How It Works', anchor: '#solution', description: 'AI coaching demo' },
-    { label: 'Pricing', anchor: '#pricing', description: 'Trial options' },
-    { label: 'Blog', href: '/blog', description: 'Interview insights and career tips' },
-    { label: 'Contact', href: '/contact', description: 'Get in touch' },
+    { label: 'How It Works', href: '/#how-it-works', description: 'AI coaching demo' },
+    { label: 'Pricing', href: '/#pricing', description: 'Trial options' },
+    { label: 'Contact', href: '/#contact', description: 'Get in touch' },
   ];
 
   useEffect(() => {
@@ -21,8 +20,8 @@ const Header = () => {
       setIsScrolled(window.scrollY > 10);
 
       const sections = navigationItems
-        .filter(item => item.anchor)
-        .map(item => item.anchor!.substring(1));
+        .filter(item => item.href.includes('#'))
+        .map(item => item.href.split('#')[1]);
       const scrollPosition = window.scrollY + 100;
 
       for (const sectionId of sections) {
@@ -42,19 +41,6 @@ const Header = () => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
-
-  const handleNavClick = (anchor: string) => {
-    const element = document.getElementById(anchor.substring(1));
-    if (element) {
-      const offset = 80;
-      const elementPosition = element.offsetTop - offset;
-      window.scrollTo({
-        top: elementPosition,
-        behavior: 'smooth',
-      });
-    }
-    setIsMobileMenuOpen(false);
-  };
 
   return (
     <header
@@ -92,28 +78,19 @@ const Header = () => {
           </span>
         </Link>
 
+        {/* Desktop Navigation */}
         <div className="hidden items-center space-x-8 md:flex">
           {navigationItems.map((item) => (
-            item.href ? (
-              <Link
-                key={item.href}
-                to={item.href}
-                className="font-body text-base font-medium transition-colors duration-250 ease-out hover:text-primary text-foreground"
-              >
-                {item.label}
-              </Link>
-            ) : (
-              <button
-                key={item.anchor}
-                onClick={() => handleNavClick(item.anchor!)}
-                className={`font-body text-base font-medium transition-colors duration-250 ease-out hover:text-primary ${
-                  activeSection === item.anchor ? 'text-primary' : 'text-foreground'
-                }`}
-                aria-label={item.description}
-              >
-                {item.label}
-              </button>
-            )
+            <Link
+              key={item.label}
+              to={item.href}
+              className={`font-body text-base font-medium transition-colors duration-250 ease-out hover:text-primary ${
+                activeSection === item.href.split('/').pop() ? 'text-primary' : 'text-foreground'
+              }`}
+              aria-label={item.description}
+            >
+              {item.label}
+            </Link>
           ))}
           <Link
             to="/login"
@@ -136,30 +113,21 @@ const Header = () => {
         </button>
       </nav>
 
+      {/* Mobile Menu */}
       {isMobileMenuOpen && (
         <div className="fixed inset-0 top-20 z-[200] bg-card md:hidden">
           <div className="flex h-full flex-col space-y-6 p-8">
             {navigationItems.map((item) => (
-              item.href ? (
-                <Link
-                  key={item.href}
-                  to={item.href}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="font-body text-left text-lg font-medium transition-colors duration-250 ease-out hover:text-primary text-foreground"
-                >
-                  {item.label}
-                </Link>
-              ) : (
-                <button
-                  key={item.anchor}
-                  onClick={() => handleNavClick(item.anchor!)}
-                  className={`font-body text-left text-lg font-medium transition-colors duration-250 ease-out hover:text-primary ${
-                    activeSection === item.anchor ? 'text-primary' : 'text-foreground'
-                  }`}
-                >
-                  {item.label}
-                </button>
-              )
+              <Link
+                key={item.label}
+                to={item.href}
+                onClick={() => setIsMobileMenuOpen(false)}
+                className={`font-body text-left text-lg font-medium transition-colors duration-250 ease-out hover:text-primary ${
+                  activeSection === item.href.split('/').pop() ? 'text-primary' : 'text-foreground'
+                }`}
+              >
+                {item.label}
+              </Link>
             ))}
             <Link
               to="/login"

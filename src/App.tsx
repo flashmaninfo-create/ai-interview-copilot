@@ -8,6 +8,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { GlobalErrorBoundary } from './components/common/GlobalErrorBoundary';
+import ScrollToHash from './components/common/ScrollToHash';
 
 // Layouts
 import { DashboardLayout } from './layouts/DashboardLayout';
@@ -62,6 +63,7 @@ function App() {
       <NotificationProvider>
         <AuthProvider>
           <BrowserRouter>
+            <ScrollToHash />
             <Routes>
               {/* ============================================ */}
               {/* Public Routes with Light Theme */}

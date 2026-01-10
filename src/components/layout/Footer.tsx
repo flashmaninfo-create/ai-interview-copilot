@@ -57,7 +57,7 @@ export function Footer({ variant = 'dark' }: FooterProps) {
               <li><Link to="/about" className={cn("transition-colors", isLight ? "text-slate-600 hover:text-primary" : "text-slate-400 hover:text-primary")}>About Us</Link></li>
               <li><Link to="/blog" className={cn("transition-colors", isLight ? "text-slate-600 hover:text-primary" : "text-slate-400 hover:text-primary")}>Blog</Link></li>
               <li><Link to="/careers" className={cn("transition-colors", isLight ? "text-slate-600 hover:text-primary" : "text-slate-400 hover:text-primary")}>Careers</Link></li>
-              <li><Link to="/contact" className={cn("transition-colors", isLight ? "text-slate-600 hover:text-primary" : "text-slate-400 hover:text-primary")}>Contact</Link></li>
+              <li><Link to="/#contact" className={cn("transition-colors", isLight ? "text-slate-600 hover:text-primary" : "text-slate-400 hover:text-primary")}>Contact</Link></li>
             </ul>
           </div>
 

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import Icon from '../../../components/ui/AppIcon';
+import { contactService } from '../../../lib/services/contactService';
 
 const BenefitsSection = () => {
   const [formData, setFormData] = useState({
@@ -10,22 +11,39 @@ const BenefitsSection = () => {
   });
   const [submitted, setSubmitted] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Contact form submitted:', formData);
     
-    setSubmitted(true);
-    
-    // Reset form after 3 seconds
-    setTimeout(() => {
-      setFormData({
-        name: '',
-        email: '',
-        company: '',
-        message: ''
+    // Split name into first and last
+    const nameParts = formData.name.trim().split(' ');
+    const firstName = nameParts[0];
+    const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+
+    try {
+      await contactService.sendMessage({
+        first_name: firstName,
+        last_name: lastName,
+        email: formData.email,
+        subject: formData.company ? `Inquiry from ${formData.company}` : 'General Inquiry',
+        message: formData.message
       });
-      setSubmitted(false);
-    }, 3000);
+      
+      setSubmitted(true);
+      
+      // Reset form after 3 seconds
+      setTimeout(() => {
+        setFormData({
+          name: '',
+          email: '',
+          company: '',
+          message: ''
+        });
+        setSubmitted(false);
+      }, 3000);
+    } catch (error) {
+      console.error('Failed to send message:', error);
+      alert('Failed to send message. Please try again.');
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {

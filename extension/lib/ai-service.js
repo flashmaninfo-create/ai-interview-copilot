@@ -160,9 +160,46 @@ export class AIService {
                 return await this.callAnthropic(apiKey, model.model_id, prompt, maxTokens, temperature);
             case 'google':
                 return await this.callGoogle(apiKey, model.model_id, prompt, maxTokens, temperature);
+            case 'deepseek':
+                return await this.callDeepSeek(apiKey, model.model_id, prompt, maxTokens, temperature);
             default:
                 throw new Error(`Unsupported provider: ${provider.slug}`);
         }
+    }
+
+    async callDeepSeek(apiKey, modelId, prompt, maxTokens = 200, temperature = 0.3) {
+        console.log('[AIService] Calling DeepSeek:', modelId, 'temp:', temperature, 'tokens:', maxTokens);
+
+        const response = await fetch('https://api.deepseek.com/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${apiKey}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                model: modelId, // e.g., 'deepseek-chat' or 'deepseek-reasoner'
+                messages: [
+                    { role: 'system', content: prompt.systemMessage },
+                    { role: 'user', content: prompt.userPrompt }
+                ],
+                max_tokens: maxTokens,
+                temperature: temperature
+            })
+        });
+
+        if (!response.ok) {
+            const error = await response.text();
+            console.error('[AIService] DeepSeek error:', error);
+
+            if (response.status === 429) {
+                throw new Error('DeepSeek Rate Limit (429). Please check your DeepSeek account credits.');
+            }
+
+            throw new Error(`DeepSeek API error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        return data.choices[0]?.message?.content || 'No response generated';
     }
 
     async callOpenAI(apiKey, modelId, prompt, maxTokens = 200, temperature = 0.3) {
@@ -188,6 +225,11 @@ export class AIService {
         if (!response.ok) {
             const error = await response.text();
             console.error('[AIService] OpenAI error:', error);
+
+            if (response.status === 429) {
+                throw new Error('OpenAI Rate Limit (429). Please check your OpenAI account credits/billing.');
+            }
+
             throw new Error(`OpenAI API error: ${response.status}`);
         }
 
@@ -218,6 +260,11 @@ export class AIService {
         if (!response.ok) {
             const error = await response.text();
             console.error('[AIService] Anthropic error:', error);
+
+            if (response.status === 429) {
+                throw new Error('Anthropic Rate Limit (429). Please check your Anthropic account credits.');
+            }
+
             throw new Error(`Anthropic API error: ${response.status}`);
         }
 
@@ -249,6 +296,11 @@ export class AIService {
         if (!response.ok) {
             const error = await response.text();
             console.error('[AIService] Google AI error:', error);
+
+            if (response.status === 429) {
+                throw new Error('Google AI Rate Limit (429). Please check your Google Cloud quota.');
+            }
+
             throw new Error(`Google AI API error: ${response.status}`);
         }
 

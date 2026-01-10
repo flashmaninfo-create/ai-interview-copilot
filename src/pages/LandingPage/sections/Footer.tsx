@@ -20,7 +20,7 @@ const Footer = () => {
     ],
     company: [
       { label: 'About Us', href: '/about-us' },
-      { label: 'Contact', href: '/#contact' },
+      { label: 'Contact', href: '/contact' },
       { label: 'Blog', href: '/blog' },
       { label: 'Careers', href: '/careers' }
     ],

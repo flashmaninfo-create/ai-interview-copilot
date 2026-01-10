@@ -56,7 +56,7 @@ export function AdminCreditPage() {
                     </div>
                     <div>
                         <h2 className="text-lg font-semibold text-white">Price Settings</h2>
-                        <p className="text-slate-400 text-sm">Set how much each credit costs in USD</p>
+                        <p className="text-slate-400 text-sm">Set how much each credit costs in INR</p>
                     </div>
                 </div>
 
@@ -64,10 +64,10 @@ export function AdminCreditPage() {
                     {/* Price Input */}
                     <div className="max-w-md">
                         <label className="block text-sm font-medium text-slate-300 mb-2">
-                            Price per Credit (USD)
+                            Price per Credit (INR)
                         </label>
                         <div className="relative">
-                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg">$</span>
+                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg">₹</span>
                             <input
                                 type="number"
                                 step="0.01"
@@ -87,8 +87,8 @@ export function AdminCreditPage() {
                             <p className="font-medium mb-1">How Credit Pricing Works</p>
                             <p className="text-blue-300/80">
                                 This price is used when users purchase credits through the platform. 
-                                For example, if you set the price to $0.10, a user buying 100 credits 
-                                will pay $10.00. Changes take effect immediately for all new purchases.
+                                For example, if you set the price to ₹0.10, a user buying 100 credits 
+                                will pay ₹10.00. Changes take effect immediately for all new purchases.
                             </p>
                         </div>
                     </div>
@@ -139,7 +139,7 @@ export function AdminCreditPage() {
                         >
                             <p className="text-slate-400 text-sm">{amount} Credits</p>
                             <p className="text-2xl font-bold text-white mt-1">
-                                ${(parseFloat(creditPrice || '0') * amount).toFixed(2)}
+                                ₹{(parseFloat(creditPrice || '0') * amount).toFixed(2)}
                             </p>
                         </div>
                     ))}

@@ -22,9 +22,16 @@ import LandingPage from './pages/LandingPage/LandingPage';
 import { FeaturesPage } from './pages/FeaturesPage';
 import { HowItWorksPage } from './pages/HowItWorksPage';
 import { AboutPage } from './pages/AboutPage';
-import { ContactPage } from './pages/ContactPage';
+import ContactPage from './pages/ContactPage';
 import { PricingPage } from './pages/PricingPage';
 import { NotFoundPage } from './pages/NotFoundPage';
+
+// Content Pages (from interview_copilot)
+import AboutUsPage from './pages/AboutUsPage';
+import BlogPage from './pages/BlogPage';
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
+import TermsOfServicePage from './pages/TermsOfServicePage';
+import ResponsibleAIUsePage from './pages/ResponsibleAIUsePage';
 import { UnauthorizedPage } from './pages/UnauthorizedPage';
 
 // Auth Pages
@@ -74,8 +81,15 @@ function App() {
                 <Route path="/how-it-works" element={<HowItWorksPage />} />
                 <Route path="/about" element={<AboutPage />} />
                 <Route path="/pricing" element={<PricingPage />} />
-                <Route path="/contact" element={<ContactPage />} />
               </Route>
+
+              {/* Content Pages (matching footer links) */}
+              <Route path="/contact" element={<ContactPage />} />
+              <Route path="/about-us" element={<AboutUsPage />} />
+              <Route path="/blog" element={<BlogPage />} />
+              <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+              <Route path="/terms-of-service" element={<TermsOfServicePage />} />
+              <Route path="/responsible-ai-use" element={<ResponsibleAIUsePage />} />
 
 
               {/* ============================================ */}

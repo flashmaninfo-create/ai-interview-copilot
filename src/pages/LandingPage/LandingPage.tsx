@@ -1,16 +1,16 @@
 import { useState } from 'react';
 import Header from '../../components/common/Header';
 import ScrollProgress from '../../components/common/ScrollProgress';
-import HeroSection from './components/HeroSection';
-import ProblemSection from './components/ProblemSection';
-import SolutionSection from './components/SolutionSection';
-import InteractiveDemoSection from './components/InteractiveDemoSection';
-import BenefitsSection from './components/BenefitsSection';
-import TestimonialsSection from './components/TestimonialsSection';
-import PricingSection from './components/PricingSection';
-import FAQSection from './components/FAQSection';
-import CTASection from './components/CTASection';
-import Footer from './components/Footer';
+import HeroSection from './sections/HeroSection';
+import ProblemSection from './sections/ProblemSection';
+import SolutionSection from './sections/SolutionSection';
+import InteractiveDemoSection from './sections/InteractiveDemoSection';
+import BenefitsSection from './sections/BenefitsSection';
+import TestimonialsSection from './sections/TestimonialsSection';
+import PricingSection from './sections/PricingSection';
+import FAQSection from './sections/FAQSection';
+import CTASection from './sections/CTASection';
+import Footer from './sections/Footer';
 
 
 const LandingPage = () => {

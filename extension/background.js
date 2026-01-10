@@ -54,9 +54,10 @@ class BackgroundService {
       this.handleCommand(command);
     });
 
-    // Monitor tab changes
-    chrome.tabs.onActivated.addListener((activeInfo) => {
-      if (this.sessionActive && this.tabId !== activeInfo.tabId) {
+    // Monitor tab closures (cleanup if meeting tab is closed)
+    chrome.tabs.onRemoved.addListener((tabId) => {
+      if (this.sessionActive && this.tabId === tabId) {
+        console.log('[Background] Meeting tab closed, pausing session');
         this.pauseSession();
       }
     });
@@ -886,124 +887,121 @@ class BackgroundService {
     console.log('[Background] pauseSession called, data:', data);
 
     try {
-      // Stop mock transcription
+      // 1. Stop capturing first
       if (this.mockTranscriptionInterval) {
         clearInterval(this.mockTranscriptionInterval);
         this.mockTranscriptionInterval = null;
       }
 
-      // Stop real audio capture
       try {
         await this.stopRealAudioCapture();
       } catch (audioError) {
         console.log('[Background] Audio stop error (non-fatal):', audioError.message);
       }
 
-      // Calculate elapsed time
+      // 2. Hide overlay immediately (User Feedback)
+      console.log('[Background] Sending SESSION_PAUSED to tab:', this.tabId);
+      if (this.tabId) {
+        chrome.tabs.sendMessage(this.tabId, { type: 'SESSION_PAUSED' }).catch(err => {
+          console.log('[Background] Failed to send SESSION_PAUSED (non-fatal):', err.message);
+        });
+      }
+
+      // 3. Capture partial state needed for resume BEFORE clearing it
       const elapsedTime = this.state.data.activeSession?.startTime
         ? Date.now() - this.state.data.activeSession.startTime
         : 0;
-
-      // Get session ID from background state (not from popup message)
       const sessionId = this.state.data.activeSession?.id;
-      console.log('[Background] Pausing session:', sessionId, 'elapsed:', elapsedTime);
+      const activeSessionData = this.state.data.activeSession;
 
-      // Prepare state to save for resume
-      const pausedState = {
-        elapsed_time: elapsedTime,
-        interview_context: this.state.data.activeSession?.interviewContext || {},
-        meeting_data: {
-          url: this.state.data.activeSession?.url,
-          platform: this.state.data.activeSession?.platform,
-          tabId: this.tabId
-        },
-        transcription_text: this.transcriptionManager?.getText() || '',
-        paused_at: Date.now()
-      };
-
-      // DATABASE SYNC: Try to mark session as paused (non-blocking)
-      // This is wrapped in try-catch so DB failures don't break popup flow
-      if (sessionId) {
-        try {
-          // Try RPC first
-          const result = await supabaseREST.rpc('pause_session', {
-            p_session_id: sessionId,
-            p_state: pausedState
-          });
-          if (result?.success) {
-            console.log('[Background] DB Session paused with state saved');
-          } else {
-            // Fallback to direct update
-            await supabaseREST.update('interview_sessions',
-              { status: 'paused', paused_at: new Date().toISOString(), paused_state: pausedState },
-              { id: sessionId }
-            );
-            console.log('[Background] DB Session paused via direct update');
-          }
-        } catch (dbError) {
-          console.error('[Background] Failed to update DB (non-fatal):', dbError.message);
-          // Continue anyway - local state is more important
-        }
-      }
-
-      // Store session ID locally for resume
-      const savedSessionInfo = {
-        id: sessionId,
-        url: this.state.data.activeSession?.url,
-        interviewContext: this.state.data.activeSession?.interviewContext,
-        consoleToken: this.state.data.consoleToken,
-        elapsedTime: elapsedTime
-      };
-
-      // Save paused session info to storage
-      await chrome.storage.local.set({
-        pausedSession: savedSessionInfo,
-        pausedSessionId: sessionId
-      });
-
-      // Clear active session state
+      // 4. Mark session as inactive in memory IMMEDIATELY to prevent "zombie" state
       this.sessionActive = false;
       this.state.data.activeSession = null;
       this.transcriptionBuffer = [];
       this.screenshotQueue = [];
 
-      // Cancel any pending console debounce timer
+      // 5. Try to save paused state (Best Effort)
+      if (sessionId && activeSessionData) {
+        const pausedState = {
+          elapsed_time: elapsedTime,
+          interview_context: activeSessionData.interviewContext || {},
+          meeting_data: {
+            url: activeSessionData.url,
+            platform: activeSessionData.platform,
+            tabId: this.tabId
+          },
+          transcription_text: this.transcriptionManager?.getText() || '',
+          paused_at: Date.now()
+        };
+
+        const savedSessionInfo = {
+          id: sessionId,
+          url: activeSessionData.url,
+          interviewContext: activeSessionData.interviewContext,
+          consoleToken: this.state.data.consoleToken,
+          elapsedTime: elapsedTime
+        };
+
+        // DB Sync
+        try {
+          const result = await supabaseREST.rpc('pause_session', {
+            p_session_id: sessionId,
+            p_state: pausedState
+          });
+          if (!result?.success) {
+            await supabaseREST.update('interview_sessions',
+              { status: 'paused', paused_at: new Date().toISOString(), paused_state: pausedState },
+              { id: sessionId }
+            );
+          }
+        } catch (dbError) {
+          console.error('[Background] DB pause error (non-fatal):', dbError);
+        }
+
+        // Local Storage Sync (Resume Data)
+        try {
+          await chrome.storage.local.set({
+            pausedSession: savedSessionInfo,
+            pausedSessionId: sessionId
+          });
+        } catch (storageError) {
+          console.error('[Background] Failed to save resume data (non-fatal):', storageError);
+        }
+      }
+
+      // 6. Persist cleared state (Critical)
+      await this.state.save();
+
+      // 7. Cleanup console
       if (this.consoleTranscriptTimeout) {
         clearTimeout(this.consoleTranscriptTimeout);
         this.consoleTranscriptTimeout = null;
       }
 
-      await this.state.save();
-
-      // Disconnect console (will reconnect on resume)
       try {
         await this.consoleSync.disconnect();
-      } catch (syncError) {
-        console.log('[Background] Console disconnect error (non-fatal):', syncError.message);
-      }
+      } catch (e) { /* ignore */ }
 
-      // Notify content script to hide overlay
-      console.log('[Background] Sending SESSION_PAUSED to tab:', this.tabId);
-      if (this.tabId) {
-        try {
-          await chrome.tabs.sendMessage(this.tabId, { type: 'SESSION_PAUSED' });
-          console.log('[Background] SESSION_PAUSED sent successfully');
-        } catch (msgError) {
-          console.log('[Background] Failed to send SESSION_PAUSED:', msgError.message);
-        }
+      console.log('[Background] Pause session complete');
+      if (sendResponse) {
+        sendResponse({
+          success: true,
+          paused: true,
+          sessionId: sessionId,
+          elapsedTime: elapsedTime
+        });
       }
-
-      console.log('[Background] Pause session complete, sending response');
-      sendResponse({
-        success: true,
-        paused: true,
-        sessionId: sessionId,
-        elapsedTime: elapsedTime
-      });
 
     } catch (error) {
-      console.error('[Background] Pause session error:', error);
-      sendResponse({ success: false, error: error.message });
+      console.error('[Background] Pause session CRITICAL error:', error);
+      // Even if critical error, ensure we are marked inactive
+      this.sessionActive = false;
+      this.state.data.activeSession = null;
+      await this.state.save().catch(() => { });
+
+      if (sendResponse) {
+        sendResponse({ success: false, error: error.message });
+      }
     }
   }
 

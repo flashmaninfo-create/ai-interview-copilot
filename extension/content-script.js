@@ -81,52 +81,40 @@
 
         <!-- Main Content Area -->
         <div class="ic-main">
-          <!-- Tab Navigation -->
-          <div class="ic-tabs">
-            <button class="ic-tab ic-tab-active" id="ic-tab-transcript" data-tab="transcript">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
-              Transcript
-            </button>
-            <button class="ic-tab" id="ic-tab-ai" data-tab="ai">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
-              AI Hints
-            </button>
-          </div>
-          
           <div class="ic-content" id="ic-content">
-            <!-- Transcript Panel -->
-            <div class="ic-panel ic-panel-active" id="ic-panel-transcript">
-              <div class="ic-transcript" id="ic-transcript">
+            <!-- AI Hints Section (Left) -->
+            <div class="ic-section ic-section-hints">
+              <div class="ic-hints-container" id="ic-hints">
                 <div class="ic-placeholder">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
-                  Listening for audio...
+                  <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L12 3Z"/></svg>
+                  <div>Select a mode to start</div>
                 </div>
+              </div>
+              
+              <!-- Quick Prompt Box (Bottom of Left Column) -->
+              <div class="ic-prompt-box">
+                <input type="text" id="ic-quick-prompt" placeholder="Ask AI anything..." class="ic-prompt-input">
+                <button id="ic-send-prompt" class="ic-prompt-btn" title="Send">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" x2="11" y1="2" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                </button>
               </div>
             </div>
 
-            <!-- AI Hints Panel -->
-            <div class="ic-panel" id="ic-panel-ai" style="display: none;">
-              <div class="ic-hints" id="ic-hints">
-                <div class="ic-placeholder">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
-                  Click a button to get AI assistance
+            <!-- Transcript Section (Right) -->
+            <div class="ic-section ic-section-transcript">
+              <div class="ic-transcript-container" id="ic-transcript">
+                <div class="ic-placeholder-small">
+                  Listening...
                 </div>
               </div>
+              
+              <!-- Console Link (Bottom of Right Column) -->
+              <a href="#" id="ic-open-console" class="ic-console-link">
+                Open Full Console →
+              </a>
             </div>
           </div>
         </div>
-      </div>
-
-      <div class="ic-footer">
-        <div class="ic-prompt-box">
-          <input type="text" id="ic-quick-prompt" placeholder="Ask AI anything..." class="ic-prompt-input">
-          <button id="ic-send-prompt" class="ic-prompt-btn" title="Send">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" x2="11" y1="2" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-          </button>
-        </div>
-        <a href="#" id="ic-open-console" class="ic-console-link">
-          Open Full Console →
-        </a>
       </div>
     `;
 
@@ -177,15 +165,7 @@
             takeScreenshot();
         });
 
-        // Event Listeners - Tab switching
-        document.getElementById('ic-tab-transcript').addEventListener('click', (e) => {
-            e.stopPropagation();
-            switchTab('transcript');
-        });
-        document.getElementById('ic-tab-ai').addEventListener('click', (e) => {
-            e.stopPropagation();
-            switchTab('ai');
-        });
+
 
         // Event Listeners - Quick Prompt
         const promptInput = document.getElementById('ic-quick-prompt');
@@ -196,7 +176,6 @@
             if (prompt) {
                 requestAI('custom', prompt);
                 promptInput.value = '';
-                switchTab('ai'); // Switch to AI hints tab to see response
             }
         };
 
@@ -221,36 +200,17 @@
         console.log('[Content] Overlay created');
     }
 
-    // Tab switching function
-    function switchTab(tabName) {
-        // Update tab buttons
-        document.querySelectorAll('.ic-tab').forEach(tab => {
-            tab.classList.remove('ic-tab-active');
-        });
-        document.getElementById(`ic-tab-${tabName}`).classList.add('ic-tab-active');
 
-        // Update panels
-        document.querySelectorAll('.ic-panel').forEach(panel => {
-            panel.style.display = 'none';
-            panel.classList.remove('ic-panel-active');
-        });
-        const activePanel = document.getElementById(`ic-panel-${tabName}`);
-        activePanel.style.display = 'block';
-        activePanel.classList.add('ic-panel-active');
-    }
 
     function toggleMinimize() {
         isMinimized = !isMinimized;
         const body = overlay.querySelector('.ic-body');
-        const footer = overlay.querySelector('.ic-footer');
 
         if (isMinimized) {
             if (body) body.style.display = 'none';
-            footer.style.display = 'none';
             overlay.classList.add('ic-minimized');
         } else {
             if (body) body.style.display = 'flex';
-            footer.style.display = 'flex';
             overlay.classList.remove('ic-minimized');
         }
     }
@@ -301,15 +261,15 @@
             btn.classList.add('loading');
         }
 
+        // Clear previous content (single response mode)
+        if (hintContainer) hintContainer.innerHTML = '';
+
         // Add loading indicator to hints
         const loadingHint = document.createElement('div');
         loadingHint.className = 'ic-hint ic-loading';
         loadingHint.innerHTML = `<span class="ic-hint-icon">⏳</span><div class="ic-hint-content">Thinking...</div>`;
 
-        const placeholder = hintContainer.querySelector('.ic-placeholder');
-        if (placeholder) placeholder.remove();
-
-        hintContainer.insertBefore(loadingHint, hintContainer.firstChild);
+        hintContainer.appendChild(loadingHint);
 
         try {
             await chrome.runtime.sendMessage({
@@ -479,15 +439,11 @@
         lastHintTimestamp = now;
         lastHintText = hintText;
 
-        // Auto-switch to hints tab
-        switchTab('ai');
+        lastHintTimestamp = now;
+        lastHintText = hintText;
 
-        // Remove placeholder and loading
-        const placeholder = hintContainer.querySelector('.ic-placeholder');
-        if (placeholder) placeholder.remove();
-
-        const loading = hintContainer.querySelector('.ic-loading');
-        if (loading) loading.remove();
+        // Clear previous content (single response mode)
+        hintContainer.innerHTML = '';
 
         // Choose icon and class based on type
         let iconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>';
@@ -514,7 +470,7 @@
       <div class="ic-hint-content">${formatHintContent(hint.hint || hint.text)}</div>
     `;
 
-        hintContainer.insertBefore(hintEl, hintContainer.firstChild);
+        hintContainer.appendChild(hintEl);
     }
 
     function formatHintContent(text) {
@@ -667,7 +623,15 @@
     if (window.location.host.includes('localhost:5173') || window.location.host.includes('interview-copilot.com')) {
         console.log('[Content] Checking for auth token on dashboard domain: ' + window.location.host);
 
+        let authPollInterval;
+
         function checkForAuthToken() {
+            if (!chrome.runtime?.id) {
+                // Extension context invalidated, stop polling
+                if (authPollInterval) clearInterval(authPollInterval);
+                return;
+            }
+
             let authData = null;
             // Iterate localStorage to find Supabase token
             // Key format: sb-<project-ref>-auth-token
@@ -685,17 +649,30 @@
 
             if (authData && authData.user && authData.access_token) {
                 // Found it! Send to background
-                chrome.runtime.sendMessage({
-                    type: 'AUTH_SYNC',
-                    user: authData.user,
-                    session: authData,
-                    token: authData.access_token
-                });
+                try {
+                    chrome.runtime.sendMessage({
+                        type: 'AUTH_SYNC',
+                        user: authData.user,
+                        session: authData,
+                        token: authData.access_token
+                    }, (response) => {
+                        if (chrome.runtime.lastError) {
+                            // Suppress errors from context invalidation
+                            if (chrome.runtime.lastError.message.includes('Extension context invalidated')) {
+                                if (authPollInterval) clearInterval(authPollInterval);
+                            }
+                        }
+                    });
+                } catch (e) {
+                    if (e.message.includes('Extension context invalidated')) {
+                        if (authPollInterval) clearInterval(authPollInterval);
+                    }
+                }
             }
         }
 
         // Poll every 2 seconds to catch login/signup completion
-        setInterval(checkForAuthToken, 2000);
+        authPollInterval = setInterval(checkForAuthToken, 2000);
         checkForAuthToken();
     }
 })();

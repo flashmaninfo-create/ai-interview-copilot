@@ -35,6 +35,10 @@ export class TranscriptionManager {
         };
     }
 
+    getText() {
+        return this.finalizedText;
+    }
+
     clear() {
         this.finalizedText = '';
         this.interimText = '';

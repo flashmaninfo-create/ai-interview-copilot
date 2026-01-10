@@ -602,45 +602,7 @@ function stopTimer() {
     }
 }
 
-// Handle Finish Meeting
-function handleFinishMeeting(e) {
-    e.preventDefault();
-
-    if (!confirm('Are you sure you want to finish this meeting?')) {
-        return;
-    }
-
-    // Send finish meeting message
-    chrome.runtime.sendMessage({
-        type: 'FINISH_MEETING',
-        sessionId: currentMeeting?.id
-    }, (response) => {
-        if (response && response.success) {
-            console.log('Meeting finished successfully');
-            endMeetingSession();
-        } else {
-            alert('Failed to finish meeting. Please try again.');
-        }
-    });
-}
-
-// Handle Disconnect Meeting
-function handleDisconnectMeeting(e) {
-    e.preventDefault();
-
-    if (!confirm('Disconnect from the meeting? You can reconnect later without losing your session.')) {
-        return;
-    }
-
-    // Send disconnect message
-    chrome.runtime.sendMessage({
-        type: 'DISCONNECT_MEETING',
-        sessionId: currentMeeting?.id
-    }, (response) => {
-        console.log('Disconnected from meeting');
-        endMeetingSession(); // Don't clear meeting data
-    });
-}
+// Duplicate handlers removed - see below
 
 // End meeting session
 function endMeetingSession() {
@@ -1114,6 +1076,7 @@ async function handleDisconnectMeeting(e) {
             }
         }
 
+        endMeetingSession(); // Updates UI to show card list
     });
 }
 

@@ -376,6 +376,11 @@ export const supabaseREST = {
         const result = await this.rpcCall('get_active_llm_config');
         console.log('[SupabaseREST] LLM config result:', JSON.stringify(result));
         return result;
+    },
+
+    // Alias for rpcCall for convenience
+    async rpc(functionName, params = {}) {
+        return this.rpcCall(functionName, params);
     }
 };
 

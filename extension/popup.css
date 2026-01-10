@@ -1003,6 +1003,66 @@ body {
     border-radius: 4px;
 }
 
+/* Paused Meeting Styles */
+.meeting-card.paused {
+    border-color: rgba(255, 165, 0, 0.3);
+    background: rgba(255, 165, 0, 0.08);
+}
+
+.meeting-card.paused:hover {
+    background: rgba(255, 165, 0, 0.12);
+    border-color: rgba(255, 165, 0, 0.4);
+}
+
+.paused-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    background: rgba(255, 165, 0, 0.2);
+    color: #FFA500;
+    font-size: 10px;
+    font-weight: 600;
+    border-radius: 4px;
+    margin-left: 8px;
+    vertical-align: middle;
+    letter-spacing: 0.5px;
+}
+
+.paused-time {
+    display: block;
+    font-size: 11px;
+    color: #FFA500;
+    margin-top: 4px;
+}
+
+.btn-resume {
+    width: 100%;
+    padding: 12px 20px;
+    background: #FFA500;
+    border: none;
+    border-radius: 8px;
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+}
+
+.btn-resume:hover {
+    background: #ffb733;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(255, 165, 0, 0.3);
+}
+
+.btn-resume .start-icon {
+    background: white;
+    color: #FFA500;
+}
+
 /* ===== SCROLLBAR ===== */
 .view-content::-webkit-scrollbar {
     width: 6px;

@@ -554,6 +554,31 @@
                 }
                 break;
 
+            case 'SESSION_PAUSED':
+                sessionActive = false;
+                // Hide overlay when paused (user will resume later)
+                hideOverlay();
+                console.log('[Content] Session paused, overlay hidden');
+                sendResponse({ success: true });
+                break;
+
+            case 'SESSION_RESUMED':
+                sessionId = message.data?.sessionId;
+                sessionActive = true;
+                showOverlay();
+                console.log('[Content] Session resumed with data:', message.data);
+
+                // Restore transcript if provided
+                if (message.data?.transcriptionText) {
+                    updateTranscript({
+                        finalizedText: message.data.transcriptionText,
+                        interimText: '',
+                        displayText: message.data.transcriptionText
+                    });
+                }
+                sendResponse({ success: true });
+                break;
+
             case 'TRANSCRIPTION_STATE':
                 ensureOverlayValid(); // Make sure overlay is attached
                 updateTranscript(message.data);

@@ -1356,3 +1356,15 @@ body {
 .dialog-btn-secondary:hover {
     background: rgba(255, 255, 255, 0.15);
 }
+
+/* ===== VALIDATION ===== */
+.input-error {
+    border: 1px solid #ef4444 !important;
+}
+
+.error-message {
+    color: #ef4444;
+    font-size: 11px;
+    margin-top: 4px;
+    font-weight: 500;
+}

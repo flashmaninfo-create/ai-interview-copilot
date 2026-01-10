@@ -3,191 +3,391 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Interview Copilot</title>
+    <title>Ntro.io</title>
     <link rel="stylesheet" href="popup.css">
 </head>
 
 <body>
     <div class="popup-container">
-        <!-- Header -->
-        <div class="header">
-            <div class="logo">
-                <img src="icons/icon48.png" alt="Icon" class="logo-icon">
-                <div class="logo-text">
-                    <h1>Interview Copilot</h1>
-                    <span class="tagline">AI Interview Assistant</span>
+        <!-- Left Sidebar -->
+        <div class="sidebar">
+            <!-- Logo Section -->
+            <div class="logo-section">
+                <div class="logo">
+                    <span class="logo-icon">X</span>
+                    <span class="logo-text">Xtroon</span>
                 </div>
-            </div>
-        </div>
-
-        <!-- Login View -->
-        <div id="loginView" class="view">
-            <div class="form-group">
-                <label for="email">Email</label>
-                <input type="email" id="email" placeholder="you@example.com">
-            </div>
-            <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" placeholder="••••••••">
-            </div>
-            <button id="loginBtn" class="btn btn-primary">Login</button>
-            <button id="signupBtn" class="btn btn-secondary">Create Account</button>
-            <div id="authError" class="error-message"></div>
-        </div>
-
-        <!-- Connect Meeting View (Step 1: Connect to a meeting) -->
-        <div id="connectView" class="view" style="display: none;">
-            <div class="user-info">
-                <span id="userEmailConnect"></span>
-                <button id="logoutBtnConnect" class="btn-link">Logout</button>
+                <div class="version">4.7.4</div>
             </div>
 
-            <div class="connect-section">
-                <div class="connect-icon">🎤</div>
-                <h3>Connect to Meeting</h3>
-                <p class="connect-desc">Start by connecting to your meeting tab to enable audio capture.</p>
-            </div>
-
-            <div class="form-group">
-                <label for="meetingUrlConnect">Meeting URL</label>
-                <input type="text" id="meetingUrlConnect" placeholder="Auto-detected from current tab">
-            </div>
-
-            <button id="connectBtn" class="btn btn-primary btn-large">
-                <span class="btn-icon">🔗</span>
-                Connect Meeting
-            </button>
-
-            <div class="credits-info">
-                <span id="creditsCountConnect">10</span> credits remaining
-            </div>
-        </div>
-
-        <!-- Connected View (Step 2: Fill form and start session) -->
-        <div id="connectedView" class="view" style="display: none;">
-            <div class="user-info">
-                <span id="userEmailConnected"></span>
-                <button id="logoutBtnConnected" class="btn-link">Logout</button>
-            </div>
-
-            <!-- Meeting Status Banner -->
-            <div class="meeting-status">
-                <div class="meeting-platform">
-                    <span id="connectedPlatformIcon">📹</span>
-                    <span id="connectedPlatformName">Meeting</span>
-                </div>
-                <div class="meeting-status-badge">Connected</div>
-            </div>
-
-            <div class="form-section">
-                <h3 class="section-title">Interview Details</h3>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="roleInput">Role Applying For <span class="required">*</span></label>
-                        <input type="text" id="roleInput" placeholder="e.g. Frontend Engineer" required>
+            <!-- Phases Navigation -->
+            <div class="phases-nav">
+                <div class="phase-item active" data-phase="before">
+                    <div class="phase-indicator"></div>
+                    <div class="phase-content">
+                        <div class="phase-title">Before the Meeting</div>
+                        <div class="phase-desc">Schedule and plan your meeting.</div>
                     </div>
                 </div>
+                <div class="phase-connector"></div>
+                <div class="phase-item" data-phase="during">
+                    <div class="phase-indicator"></div>
+                    <div class="phase-content">
+                        <div class="phase-title">In the Meeting</div>
+                        <div class="phase-desc">Connect Ntro.io to the meeting and go!</div>
+                    </div>
+                </div>
+                <div class="phase-connector"></div>
+                <div class="phase-item" data-phase="after">
+                    <div class="phase-indicator"></div>
+                    <div class="phase-content">
+                        <div class="phase-title">After the Meeting</div>
+                        <div class="phase-desc">Rate us and learn from AI feedback.</div>
+                    </div>
+                </div>
+            </div>
 
-                <div class="form-row two-col">
+            <!-- Footer Actions -->
+            <div class="footer-actions">
+                <button class="footer-btn" id="logoutBtn">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <path
+                            d="M6 14H3.33333C2.97971 14 2.64057 13.8595 2.39052 13.6095C2.14048 13.3594 2 13.0203 2 12.6667V3.33333C2 2.97971 2.14048 2.64057 2.39052 2.39052C2.64057 2.14048 2.97971 2 3.33333 2H6"
+                            stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                        <path d="M10.6667 11.3333L14 8L10.6667 4.66667" stroke="currentColor" stroke-width="1.5"
+                            stroke-linecap="round" stroke-linejoin="round" />
+                        <path d="M14 8H6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                    </svg>
+                    <span>Logout</span>
+                </button>
+                <div class="footer-divider"></div>
+                <button class="footer-btn" id="dashboardBtn">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <path
+                            d="M2 8.66667C2 8.66667 4 4.66667 8 4.66667C12 4.66667 14 8.66667 14 8.66667C14 8.66667 12 12.6667 8 12.6667C4 12.6667 2 8.66667 2 8.66667Z"
+                            stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                        <path
+                            d="M8 10C9.10457 10 10 9.10457 10 8C10 6.89543 9.10457 6 8 6C6.89543 6 6 6.89543 6 8C6 9.10457 6.89543 10 8 10Z"
+                            stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                    <span>Dashboard</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Right Content Area -->
+        <div class="content-area">
+            <!-- Header -->
+            <!-- Content Header -->
+            <div class="content-header">
+                <!-- Row 1: Username + Credits (left) | Refresh (right) -->
+                <div class="header-row-1">
+                    <div class="header-left">
+                        <span class="user-name" id="userName">User</span>
+                        <div class="user-credits">
+                            <span>💰</span>
+                            <span id="creditsAmount">$0.00</span>
+                        </div>
+                    </div>
+                    <button class="btn-refresh" id="refreshBtn">
+                        <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
+                            <path
+                                d="M17.5 10C17.5 14.1421 14.1421 17.5 10 17.5C5.85786 17.5 2.5 14.1421 2.5 10C2.5 5.85786 5.85786 2.5 10 2.5C12.0711 2.5 13.9462 3.35714 15.3033 4.75"
+                                stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+                            <path d="M15 2.5V5H12.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Row 2: Plan + Upgrade (left) | Create New (right) -->
+                <div class="header-row-2">
+                    <div class="header-left">
+                        <div class="user-plan">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                                <path
+                                    d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"
+                                    fill="#FFA500" stroke="#FFA500" stroke-width="1.5" />
+                            </svg>
+                            <span id="planName">Starter Plan</span>
+                        </div>
+                        <a href="#" class="upgrade-link" id="upgradeLink">Upgrade Plan</a>
+                    </div>
+                    <button class="btn-create-new" id="createNewBtn">
+                        <span>+</span> Create new
+                    </button>
+                </div>
+            </div>
+
+            <!-- Login/Signup View -->
+            <div class="auth-page" id="loginView" style="display: none;">
+                <div class="auth-container">
+                    <!-- Left Side: Image (Dark) -->
+                    <div class="auth-image-side">
+                        <img src="student_interview_scene.png" alt="Student Interview">
+                        <div class="auth-image-overlay">
+                            <div class="auth-brand">
+                                <div class="brand-icon">X</div>
+                                <div class="brand-name">Xtroon</div>
+                            </div>
+                            <p class="auth-tagline">Your AI-powered interview assistant</p>
+                        </div>
+                    </div>
+
+                    <!-- Right Side: Form (Whitish) -->
+                    <div class="auth-form-side">
+                        <div class="auth-form-container">
+                            <div class="auth-header">
+                                <h1 id="authTitle">Welcome Back</h1>
+                                <p id="authSubtitle">Sign in to continue your interview preparation</p>
+                            </div>
+
+                            <form id="authForm" class="auth-form">
+                                <!-- Full Name (only shown in signup mode) -->
+                                <div class="auth-input-group" id="fullNameGroup" style="display: none;">
+                                    <label for="authFullName">Full Name <span
+                                            class="optional-text">(optional)</span></label>
+                                    <input type="text" id="authFullName" placeholder="John Doe" autocomplete="name">
+                                </div>
+
+                                <div class="auth-input-group">
+                                    <label for="authEmail">Email</label>
+                                    <input type="email" id="authEmail" placeholder="you@example.com" required
+                                        autocomplete="email">
+                                </div>
+
+                                <div class="auth-input-group">
+                                    <label for="authPassword">Password</label>
+                                    <input type="password" id="authPassword" placeholder="Enter your password" required
+                                        autocomplete="current-password">
+                                    <small class="password-hint" id="passwordHint" style="display: none;">Must be at
+                                        least 6 characters</small>
+                                </div>
+
+                                <!-- Confirm Password (only shown in signup mode) -->
+                                <div class="auth-input-group" id="confirmPasswordGroup" style="display: none;">
+                                    <label for="authConfirmPassword">Confirm Password</label>
+                                    <input type="password" id="authConfirmPassword" placeholder="Re-enter your password"
+                                        autocomplete="new-password">
+                                </div>
+
+                                <button type="submit" class="auth-submit-btn" id="authSubmitBtn">
+                                    Sign In
+                                </button>
+                            </form>
+
+                            <div class="auth-footer">
+                                <span id="authToggleText">Don't have an account?</span>
+                                <a href="#" id="authToggleLink">Sign Up</a>
+                            </div>
+
+                            <div class="auth-terms" id="authTerms" style="display: none;">
+                                By signing up, you agree to our <a href="http://localhost:5173/terms"
+                                    target="_blank">Terms of Service</a> and <a href="http://localhost:5173/privacy"
+                                    target="_blank">Privacy Policy</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Empty State View -->
+            <div class="view-content" id="emptyStateView">
+                <div class="empty-state">
+                    <div class="empty-icon">
+                        <svg width="120" height="120" viewBox="0 0 120 120" fill="none">
+                            <circle cx="60" cy="60" r="50" stroke="currentColor" stroke-width="3" opacity="0.3" />
+                            <line x1="30" y1="30" x2="90" y2="90" stroke="currentColor" stroke-width="3"
+                                opacity="0.3" />
+                        </svg>
+                    </div>
+                    <div class="empty-message">
+                        Found no reserved meeting. Click<br>"Create new" to add one.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Form View -->
+            <div class="view-content" id="formView" style="display: none;">
+                <div class="form-container">
                     <div class="form-group">
-                        <label for="experienceLevel">Experience Level</label>
-                        <select id="experienceLevel">
-                            <option value="junior">Junior (0-2 yrs)</option>
-                            <option value="mid" selected>Mid (2-5 yrs)</option>
-                            <option value="senior">Senior (5+ yrs)</option>
+                        <label for="scenarioInput">Scenario</label>
+                        <select id="scenarioInput" class="form-control">
+                            <option value="">Select scenario</option>
+                            <option value="job-interview">Job Interview</option>
+                            <option value="client-meeting">Client Meeting</option>
+                            <option value="team-standup">Team Standup</option>
+                            <option value="presentation">Presentation</option>
+                            <option value="other">Other</option>
                         </select>
                     </div>
+
                     <div class="form-group">
-                        <label for="interviewType">Interview Type</label>
-                        <select id="interviewType">
-                            <option value="technical" selected>Technical</option>
-                            <option value="behavioral">Behavioral</option>
-                            <option value="system-design">System Design</option>
-                            <option value="hr">HR / Culture</option>
+                        <label for="meetingUrlInput">Meeting URL</label>
+                        <div class="input-with-link">
+                            <input type="text" id="meetingUrlInput" class="form-control"
+                                placeholder="The scheduled meeting page link">
+                            <a href="#" class="input-link" id="useThisPageLink">Use this page</a>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="toggle-label">
+                            <span>Is Desktop Call</span>
+                            <div class="toggle-wrapper">
+                                <input type="checkbox" id="isDesktopCall" class="toggle-input">
+                                <div class="toggle-slider"></div>
+                            </div>
+                        </label>
+                        <div class="form-hint">Is meeting by desktop, not a web browser?</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="meetingLanguageInput">Meeting Language</label>
+                        <select id="meetingLanguageInput" class="form-control">
+                            <option value="english">English</option>
+                            <option value="spanish">Spanish</option>
+                            <option value="french">French</option>
+                            <option value="german">German</option>
+                            <option value="chinese">Chinese</option>
+                            <option value="japanese">Japanese</option>
                         </select>
                     </div>
-                </div>
 
-                <div class="form-row two-col">
                     <div class="form-group">
-                        <label for="techStack">Primary Tech Stack <span class="required">*</span></label>
-                        <input type="text" id="techStack" placeholder="e.g. React, TypeScript" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="companyType">Company Type</label>
-                        <select id="companyType">
-                            <option value="startup" selected>Startup</option>
-                            <option value="mid-size">Mid-size</option>
-                            <option value="enterprise">Enterprise</option>
-                            <option value="faang">FAANG/Big Tech</option>
+                        <label for="translationLanguageInput">Translation Language</label>
+                        <select id="translationLanguageInput" class="form-control">
+                            <option value="none">None</option>
+                            <option value="english">English</option>
+                            <option value="spanish">Spanish</option>
+                            <option value="french">French</option>
+                            <option value="german">German</option>
+                            <option value="chinese">Chinese</option>
+                            <option value="japanese">Japanese</option>
                         </select>
                     </div>
-                </div>
 
-                <div class="form-group">
-                    <label>Response Style</label>
-                    <div class="radio-group">
-                        <label class="radio-option">
-                            <input type="radio" name="responseStyle" value="short">
-                            <span>Short</span>
+                    <div class="form-group">
+                        <label for="additionalInfoInput">
+                            Additional Information
+                            <span class="label-icon">👑</span>
                         </label>
-                        <label class="radio-option">
-                            <input type="radio" name="responseStyle" value="balanced" checked>
-                            <span>Balanced</span>
-                        </label>
-                        <label class="radio-option">
-                            <input type="radio" name="responseStyle" value="detailed">
-                            <span>Detailed</span>
-                        </label>
+                        <textarea id="additionalInfoInput" class="form-control form-textarea"
+                            placeholder="Input any additional instruction." rows="3"></textarea>
                     </div>
-                </div>
 
-                <div class="form-group">
-                    <label for="weakAreas">Weak Areas (optional)</label>
-                    <textarea id="weakAreas" placeholder="e.g. System design, concurrency..."></textarea>
+                    <div class="form-group">
+                        <label for="keywordsInput">
+                            Keywords
+                            <span class="label-hint">(Press Enter for each keyword.)</span>
+                        </label>
+                        <div class="keywords-container" id="keywordsContainer">
+                            <div class="keywords-tags" id="keywordsTags"></div>
+                            <input type="text" id="keywordsInput" class="keywords-input"
+                                placeholder="Type and press Enter...">
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button class="btn btn-secondary" id="backBtn">Back</button>
+                        <button class="btn btn-primary" id="saveBtn">Save</button>
+                    </div>
                 </div>
             </div>
 
-            <button id="startBtn" class="btn btn-primary btn-large">
-                <span class="btn-icon">▶</span>
-                Start Session
-            </button>
+            <!-- Cards List View (Multiple Meetings) -->
+            <div class="view-content" id="cardsListView" style="display: none;">
+                <div class="cards-container" id="cardsContainer">
+                    <!-- Meeting cards will be dynamically generated here -->
+                </div>
+            </div>
 
-            <button id="disconnectFromConnectedBtn" class="btn btn-secondary">
-                Disconnect Meeting
-            </button>
+            <!-- In Meeting View -->
+            <div class="view-content" id="inMeetingView" style="display: none;">
+                <div class="in-meeting-container">
+                    <!-- Phase Indicator -->
+                    <div class="phase-badge">
+                        <div class="phase-badge-dot"></div>
+                        <span>In the Meeting</span>
+                    </div>
 
-            <div class="credits-info">
-                <span id="creditsCountConnected">10</span> credits remaining
+                    <!-- Meeting Info -->
+                    <div class="active-meeting-card">
+                        <div class="meeting-card-header">
+                            <h3 id="activeMeetingTitle">Job Interview</h3>
+                        </div>
+                        <div class="meeting-card-body">
+                            <p id="activeMeetingSubtitle">Data Science at Google</p>
+                            <div class="meeting-meta">
+                                <span id="activeMeetingPlatform">Web Browser</span>
+                                <span class="meta-separator">•</span>
+                                <span id="activeMeetingLanguage">English</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Session Timer -->
+                    <div class="session-timer-container">
+                        <div class="timer-label">Session Duration</div>
+                        <div class="session-timer" id="sessionTimer">00:00</div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="meeting-actions">
+                        <button class="btn btn-success btn-large" id="finishMeetingBtn">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                                <path d="M13.3333 4L6 11.3333L2.66667 8" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                            <span>Finish Meeting</span>
+                        </button>
+                        <button class="btn btn-secondary" id="disconnectMeetingBtn">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                                <path
+                                    d="M6 14H3.33333C2.97971 14 2.64057 13.8595 2.39052 13.6095C2.14048 13.3594 2 13.0203 2 12.6667V3.33333C2 2.97971 2.14048 2.64057 2.39052 2.39052C2.64057 2.14048 2.97971 2 3.33333 2H6"
+                                    stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+                                    stroke-linejoin="round" />
+                                <path d="M10.6667 11.3333L14 8L10.6667 4.66667" stroke="currentColor" stroke-width="1.5"
+                                    stroke-linecap="round" stroke-linejoin="round" />
+                                <path d="M14 8H6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+                                    stroke-linejoin="round" />
+                            </svg>
+                            <span>Disconnect</span>
+                        </button>
+                    </div>
+
+                    <!-- Console Link -->
+                    <a href="#" class="console-link" id="openConsoleLinkInMeeting">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                            <path
+                                d="M2 8.66667C2 8.66667 4 4.66667 8 4.66667C12 4.66667 14 8.66667 14 8.66667C14 8.66667 12 12.6667 8 12.6667C4 12.6667 2 8.66667 2 8.66667Z"
+                                stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                            <path
+                                d="M8 10C9.10457 10 10 9.10457 10 8C10 6.89543 9.10457 6 8 6C6.89543 6 6 6.89543 6 8C6 9.10457 6.89543 10 8 10Z"
+                                stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                        </svg>
+                        <span>Open Console Dashboard</span>
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                            <path d="M4 10L8 6L4 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                        </svg>
+                    </a>
+                </div>
             </div>
         </div>
+    </div>
 
-        <!-- Active Session View -->
-        <div id="activeView" class="view" style="display: none;">
-            <div class="session-status">
-                <div class="status-indicator active"></div>
-                <span>Session Active</span>
+    <!-- Custom Dialog Overlay -->
+    <div class="dialog-overlay" id="dialogOverlay" style="display: none;">
+        <div class="dialog-modal">
+            <div class="dialog-content">
+                <div class="dialog-icon" id="dialogIcon"></div>
+                <div class="dialog-message" id="dialogMessage"></div>
             </div>
-
-            <div class="session-timer" id="sessionTimer">00:00</div>
-
-            <div class="session-info">
-                <span id="sessionPlatform">Google Meet</span>
-            </div>
-
-            <button id="openConsoleBtn" class="btn btn-primary">
-                Open Console Dashboard
-            </button>
-
-            <button id="showOverlayBtn" class="btn btn-secondary">
-                Show Overlay
-            </button>
-
-            <div class="session-actions">
-                <button id="disconnectBtn" class="btn btn-warning">Disconnect</button>
-                <button id="finishBtn" class="btn btn-success">Finish Meeting</button>
-            </div>
+            <div class="dialog-actions" id="dialogActions"></div>
         </div>
     </div>
 

@@ -231,11 +231,11 @@ export function useConsoleSync() {
         // Initial check
         checkActiveSession();
 
-        // 3. Polling backup: Check every 3 seconds (always poll, even if session was previously found)
+        // 3. Polling backup: Check every 1.5 seconds (faster detection)
         const pollInterval = setInterval(() => {
             console.log('[useConsoleSync] Polling for sessions...');
             checkActiveSession();
-        }, 3000);
+        }, 1500);
 
         // 4. Listen for NEW sessions and UPDATES (Realtime)
         console.log('[useConsoleSync] Subscribing to session changes...');

@@ -4,7 +4,7 @@
  * Create or edit credit packages.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { adminService, type CreditPlan } from '../../lib/services/adminService';
 import { 
@@ -24,16 +24,46 @@ export function AdminPlanEditorPage() {
     const [loading, setLoading] = useState(!isNew);
     const [saving, setSaving] = useState(false);
     
+    // Price per credit settings from global config
+    const [pricePerCredit, setPricePerCredit] = useState<number>(10);
+    const [autoCalculate, setAutoCalculate] = useState<boolean>(true);
+    
     const [plan, setPlan] = useState<CreditPlan>({
         id: crypto.randomUUID(),
         name: '',
         credits: 100,
+<<<<<<< HEAD
         price: 19.99,
+=======
+        price: 1000,
+>>>>>>> main
         currency: 'INR',
         active: true,
         popular: false,
         features: ['Standard Support', 'All Interview Modes']
     });
+
+    // Calculate price based on credits
+    const calculatePrice = useCallback((credits: number) => {
+        return Math.round(credits * pricePerCredit);
+    }, [pricePerCredit]);
+
+    // Load price settings from app config
+    useEffect(() => {
+        const loadSettings = async () => {
+            try {
+                const savedPrice = await adminService.getAppConfig('price_per_credit');
+                const savedCurrency = await adminService.getAppConfig('credit_currency');
+                if (savedPrice) setPricePerCredit(Number(savedPrice));
+                if (savedCurrency && isNew) {
+                    setPlan(p => ({ ...p, currency: String(savedCurrency) }));
+                }
+            } catch (err) {
+                console.error('Failed to load price settings:', err);
+            }
+        };
+        loadSettings();
+    }, [isNew]);
 
     useEffect(() => {
         if (!isNew && id) {
@@ -41,11 +71,20 @@ export function AdminPlanEditorPage() {
         }
     }, [id, isNew]);
 
+    // Auto-calculate price when credits change (only if auto-calculate is on)
+    useEffect(() => {
+        if (autoCalculate && isNew) {
+            setPlan(p => ({ ...p, price: calculatePrice(p.credits) }));
+        }
+    }, [plan.credits, autoCalculate, calculatePrice, isNew]);
+
     const loadPlan = async (planId: string) => {
         try {
             const data = await adminService.getCreditPlan(planId);
             if (data) {
                 setPlan(data);
+                // When editing, don't auto-calculate by default
+                setAutoCalculate(false);
             } else {
                 navigate('/admin/plans');
             }
@@ -136,19 +175,48 @@ export function AdminPlanEditorPage() {
                             <input
                                 type="number"
                                 value={plan.credits}
-                                onChange={e => setPlan(p => ({ ...p, credits: parseInt(e.target.value) || 0 }))}
+                                onChange={e => {
+                                    const credits = parseInt(e.target.value) || 0;
+                                    setPlan(p => ({
+                                        ...p,
+                                        credits,
+                                        price: autoCalculate ? calculatePrice(credits) : p.price
+                                    }));
+                                }}
                                 className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-primary"
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-slate-300 mb-2">Price ({plan.currency})</label>
+                            <div className="flex items-center justify-between mb-2">
+                                <label className="block text-sm font-medium text-slate-300">Price (₹ INR)</label>
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={autoCalculate}
+                                        onChange={e => {
+                                            setAutoCalculate(e.target.checked);
+                                            if (e.target.checked) {
+                                                setPlan(p => ({ ...p, price: calculatePrice(p.credits) }));
+                                            }
+                                        }}
+                                        className="rounded border-slate-700 bg-slate-800 text-primary focus:ring-primary/50"
+                                    />
+                                    <span className="text-xs text-slate-400">Auto</span>
+                                </label>
+                            </div>
                             <input
                                 type="number"
-                                step="0.01"
+                                step="1"
                                 value={plan.price}
                                 onChange={e => setPlan(p => ({ ...p, price: parseFloat(e.target.value) || 0 }))}
-                                className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-primary"
+                                disabled={autoCalculate}
+                                className={`w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-primary ${autoCalculate ? 'opacity-60' : ''}`}
                             />
+                            {autoCalculate && (
+                                <p className="text-xs text-emerald-400 mt-1">
+                                    Auto-calculated: {plan.credits} credits × ₹{pricePerCredit} = ₹{plan.price}
+                                </p>
+                            )}
                         </div>
                     </div>
 
@@ -233,8 +301,13 @@ export function AdminPlanEditorPage() {
                             <div>
                                 <h3 className="text-lg font-bold text-white mb-1">{plan.name || 'Plan Name'}</h3>
                                 <div className="flex items-baseline gap-1">
+<<<<<<< HEAD
                                     <span className="text-3xl font-bold text-white">
                                         {plan.currency === 'INR' ? '₹' : plan.currency} {plan.price}
+=======
+                                <span className="text-3xl font-bold text-white">
+                                        ₹{plan.price}
+>>>>>>> main
                                     </span>
                                 </div>
                             </div>

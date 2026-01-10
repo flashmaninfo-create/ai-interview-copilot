@@ -68,8 +68,8 @@ export function AdminLayout() {
             icon: <CreditCard className="w-5 h-5" />
         },
         {
-            label: 'Credit Pricing',
-            path: '/admin/credit',
+            label: 'Plans',
+            path: '/admin/plans',
             icon: <DollarSign className="w-5 h-5" />
         },
     ];

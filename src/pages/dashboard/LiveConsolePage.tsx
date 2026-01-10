@@ -159,7 +159,7 @@ export function LiveConsolePage() {
                   <div className="my-4 ml-4">
                     <div className="inline-flex items-center gap-2 bg-white/10 border border-[#ff6b35] rounded-lg px-3 py-2 text-sm">
                       <span className="w-2 h-2 bg-[#ff6b35] rounded-sm"></span>
-                      <span className="text-white">www.ntro.io is sharing your screen.</span>
+                      <span className="text-white">www.xtroon.io is sharing your screen.</span>
                       <button className="bg-white/20 text-white px-3 py-1 rounded text-xs">Stop sharing</button>
                       <button className="bg-[#ff6b35] text-white px-3 py-1 rounded text-xs">Hide</button>
                     </div>

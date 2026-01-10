@@ -46,10 +46,13 @@ export interface AuthContextType extends AuthState {
     signIn: (email: string, password: string) => Promise<{ error: AuthServiceError | null }>;
     signUp: (email: string, password: string, fullName?: string) => Promise<{ error: AuthServiceError | null }>;
     signOut: () => Promise<void>;
+    signInWithGoogle: () => Promise<{ error: AuthServiceError | null }>;
+    signInWithGitHub: () => Promise<{ error: AuthServiceError | null }>;
 
     // Password management
     requestPasswordReset: (email: string) => Promise<{ error: AuthServiceError | null }>;
     updatePassword: (newPassword: string) => Promise<{ error: AuthServiceError | null }>;
+    deleteAccount: () => Promise<{ error: AuthServiceError | null }>;
 
     // Profile management
     refreshProfile: () => Promise<void>;
@@ -264,6 +267,26 @@ export function AuthProvider({ children }: AuthProviderProps) {
         // Auth state change listener will handle the state update
     }, []);
 
+    const signInWithGoogle = useCallback(async () => {
+        setState((prev) => ({ ...prev, error: null }));
+        const result = await authService.signInWithGoogle();
+        if (result.error) {
+            setState((prev) => ({ ...prev, error: result.error }));
+            return { error: result.error };
+        }
+        return { error: null };
+    }, []);
+
+    const signInWithGitHub = useCallback(async () => {
+        setState((prev) => ({ ...prev, error: null }));
+        const result = await authService.signInWithGitHub();
+        if (result.error) {
+            setState((prev) => ({ ...prev, error: result.error }));
+            return { error: result.error };
+        }
+        return { error: null };
+    }, []);
+
     // ========================================================================
     // Password Management
     // ========================================================================
@@ -276,6 +299,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const updatePassword = useCallback(async (newPassword: string) => {
         const result = await authService.updatePassword(newPassword);
         return { error: result.error };
+    }, []);
+
+    const deleteAccount = useCallback(async () => {
+        const result = await authService.deleteAccount();
+        if (result.error) {
+            return { error: result.error };
+        }
+        // Auth state listener handles the rest
+        return { error: null };
     }, []);
 
     // ========================================================================
@@ -354,8 +386,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
         signIn,
         signUp,
         signOut,
+        signInWithGoogle,
+        signInWithGitHub,
         requestPasswordReset,
         updatePassword,
+        deleteAccount,
         refreshProfile,
         updateProfile,
         refreshSession,
@@ -365,8 +400,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
         signIn,
         signUp,
         signOut,
+        signInWithGoogle,
+        signInWithGitHub,
         requestPasswordReset,
         updatePassword,
+        deleteAccount,
         refreshProfile,
         updateProfile,
         refreshSession,

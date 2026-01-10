@@ -81,10 +81,10 @@ export function ResetPasswordPage() {
     if (success) {
         return (
             <div className="min-h-screen bg-background flex items-center justify-center p-4">
-                <div className="bg-surface p-8 rounded-2xl shadow-lg border border-white/10 w-full max-w-md text-center">
+                <div className="bg-surface p-8 rounded-2xl shadow-lg border border-border w-full max-w-md text-center">
                     <div className="mx-auto w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mb-6">
                         <svg
-                            className="w-8 h-8 text-green-400"
+                            className="w-8 h-8 text-green-500"
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
@@ -97,11 +97,11 @@ export function ResetPasswordPage() {
                             />
                         </svg>
                     </div>
-                    <h1 className="text-2xl font-bold text-white mb-2">Password Updated</h1>
-                    <p className="text-slate-300 mb-6">
+                    <h1 className="text-2xl font-bold text-foreground mb-2">Password Updated</h1>
+                    <p className="text-muted-foreground mb-6">
                         Your password has been successfully changed.
                     </p>
-                    <p className="text-sm text-slate-400">
+                    <p className="text-sm text-muted-foreground">
                         Redirecting to dashboard...
                     </p>
                 </div>
@@ -111,10 +111,10 @@ export function ResetPasswordPage() {
 
     return (
         <div className="min-h-screen bg-background flex items-center justify-center p-4">
-            <div className="bg-surface p-8 rounded-2xl shadow-lg border border-white/10 w-full max-w-md">
+            <div className="bg-surface p-8 rounded-2xl shadow-lg border border-border w-full max-w-md">
                 <div className="text-center mb-8">
-                    <h1 className="text-2xl font-bold text-white">Set New Password</h1>
-                    <p className="text-slate-400">Choose a strong password for your account</p>
+                    <h1 className="text-2xl font-bold text-foreground">Set New Password</h1>
+                    <p className="text-muted-foreground">Choose a strong password for your account</p>
                 </div>
 
                 {validationError && (
@@ -127,7 +127,7 @@ export function ResetPasswordPage() {
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-1">
+                        <label className="block text-sm font-medium text-foreground mb-1">
                             New Password
                         </label>
                         <input
@@ -135,18 +135,18 @@ export function ResetPasswordPage() {
                             name="password"
                             required
                             autoComplete="new-password"
-                            className="w-full px-4 py-3 rounded-lg border border-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors bg-background text-white placeholder-slate-500"
+                            className="w-full px-4 py-3 rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors bg-background text-foreground placeholder-muted-foreground"
                             placeholder="••••••••"
                             value={formData.password}
                             onChange={handleChange}
                             disabled={loading}
                         />
-                        <p className="text-xs text-slate-500 mt-1">
+                        <p className="text-xs text-muted-foreground mt-1">
                             Must be at least 6 characters
                         </p>
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-1">
+                        <label className="block text-sm font-medium text-foreground mb-1">
                             Confirm New Password
                         </label>
                         <input
@@ -154,7 +154,7 @@ export function ResetPasswordPage() {
                             name="confirmPassword"
                             required
                             autoComplete="new-password"
-                            className="w-full px-4 py-3 rounded-lg border border-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors bg-background text-white placeholder-slate-500"
+                            className="w-full px-4 py-3 rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors bg-background text-foreground placeholder-muted-foreground"
                             placeholder="••••••••"
                             value={formData.confirmPassword}
                             onChange={handleChange}
@@ -178,7 +178,7 @@ export function ResetPasswordPage() {
                     </button>
                 </form>
 
-                <div className="mt-6 text-center text-sm text-slate-400">
+                <div className="mt-6 text-center text-sm text-muted-foreground">
                     <Link to="/login" className="text-primary font-semibold hover:underline">
                         Back to Login
                     </Link>

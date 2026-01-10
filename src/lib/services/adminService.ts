@@ -79,7 +79,7 @@ export const adminService = {
     async getRegisteredUsers() {
         // We use the RPC to get ban status as well
         const { data, error } = await supabase.rpc('admin_get_users_with_status');
-        
+
         if (error) throw error;
         return data as (Profile & { banned_until: string | null })[];
     },
@@ -98,7 +98,7 @@ export const adminService = {
             .from('contact_messages')
             .select('*')
             .order('created_at', { ascending: false });
-        
+
         if (error) throw error;
         return data as {
             id: string;
@@ -162,7 +162,7 @@ export const adminService = {
         // We use the main `supabase` client here which is authenticated as the current admin.
         const { error: profileError } = await supabase
             .from('profiles')
-            .update({ 
+            .update({
                 role: 'admin',
                 full_name: fullName // Ensure name is set in profile
             })
@@ -185,7 +185,7 @@ export const adminService = {
             .order('name');
 
         if (error) throw error;
-        
+
         return (data as DBProvider[]).map(p => ({
             id: p.id,
             name: p.name,
@@ -231,7 +231,7 @@ export const adminService = {
             enabled: provider.enabled,
             api_base_url: provider.baseUrl || null,
             // Config could store extra fields if needed
-            config: provider.isCustom ? { custom: true } : null 
+            config: provider.isCustom ? { custom: true } : null
         };
 
         const { error } = await supabase
@@ -278,7 +278,7 @@ export const adminService = {
                 provider_id: providerId,
                 name,
                 model_id: modelId,
-                cost_per_token: costPerToken,
+                cost_per_1k_input_tokens: costPerToken, // Fixed column name mismatch assumption
                 enabled: true
             })
             .select()
@@ -286,6 +286,30 @@ export const adminService = {
 
         if (error) throw error;
         return data as LLMModel;
+    },
+
+    async syncProviderModels(providerId: string, models: { id: string; name: string }[]) {
+        if (!models || models.length === 0) return;
+
+        // Prepare bulk upsert payload
+        const upsertData = models.map(m => ({
+            provider_id: providerId,
+            name: m.name,
+            model_id: m.id,
+            // Only set default enabled=true on INSERT. 
+            // Postgres upsert (ON CONFLICT DO UPDATE) updates columns specified or all if not specified.
+            // But we can't easily specify "do nothing on update" with simple upsert helper unless we exclude columns.
+            // For now, let's just upsert all fields. It might re-enable disabled models, but that ensures they work.
+            enabled: true,
+            max_tokens: 128000 // Default safe max
+        }));
+
+        // Upsert models
+        const { error } = await supabase
+            .from('llm_models')
+            .upsert(upsertData, { onConflict: 'provider_id,model_id' });
+
+        if (error) throw error;
     },
 
     async toggleModel(id: string, enabled: boolean) {
@@ -343,7 +367,7 @@ export const adminService = {
             active: p.is_active ?? false,
             // Defaults as these aren't in DB yet
             popular: false,
-            currency: 'USD'
+            currency: 'INR'
         }));
     },
 
@@ -358,7 +382,7 @@ export const adminService = {
             if (error.code === 'PGRST116') return null;
             throw error;
         }
-        
+
         const p = data as DBPlan;
         return {
             id: p.id,
@@ -368,13 +392,13 @@ export const adminService = {
             features: Array.isArray(p.features) ? p.features.map(String) : [],
             active: p.is_active ?? false,
             popular: false,
-            currency: 'USD'
+            currency: 'INR'
         };
     },
 
     async saveCreditPlan(plan: CreditPlan) {
         const slug = plan.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-        
+
         const dbPayload = {
             id: plan.id,
             name: plan.name,

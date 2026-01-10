@@ -10,7 +10,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { adminService, type LLMProvider } from '../../lib/services/adminService';
-import { 
+import {
     ArrowLeft,
     Key,
     Save,
@@ -96,10 +96,10 @@ export function AdminProvidersPage() {
     const loadSettings = async () => {
         try {
             setLoading(true);
-            
+
             // Load providers from DB
             const providers = await adminService.getProviders();
-            
+
             // Find active provider (Must be in PROVIDER_CONFIGS to be considered an "LLM" provider)
             const active = providers.find(p => p.enabled && PROVIDER_CONFIGS.some(c => c.id === p.provider));
             if (active) {
@@ -149,7 +149,7 @@ export function AdminProvidersPage() {
             // 1. Update LLM Providers
             for (const config of PROVIDER_CONFIGS) {
                 const existingProvider = providers.find(p => p.provider === config.id);
-                
+
                 const providerData: LLMProvider = {
                     id: existingProvider?.id || crypto.randomUUID(),
                     name: config.name,
@@ -161,6 +161,9 @@ export function AdminProvidersPage() {
                 };
 
                 await adminService.saveProvider(providerData);
+
+                // Sync models for this provider (Ensures DB table is populated so RPC works)
+                await adminService.syncProviderModels(providerData.id, config.models);
             }
 
             // 2. Update Deepgram Provider
@@ -205,8 +208,8 @@ export function AdminProvidersPage() {
             <div className="flex items-center justify-between">
                 <div>
                     <div className="flex items-center gap-3 mb-2">
-                        <Link 
-                            to="/admin/dashboard" 
+                        <Link
+                            to="/admin/dashboard"
                             className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
                         >
                             <ArrowLeft className="w-5 h-5" />
@@ -254,8 +257,8 @@ export function AdminProvidersPage() {
                                 key={config.id}
                                 className={`
                                     block p-4 rounded-xl border-2 cursor-pointer transition-all
-                                    ${activeProvider === config.id 
-                                        ? 'border-primary bg-primary/5' 
+                                    ${activeProvider === config.id
+                                        ? 'border-primary bg-primary/5'
                                         : 'border-slate-700 hover:border-slate-600 bg-slate-800/50'
                                     }
                                 `}
@@ -329,7 +332,7 @@ export function AdminProvidersPage() {
 
                         {/* Deepgram Model */}
                         <div className="pt-4 border-t border-slate-800">
-                             <div className="flex items-center gap-2 mb-3">
+                            <div className="flex items-center gap-2 mb-3">
                                 <div className="p-1 bg-purple-500/20 rounded">
                                     <svg className="w-3 h-3 text-purple-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                         <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />

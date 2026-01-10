@@ -1,7 +1,7 @@
 import { useAuth } from '../../contexts/AuthContext';
 
 export function SettingsPage() {
-    const { user } = useAuth();
+    const { user, deleteAccount } = useAuth();
 
     return (
         <div className="max-w-2xl">
@@ -60,7 +60,17 @@ export function SettingsPage() {
                         <div className="font-medium text-foreground">Delete Account</div>
                         <div className="text-sm text-muted-foreground">Permanently delete your account and all data</div>
                     </div>
-                    <button className="px-4 py-2 bg-destructive/10 text-destructive border border-destructive/20 rounded-lg text-sm font-medium hover:bg-destructive/20 transition-colors">
+                    <button 
+                        onClick={async () => {
+                            if (window.confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
+                                const { error } = await deleteAccount();
+                                if (error) {
+                                    alert('Failed to delete account: ' + error.message);
+                                }
+                            }
+                        }}
+                        className="px-4 py-2 bg-destructive/10 text-destructive border border-destructive/20 rounded-lg text-sm font-medium hover:bg-destructive/20 transition-colors"
+                    >
                         Delete Account
                     </button>
                 </div>

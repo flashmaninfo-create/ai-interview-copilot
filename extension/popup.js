@@ -488,7 +488,7 @@ function stopTimer() {
 function handleFinishMeeting(e) {
     e.preventDefault();
 
-    if (!confirm('Are you sure you want to finish this meeting? This will end the session and deduct credits.')) {
+    if (!confirm('Are you sure you want to finish this meeting?')) {
         return;
     }
 
@@ -929,7 +929,7 @@ async function handleFinishMeeting(e) {
 async function handleDisconnectMeeting(e) {
     e.preventDefault();
 
-    const confirmed = await showConfirm('Disconnect from this meeting? You can reconnect later without deducting credits.');
+    const confirmed = await showConfirm('Disconnect from this meeting?');
     if (!confirmed) {
         return;
     }
@@ -958,8 +958,26 @@ async function handleDisconnectMeeting(e) {
             }
         }
 
-        endMeetingSession();
     });
+}
+
+function handleLogout(e) {
+    if (e) e.preventDefault();
+    if (confirm('Are you sure you want to logout?')) {
+        chrome.storage.local.remove(['user', 'credits', 'savedMeetings', 'activeSessionId', 'consoleToken'], () => {
+            elements.userName.textContent = 'User';
+            elements.creditsAmount.textContent = '$0.00';
+            savedMeetings = [];
+            currentKeywords = [];
+            setState(STATE.LOGIN);
+        });
+    }
+}
+
+function handleDashboard(e) {
+    if (e) e.preventDefault();
+    // Redirect to console page
+    chrome.tabs.create({ url: 'http://localhost:5173/dashboard/console' });
 }
 
 // ===== AUTHENTICATION HANDLERS =====
@@ -1230,6 +1248,13 @@ function loadMeetingsData() {
 
                 // Show IN_MEETING state
                 setState(STATE.IN_MEETING);
+
+                // Send message to show overlay (in case user closed it)
+                chrome.runtime.sendMessage({
+                    type: 'SHOW_OVERLAY_ON_TAB',
+                    tabId: response.tabId
+                });
+
                 return;
             }
 

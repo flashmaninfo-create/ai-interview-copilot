@@ -280,6 +280,10 @@
         if (!overlay) createOverlay();
         overlay.style.display = 'flex';
         isHidden = false;
+
+        // Set status dot to green (active)
+        const statusDot = overlay.querySelector('.ic-status-dot');
+        if (statusDot) statusDot.style.background = '#22c55e'; // Green for active
     }
 
     function hideOverlay() {
@@ -545,13 +549,10 @@
 
             case 'SESSION_STOPPED':
                 sessionActive = false;
-                // Keep overlay visible but update status
-                if (overlay) {
-                    const statusDot = overlay.querySelector('.ic-status-dot');
-                    if (statusDot) statusDot.style.background = '#94a3b8';
-                    const liveBadge = overlay.querySelector('.ic-live-badge');
-                    if (liveBadge) liveBadge.textContent = '● ENDED';
-                }
+                // Hide overlay when session is finished
+                hideOverlay();
+                console.log('[Content] Session stopped, overlay hidden');
+                sendResponse({ success: true });
                 break;
 
             case 'SESSION_PAUSED':

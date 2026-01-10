@@ -2,10 +2,22 @@ import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 
 const ScrollToHash = () => {
-  const { hash } = useLocation();
+  const { hash, pathname } = useLocation();
   const lastHash = useRef('');
+  const lastPathname = useRef('');
 
   useEffect(() => {
+    // Scroll to top when pathname changes (new page navigation)
+    if (pathname !== lastPathname.current) {
+      lastPathname.current = pathname;
+      
+      // Only scroll to top if there's no hash to scroll to
+      if (!hash) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+    }
+
     if (hash) {
       lastHash.current = hash;
       const scrollToElement = () => {
@@ -30,7 +42,7 @@ const ScrollToHash = () => {
         return () => clearInterval(interval);
       }
     }
-  }, [hash]);
+  }, [hash, pathname]);
 
   return null;
 };

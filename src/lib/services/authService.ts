@@ -277,6 +277,42 @@ export const authService = {
     },
 
     // ========================================================================
+    // OAuth Sign-In
+    // ========================================================================
+
+    /**
+     * Sign in with Google OAuth
+     */
+    async signInWithGoogle(): Promise<AuthResult<void>> {
+        try {
+            const { error } = await supabase.auth.signInWithOAuth({
+                provider: 'google',
+                options: { redirectTo: `${window.location.origin}/dashboard` },
+            });
+            if (error) return { data: null, error: mapAuthError(error) };
+            return { data: null, error: null };
+        } catch (err) {
+            return { data: null, error: { code: 'NETWORK_ERROR', message: 'Failed to initiate Google OAuth.' } };
+        }
+    },
+
+    /**
+     * Sign in with GitHub OAuth
+     */
+    async signInWithGitHub(): Promise<AuthResult<void>> {
+        try {
+            const { error } = await supabase.auth.signInWithOAuth({
+                provider: 'github',
+                options: { redirectTo: `${window.location.origin}/dashboard` },
+            });
+            if (error) return { data: null, error: mapAuthError(error) };
+            return { data: null, error: null };
+        } catch (err) {
+            return { data: null, error: { code: 'NETWORK_ERROR', message: 'Failed to initiate GitHub OAuth.' } };
+        }
+    },
+
+    // ========================================================================
     // Logout
     // ========================================================================
 
@@ -428,6 +464,35 @@ export const authService = {
                 error: {
                     code: 'NETWORK_ERROR',
                     message: 'Failed to update password.',
+                },
+            };
+        }
+    },
+
+    // ========================================================================
+    // Account Management
+    // ========================================================================
+
+    /**
+     * Permanently delete current user account
+     */
+    async deleteAccount(): Promise<AuthResult> {
+        try {
+            const { error } = await supabase.rpc('delete_user_account');
+            
+            if (error) {
+                return { data: null, error: mapAuthError(error as unknown as AuthError) };
+            }
+
+            // Force local signout
+            const { error: signOutError } = await supabase.auth.signOut();
+            return { data: null, error: signOutError ? mapAuthError(signOutError) : null };
+        } catch (err) {
+            return {
+                data: null,
+                error: {
+                    code: 'NETWORK_ERROR',
+                    message: 'Failed to delete account.',
                 },
             };
         }

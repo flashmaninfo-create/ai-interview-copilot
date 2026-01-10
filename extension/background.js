@@ -127,12 +127,14 @@ class BackgroundService {
 
       case 'DISCONNECT_MEETING':
         // Disconnect = pause session (can be resumed)
-        await this.pauseSession(msg.data, sendResponse);
+        // Note: sessionId is at root level of msg, not in msg.data
+        await this.pauseSession(msg, sendResponse);
         break;
 
       case 'RESUME_MEETING':
         // Resume a paused meeting
-        await this.resumeSession(msg.data, sendResponse);
+        // Note: sessionId is at root level of msg, not in msg.data
+        await this.resumeSession(msg, sendResponse);
         break;
 
       case 'START_SESSION':
@@ -169,6 +171,15 @@ class BackgroundService {
           sessionTime: this.getSessionTime(),
           meetingUrl: this.state.data.activeSession?.url || ''
         });
+        break;
+
+      case 'SHOW_OVERLAY_ON_TAB':
+        // Show overlay on the specified tab (called when popup opens during active session)
+        const overlayTabId = msg.tabId || this.tabId;
+        if (overlayTabId && this.sessionActive) {
+          chrome.tabs.sendMessage(overlayTabId, { type: 'SHOW_OVERLAY' }).catch(() => { });
+        }
+        sendResponse({ success: true });
         break;
 
       case 'UPDATE_SETTINGS':
@@ -556,6 +567,14 @@ class BackgroundService {
     await this.sendSessionStartedWithRetry(tabId, 3);
   }
 
+  // Get elapsed session time in seconds
+  getSessionTime() {
+    if (!this.sessionActive || !this.state.data.activeSession?.startTime) {
+      return 0;
+    }
+    return Math.floor((Date.now() - this.state.data.activeSession.startTime) / 1000);
+  }
+
   // Helper function to send SESSION_STARTED with retries
   async sendSessionStartedWithRetry(tabId, maxRetries = 3) {
     const sessionData = {
@@ -858,6 +877,8 @@ class BackgroundService {
 
   // Pause session - saves state for later resume (no credit deduction)
   async pauseSession(data, sendResponse) {
+    console.log('[Background] pauseSession called, data:', data);
+
     try {
       // Stop mock transcription
       if (this.mockTranscriptionInterval) {
@@ -866,12 +887,20 @@ class BackgroundService {
       }
 
       // Stop real audio capture
-      await this.stopRealAudioCapture();
+      try {
+        await this.stopRealAudioCapture();
+      } catch (audioError) {
+        console.log('[Background] Audio stop error (non-fatal):', audioError.message);
+      }
 
       // Calculate elapsed time
       const elapsedTime = this.state.data.activeSession?.startTime
         ? Date.now() - this.state.data.activeSession.startTime
         : 0;
+
+      // Get session ID from background state (not from popup message)
+      const sessionId = this.state.data.activeSession?.id;
+      console.log('[Background] Pausing session:', sessionId, 'elapsed:', elapsedTime);
 
       // Prepare state to save for resume
       const pausedState = {
@@ -882,44 +911,36 @@ class BackgroundService {
           platform: this.state.data.activeSession?.platform,
           tabId: this.tabId
         },
-        transcription_text: this.transcriptionManager.getText(),
+        transcription_text: this.transcriptionManager?.getText() || '',
         paused_at: Date.now()
       };
 
-      // DATABASE SYNC: Mark session as paused with state
-      const sessionId = this.state.data.activeSession?.id;
-      try {
-        if (sessionId) {
+      // DATABASE SYNC: Try to mark session as paused (non-blocking)
+      // This is wrapped in try-catch so DB failures don't break popup flow
+      if (sessionId) {
+        try {
+          // Try RPC first
           const result = await supabaseREST.rpc('pause_session', {
             p_session_id: sessionId,
             p_state: pausedState
           });
-
-          if (result.success) {
+          if (result?.success) {
             console.log('[Background] DB Session paused with state saved');
           } else {
-            // Fallback to direct update if RPC fails
+            // Fallback to direct update
             await supabaseREST.update('interview_sessions',
               { status: 'paused', paused_at: new Date().toISOString(), paused_state: pausedState },
               { id: sessionId }
             );
             console.log('[Background] DB Session paused via direct update');
           }
-        }
-      } catch (dbError) {
-        console.error('[Background] Failed to pause DB session:', dbError);
-        // Try fallback
-        try {
-          await supabaseREST.update('interview_sessions',
-            { status: 'paused', paused_at: new Date().toISOString(), paused_state: pausedState },
-            { id: sessionId }
-          );
-        } catch (e) {
-          console.error('[Background] Fallback pause also failed:', e);
+        } catch (dbError) {
+          console.error('[Background] Failed to update DB (non-fatal):', dbError.message);
+          // Continue anyway - local state is more important
         }
       }
 
-      // Store session ID locally for resume (don't clear activeSession completely)
+      // Store session ID locally for resume
       const savedSessionInfo = {
         id: sessionId,
         url: this.state.data.activeSession?.url,
@@ -934,17 +955,11 @@ class BackgroundService {
         pausedSessionId: sessionId
       });
 
-      // Clear active session state but keep paused session ID reference
+      // Clear active session state
       this.sessionActive = false;
       this.state.data.activeSession = null;
       this.transcriptionBuffer = [];
       this.screenshotQueue = [];
-
-      // DON'T clear TranscriptionManager - we'll restore it on resume
-      // this.transcriptionManager.clear();
-
-      // DON'T clear InterviewContext - we'll restore it on resume
-      // this.interviewContext.clear();
 
       // Cancel any pending console debounce timer
       if (this.consoleTranscriptTimeout) {
@@ -955,13 +970,24 @@ class BackgroundService {
       await this.state.save();
 
       // Disconnect console (will reconnect on resume)
-      await this.consoleSync.disconnect();
-
-      // Notify content script to hide overlay
-      if (this.tabId) {
-        chrome.tabs.sendMessage(this.tabId, { type: 'SESSION_PAUSED' });
+      try {
+        await this.consoleSync.disconnect();
+      } catch (syncError) {
+        console.log('[Background] Console disconnect error (non-fatal):', syncError.message);
       }
 
+      // Notify content script to hide overlay
+      console.log('[Background] Sending SESSION_PAUSED to tab:', this.tabId);
+      if (this.tabId) {
+        try {
+          await chrome.tabs.sendMessage(this.tabId, { type: 'SESSION_PAUSED' });
+          console.log('[Background] SESSION_PAUSED sent successfully');
+        } catch (msgError) {
+          console.log('[Background] Failed to send SESSION_PAUSED:', msgError.message);
+        }
+      }
+
+      console.log('[Background] Pause session complete, sending response');
       sendResponse({
         success: true,
         paused: true,
@@ -1551,15 +1577,8 @@ class BackgroundService {
     return Math.floor((Date.now() - this.state.data.activeSession.startTime) / 1000);
   }
 
-  pauseSession() {
-    // Pause audio capture but keep session active
-    this.audioManager.pause();
-  }
-
-  async resumeSession() {
-    // Resume audio capture
-    await this.audioManager.resume();
-  }
+  // NOTE: Full pauseSession() and resumeSession() implementations are defined earlier in the class
+  // Do NOT add duplicate stubs here as they would override the full implementations
 }
 
 // Initialize background service

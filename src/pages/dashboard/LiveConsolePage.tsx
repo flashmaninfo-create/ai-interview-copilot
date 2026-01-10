@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useConsoleSync } from '../../hooks/useConsoleSync';
-import { creditService } from '../../lib/services/creditService';
+
 import {
   Mic,
   Lightbulb,
@@ -31,10 +31,12 @@ export function LiveConsolePage() {
   const [userScrolledUp, setUserScrolledUp] = useState(false);
   const [activePanel, setActivePanel] = useState<'transcript' | 'hints'>('transcript');
   const [loading, setLoading] = useState(false);
-  const [quickPrompt, setQuickPrompt] = useState('');
+
+
+  /* ---------------- Fetch Credits (Unused) ---------------- */
+  /*
   const [credits, setCredits] = useState<number>(0);
 
-  /* ---------------- Fetch Credits ---------------- */
   useEffect(() => {
     const fetchCredits = async () => {
       const result = await creditService.getBalance();
@@ -46,6 +48,7 @@ export function LiveConsolePage() {
     const interval = setInterval(fetchCredits, 30000);
     return () => clearInterval(interval);
   }, []);
+  */
 
   /* ---------------- Auto scroll ---------------- */
   useEffect(() => {
@@ -73,21 +76,7 @@ export function LiveConsolePage() {
     setTimeout(() => setLoading(false), 3000);
   };
 
-  const handleQuickPrompt = async () => {
-    if (!quickPrompt.trim()) return;
 
-    setLoading(true);
-    setActivePanel('hints');
-
-    await sendCommand('REQUEST_HINT', {
-      requestType: 'custom',
-      trigger: 'manual',
-      customPrompt: quickPrompt
-    });
-
-    setQuickPrompt('');
-    setTimeout(() => setLoading(false), 3000);
-  };
 
   const handleRefresh = () => {
     window.location.reload();

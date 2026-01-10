@@ -153,7 +153,6 @@ export function InterviewHistoryPage() {
                                     <th className="text-left px-6 py-4 text-sm font-semibold text-muted-foreground">Role</th>
                                     <th className="text-left px-6 py-4 text-sm font-semibold text-muted-foreground">Type</th>
                                     <th className="text-left px-6 py-4 text-sm font-semibold text-muted-foreground">Status</th>
-                                    <th className="text-left px-6 py-4 text-sm font-semibold text-muted-foreground">Score</th>
                                     <th className="text-left px-6 py-4 text-sm font-semibold text-muted-foreground">Duration</th>
                                     <th className="text-left px-6 py-4 text-sm font-semibold text-muted-foreground">Date</th>
                                     <th className="text-right px-6 py-4 text-sm font-semibold text-muted-foreground"></th>
@@ -172,13 +171,6 @@ export function InterviewHistoryPage() {
                                             <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium capitalize ${getStatusColor(session.status)}`}>
                                                 {session.status}
                                             </span>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            {session.score !== null ? (
-                                                <span className="font-medium text-foreground">{session.score}</span>
-                                            ) : (
-                                                <span className="text-muted-foreground">—</span>
-                                            )}
                                         </td>
                                         <td className="px-6 py-4 text-muted-foreground">
                                             {formatDuration(session.started_at, session.ended_at)}

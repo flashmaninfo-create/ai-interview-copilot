@@ -32,11 +32,7 @@ export function AdminPlanEditorPage() {
         id: crypto.randomUUID(),
         name: '',
         credits: 100,
-<<<<<<< HEAD
-        price: 19.99,
-=======
         price: 1000,
->>>>>>> main
         currency: 'INR',
         active: true,
         popular: false,
@@ -301,13 +297,8 @@ export function AdminPlanEditorPage() {
                             <div>
                                 <h3 className="text-lg font-bold text-white mb-1">{plan.name || 'Plan Name'}</h3>
                                 <div className="flex items-baseline gap-1">
-<<<<<<< HEAD
                                     <span className="text-3xl font-bold text-white">
-                                        {plan.currency === 'INR' ? '₹' : plan.currency} {plan.price}
-=======
-                                <span className="text-3xl font-bold text-white">
                                         ₹{plan.price}
->>>>>>> main
                                     </span>
                                 </div>
                             </div>

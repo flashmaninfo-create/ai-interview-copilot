@@ -139,54 +139,24 @@
                     <div class="auth-form-side">
                         <div class="auth-form-container">
                             <div class="auth-header">
-                                <h1 id="authTitle">Welcome Back</h1>
-                                <p id="authSubtitle">Sign in to continue your interview preparation</p>
+                                <h1>Welcome</h1>
+                                <p>Please log in via our secure dashboard to access Interview Copilot.</p>
                             </div>
 
-                            <form id="authForm" class="auth-form">
-                                <!-- Full Name (only shown in signup mode) -->
-                                <div class="auth-input-group" id="fullNameGroup" style="display: none;">
-                                    <label for="authFullName">Full Name <span
-                                            class="optional-text">(optional)</span></label>
-                                    <input type="text" id="authFullName" placeholder="John Doe" autocomplete="name">
-                                </div>
-
-                                <div class="auth-input-group">
-                                    <label for="authEmail">Email</label>
-                                    <input type="email" id="authEmail" placeholder="you@example.com" required
-                                        autocomplete="email">
-                                </div>
-
-                                <div class="auth-input-group">
-                                    <label for="authPassword">Password</label>
-                                    <input type="password" id="authPassword" placeholder="Enter your password" required
-                                        autocomplete="current-password">
-                                    <small class="password-hint" id="passwordHint" style="display: none;">Must be at
-                                        least 6 characters</small>
-                                </div>
-
-                                <!-- Confirm Password (only shown in signup mode) -->
-                                <div class="auth-input-group" id="confirmPasswordGroup" style="display: none;">
-                                    <label for="authConfirmPassword">Confirm Password</label>
-                                    <input type="password" id="authConfirmPassword" placeholder="Re-enter your password"
-                                        autocomplete="new-password">
-                                </div>
-
-                                <button type="submit" class="auth-submit-btn" id="authSubmitBtn">
-                                    Sign In
+                            <div class="auth-buttons-container"
+                                style="display: flex; flex-direction: column; gap: 15px; margin-top: 30px;">
+                                <button id="loginBtn" class="auth-submit-btn">
+                                    Log In via Dashboard
                                 </button>
-                            </form>
-
-                            <div class="auth-footer">
-                                <span id="authToggleText">Don't have an account?</span>
-                                <a href="#" id="authToggleLink">Sign Up</a>
+                                <button id="signupBtn" class="auth-submit-btn"
+                                    style="background: transparent; border: 1px solid #ddd; color: #333;">
+                                    Create New Account
+                                </button>
                             </div>
 
-                            <div class="auth-terms" id="authTerms" style="display: none;">
-                                By signing up, you agree to our <a href="http://localhost:5173/terms"
-                                    target="_blank">Terms of Service</a> and <a href="http://localhost:5173/privacy"
-                                    target="_blank">Privacy Policy</a>
-                            </div>
+                            <p style="margin-top: 20px; font-size: 13px; color: #666; text-align: center;">
+                                Once logged in, click the extension icon again to start.
+                            </p>
                         </div>
                     </div>
                 </div>

@@ -659,3 +659,43 @@
 
     console.log('[Content] Content script ready');
 })();
+
+// ==========================================
+// Dashboard Auth Sync Logic
+// ==========================================
+(function () {
+    if (window.location.host.includes('localhost:5173') || window.location.host.includes('interview-copilot.com')) {
+        console.log('[Content] Checking for auth token on dashboard domain: ' + window.location.host);
+
+        function checkForAuthToken() {
+            let authData = null;
+            // Iterate localStorage to find Supabase token
+            // Key format: sb-<project-ref>-auth-token
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key.startsWith('sb-') && key.endsWith('-auth-token')) {
+                    try {
+                        authData = JSON.parse(localStorage.getItem(key));
+                        break;
+                    } catch (e) {
+                        console.error('[Content] Failed to parse auth token', e);
+                    }
+                }
+            }
+
+            if (authData && authData.user && authData.access_token) {
+                // Found it! Send to background
+                chrome.runtime.sendMessage({
+                    type: 'AUTH_SYNC',
+                    user: authData.user,
+                    session: authData,
+                    token: authData.access_token
+                });
+            }
+        }
+
+        // Poll every 2 seconds to catch login/signup completion
+        setInterval(checkForAuthToken, 2000);
+        checkForAuthToken();
+    }
+})();

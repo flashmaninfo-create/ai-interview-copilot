@@ -148,20 +148,8 @@ function initializeElements() {
     elements.planDetails = document.getElementById('planDetails');
 
     // Auth elements
-    elements.authForm = document.getElementById('authForm');
-    elements.authFullName = document.getElementById('authFullName');
-    elements.authEmail = document.getElementById('authEmail');
-    elements.authPassword = document.getElementById('authPassword');
-    elements.authConfirmPassword = document.getElementById('authConfirmPassword');
-    elements.authTitle = document.getElementById('authTitle');
-    elements.authSubtitle = document.getElementById('authSubtitle');
-    elements.authSubmitBtn = document.getElementById('authSubmitBtn');
-    elements.authToggleText = document.getElementById('authToggleText');
-    elements.authToggleLink = document.getElementById('authToggleLink');
-    elements.fullNameGroup = document.getElementById('fullNameGroup');
-    elements.confirmPasswordGroup = document.getElementById('confirmPasswordGroup');
-    elements.passwordHint = document.getElementById('passwordHint');
-    elements.authTerms = document.getElementById('authTerms');
+    elements.loginBtn = document.getElementById('loginBtn');
+    elements.signupBtn = document.getElementById('signupBtn');
 }
 
 // ===== EVENT LISTENERS =====
@@ -192,13 +180,14 @@ function attachEventListeners() {
         });
     }
 
-    // Auth form and toggle
-    if (elements.authForm) {
-        elements.authForm.addEventListener('submit', handleAuthSubmit);
-    }
-    if (elements.authToggleLink) {
-        elements.authToggleLink.addEventListener('click', handleAuthToggle);
-    }
+    // Auth buttons (External Links)
+    elements.loginBtn?.addEventListener('click', () => {
+        chrome.tabs.create({ url: 'http://localhost:5173/login' });
+    });
+
+    elements.signupBtn?.addEventListener('click', () => {
+        chrome.tabs.create({ url: 'http://localhost:5173/signup' });
+    });
 
     // Keywords input - add tag on Enter
     if (elements.keywordsInput) {
@@ -1289,6 +1278,15 @@ function loadUserInfo() {
     chrome.storage.local.get(['user', 'credits'], (result) => {
         if (result.user) {
             elements.userName.textContent = result.user.name || result.user.email || 'User';
+
+            // Request fresh credits in background
+            chrome.runtime.sendMessage({ type: 'GET_CREDITS' }, (response) => {
+                if (response && response.success !== undefined) {
+                    // Note: response.credits might be 0, which is falsy, check undefined
+                    const amount = response.credits || 0;
+                    elements.creditsAmount.textContent = `$${amount.toFixed(2)}`;
+                }
+            });
         }
 
         if (result.credits !== undefined) {

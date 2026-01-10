@@ -173,6 +173,10 @@ class BackgroundService {
         });
         break;
 
+      case 'AUTH_SYNC':
+        await this.handleAuthSync(msg, sendResponse);
+        break;
+
       case 'SHOW_OVERLAY_ON_TAB':
         // Show overlay on the specified tab (called when popup opens during active session)
         const overlayTabId = msg.tabId || this.tabId;
@@ -181,6 +185,8 @@ class BackgroundService {
         }
         sendResponse({ success: true });
         break;
+
+
 
       case 'UPDATE_SETTINGS':
         await this.updateSettings(msg.data, sendResponse);
@@ -1577,8 +1583,49 @@ class BackgroundService {
     return Math.floor((Date.now() - this.state.data.activeSession.startTime) / 1000);
   }
 
-  // NOTE: Full pauseSession() and resumeSession() implementations are defined earlier in the class
-  // Do NOT add duplicate stubs here as they would override the full implementations
+  async handleAuthSync(msg, sendResponse) {
+    try {
+      console.log('[Background] Received AUTH_SYNC', msg.user?.id);
+
+      if (msg.user && msg.token) {
+        const updates = {
+          user: msg.user,
+          supabase_access_token: msg.token,
+          supabase_refresh_token: msg.session?.refresh_token || null,
+          supabase_token_expires: msg.session?.expires_at || null,
+          isAuthenticated: true
+        };
+
+        await chrome.storage.local.set(updates);
+
+        // Update local state if needed
+        this.state.data.user = msg.user;
+
+        // Fetch credits immediately to ensure UI is up to date
+        try {
+          const creditsResult = await supabaseREST.getCredits();
+          if (creditsResult.success) {
+            this.state.data.credits = creditsResult.balance;
+            await chrome.storage.local.set({ credits: creditsResult.balance });
+            console.log('[Background] Credits fetched on auth sync:', creditsResult.balance);
+          }
+        } catch (err) {
+          console.error('[Background] Failed to fetch credits on auth sync:', err);
+        }
+
+        console.log('[Background] Auth synced and stored');
+        sendResponse({ success: true });
+      } else {
+        console.warn('[Background] Invalid auth sync data');
+        sendResponse({ success: false, error: 'Invalid auth data' });
+      }
+    } catch (e) {
+      console.error('[Background] Auth sync error:', e);
+      sendResponse({ success: false, error: e.message });
+    }
+  }
+
+  // NOTE: Full pauseSession() and resumeSession() 
 }
 
 // Initialize background service

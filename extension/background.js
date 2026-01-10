@@ -126,8 +126,13 @@ class BackgroundService {
         break;
 
       case 'DISCONNECT_MEETING':
-        // Disconnect = cancel session (no credit deduction)
-        await this.cancelSession(sendResponse);
+        // Disconnect = pause session (can be resumed)
+        await this.pauseSession(msg.data, sendResponse);
+        break;
+
+      case 'RESUME_MEETING':
+        // Resume a paused meeting
+        await this.resumeSession(msg.data, sendResponse);
         break;
 
       case 'START_SESSION':
@@ -848,6 +853,305 @@ class BackgroundService {
     } catch (error) {
       console.error('[Background] Cancel session error:', error);
       sendResponse({ success: false, error: error.message });
+    }
+  }
+
+  // Pause session - saves state for later resume (no credit deduction)
+  async pauseSession(data, sendResponse) {
+    try {
+      // Stop mock transcription
+      if (this.mockTranscriptionInterval) {
+        clearInterval(this.mockTranscriptionInterval);
+        this.mockTranscriptionInterval = null;
+      }
+
+      // Stop real audio capture
+      await this.stopRealAudioCapture();
+
+      // Calculate elapsed time
+      const elapsedTime = this.state.data.activeSession?.startTime
+        ? Date.now() - this.state.data.activeSession.startTime
+        : 0;
+
+      // Prepare state to save for resume
+      const pausedState = {
+        elapsed_time: elapsedTime,
+        interview_context: this.state.data.activeSession?.interviewContext || {},
+        meeting_data: {
+          url: this.state.data.activeSession?.url,
+          platform: this.state.data.activeSession?.platform,
+          tabId: this.tabId
+        },
+        transcription_text: this.transcriptionManager.getText(),
+        paused_at: Date.now()
+      };
+
+      // DATABASE SYNC: Mark session as paused with state
+      const sessionId = this.state.data.activeSession?.id;
+      try {
+        if (sessionId) {
+          const result = await supabaseREST.rpc('pause_session', {
+            p_session_id: sessionId,
+            p_state: pausedState
+          });
+
+          if (result.success) {
+            console.log('[Background] DB Session paused with state saved');
+          } else {
+            // Fallback to direct update if RPC fails
+            await supabaseREST.update('interview_sessions',
+              { status: 'paused', paused_at: new Date().toISOString(), paused_state: pausedState },
+              { id: sessionId }
+            );
+            console.log('[Background] DB Session paused via direct update');
+          }
+        }
+      } catch (dbError) {
+        console.error('[Background] Failed to pause DB session:', dbError);
+        // Try fallback
+        try {
+          await supabaseREST.update('interview_sessions',
+            { status: 'paused', paused_at: new Date().toISOString(), paused_state: pausedState },
+            { id: sessionId }
+          );
+        } catch (e) {
+          console.error('[Background] Fallback pause also failed:', e);
+        }
+      }
+
+      // Store session ID locally for resume (don't clear activeSession completely)
+      const savedSessionInfo = {
+        id: sessionId,
+        url: this.state.data.activeSession?.url,
+        interviewContext: this.state.data.activeSession?.interviewContext,
+        consoleToken: this.state.data.consoleToken,
+        elapsedTime: elapsedTime
+      };
+
+      // Save paused session info to storage
+      await chrome.storage.local.set({
+        pausedSession: savedSessionInfo,
+        pausedSessionId: sessionId
+      });
+
+      // Clear active session state but keep paused session ID reference
+      this.sessionActive = false;
+      this.state.data.activeSession = null;
+      this.transcriptionBuffer = [];
+      this.screenshotQueue = [];
+
+      // DON'T clear TranscriptionManager - we'll restore it on resume
+      // this.transcriptionManager.clear();
+
+      // DON'T clear InterviewContext - we'll restore it on resume
+      // this.interviewContext.clear();
+
+      // Cancel any pending console debounce timer
+      if (this.consoleTranscriptTimeout) {
+        clearTimeout(this.consoleTranscriptTimeout);
+        this.consoleTranscriptTimeout = null;
+      }
+
+      await this.state.save();
+
+      // Disconnect console (will reconnect on resume)
+      await this.consoleSync.disconnect();
+
+      // Notify content script to hide overlay
+      if (this.tabId) {
+        chrome.tabs.sendMessage(this.tabId, { type: 'SESSION_PAUSED' });
+      }
+
+      sendResponse({
+        success: true,
+        paused: true,
+        sessionId: sessionId,
+        elapsedTime: elapsedTime
+      });
+
+    } catch (error) {
+      console.error('[Background] Pause session error:', error);
+      sendResponse({ success: false, error: error.message });
+    }
+  }
+
+  // Resume a paused session - restores state and reconnects
+  async resumeSession(data, sendResponse) {
+    try {
+      const sessionId = data?.sessionId;
+
+      if (!sessionId) {
+        sendResponse({ success: false, error: 'No session ID provided' });
+        return;
+      }
+
+      console.log('[Background] Resuming session:', sessionId);
+
+      // Get active tab
+      const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (!activeTab) {
+        sendResponse({ success: false, error: 'No active tab found' });
+        return;
+      }
+
+      this.tabId = activeTab.id;
+
+      // Fetch session from database
+      let sessionData = null;
+      let pausedState = null;
+      let consoleToken = null;
+
+      try {
+        const result = await supabaseREST.rpc('resume_session', {
+          p_session_id: sessionId
+        });
+
+        if (result.success) {
+          pausedState = result.paused_state;
+          consoleToken = result.console_token;
+          console.log('[Background] Session resumed via RPC, paused_state:', pausedState);
+        } else {
+          // If RPC fails, try fetching directly
+          const sessions = await supabaseREST.select('interview_sessions', `id=eq.${sessionId}`);
+          if (sessions && sessions.length > 0) {
+            sessionData = sessions[0];
+            pausedState = sessionData.paused_state;
+            consoleToken = sessionData.console_token;
+
+            // Update status to active
+            await supabaseREST.update('interview_sessions',
+              { status: 'active', updated_at: new Date().toISOString() },
+              { id: sessionId }
+            );
+          }
+        }
+      } catch (dbError) {
+        console.error('[Background] Failed to resume from DB:', dbError);
+        // Try to get from local storage
+        const stored = await chrome.storage.local.get(['pausedSession']);
+        if (stored.pausedSession && stored.pausedSession.id === sessionId) {
+          pausedState = {
+            elapsed_time: stored.pausedSession.elapsedTime,
+            interview_context: stored.pausedSession.interviewContext
+          };
+          consoleToken = stored.pausedSession.consoleToken;
+        }
+      }
+
+      // Calculate new start time based on elapsed time at pause
+      const elapsedTime = pausedState?.elapsed_time || 0;
+      const adjustedStartTime = Date.now() - elapsedTime;
+
+      // Restore session state
+      this.sessionActive = true;
+      this.state.data.activeSession = {
+        id: sessionId,
+        tabId: this.tabId,
+        startTime: adjustedStartTime, // Adjusted so timer continues from where it was
+        url: pausedState?.meeting_data?.url || data?.meetingUrl || activeTab.url,
+        platform: pausedState?.meeting_data?.platform || this.detectPlatform(activeTab.url),
+        interviewContext: pausedState?.interview_context || data?.interviewContext || {},
+        resumed: true,
+        resumedAt: Date.now()
+      };
+
+      // Restore interview context
+      if (pausedState?.interview_context) {
+        this.interviewContext.setMeta(pausedState.interview_context);
+      }
+
+      // Pre-warm AI config
+      this.aiService.warmup();
+
+      this.state.data.consoleToken = consoleToken;
+      await this.state.save();
+
+      // Reconnect console sync
+      if (consoleToken) {
+        await this.consoleSync.connect(consoleToken, sessionId);
+
+        // Send heartbeat
+        await this.consoleSync.send({
+          type: 'SESSION_ACTIVE',
+          data: {
+            sessionId: sessionId,
+            timestamp: Date.now(),
+            resumed: true,
+            interviewContext: pausedState?.interview_context || {}
+          }
+        });
+      }
+
+      // Start audio capture
+      try {
+        await this.startRealAudioCapture(this.tabId);
+        console.log('[Background] Real audio capture resumed');
+      } catch (error) {
+        console.error('[Background] Audio capture failed on resume:', error.message);
+      }
+
+      // Notify content script to show overlay with resumed state
+      await this.notifyContentScriptResume(this.tabId, {
+        sessionId: sessionId,
+        elapsedTime: elapsedTime,
+        transcriptionText: pausedState?.transcription_text || ''
+      });
+
+      // Clear paused session from storage
+      await chrome.storage.local.remove(['pausedSession', 'pausedSessionId']);
+
+      sendResponse({
+        success: true,
+        resumed: true,
+        sessionId: sessionId,
+        consoleToken: consoleToken,
+        elapsedTime: elapsedTime
+      });
+
+    } catch (error) {
+      console.error('[Background] Resume session error:', error);
+      sendResponse({ success: false, error: error.message });
+    }
+  }
+
+  // Helper to notify content script about resumed session
+  async notifyContentScriptResume(tabId, data) {
+    // Try to send message first
+    let contentScriptReady = false;
+    try {
+      await chrome.tabs.sendMessage(tabId, { type: 'PING' });
+      contentScriptReady = true;
+    } catch (err) {
+      console.log('[Background] Content script not loaded for resume, will inject');
+    }
+
+    // Inject if needed
+    if (!contentScriptReady) {
+      try {
+        await chrome.scripting.insertCSS({
+          target: { tabId },
+          files: ['content-styles.css']
+        });
+        await chrome.scripting.executeScript({
+          target: { tabId },
+          files: ['content-script.js']
+        });
+        await new Promise(resolve => setTimeout(resolve, 300));
+      } catch (error) {
+        console.error('[Background] Failed to inject for resume:', error.message);
+        return;
+      }
+    }
+
+    // Send resume message
+    try {
+      await chrome.tabs.sendMessage(tabId, {
+        type: 'SESSION_RESUMED',
+        data: data
+      });
+      console.log('[Background] Content script notified of resume');
+    } catch (err) {
+      console.error('[Background] Failed to send resume message:', err.message);
     }
   }
 

@@ -226,6 +226,8 @@ function attachEventListeners() {
 
             if (target.classList.contains('card-start-btn')) {
                 startMeetingById(meetingId);
+            } else if (target.classList.contains('card-resume-btn')) {
+                resumeMeetingById(meetingId);
             } else if (target.classList.contains('card-edit-btn')) {
                 editMeetingById(meetingId);
             } else if (target.classList.contains('card-delete-btn')) {
@@ -563,12 +565,29 @@ function renderMeetingCards() {
 // Create individual meeting card
 function createMeetingCard(meeting) {
     const card = document.createElement('div');
-    card.className = 'meeting-card';
+    card.className = 'meeting-card' + (meeting.paused ? ' paused' : '');
     card.dataset.id = meeting.id;
+
+    // Determine button based on paused state
+    const isPaused = meeting.paused || meeting.status === 'paused';
+    const buttonClass = isPaused ? 'btn-resume card-resume-btn' : 'btn-start card-start-btn';
+    const buttonText = isPaused ? 'Resume' : 'Start';
+    const buttonIcon = isPaused ? '▶' : 'X';
+
+    // Format elapsed time if paused
+    let pausedInfo = '';
+    if (isPaused && meeting.elapsedTime) {
+        const mins = Math.floor(meeting.elapsedTime / 60000);
+        const secs = Math.floor((meeting.elapsedTime % 60000) / 1000);
+        pausedInfo = `<span class="paused-time">Paused at ${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}</span>`;
+    }
 
     card.innerHTML = `
         <div class="card-header">
-            <div class="card-title">${meeting.title}</div>
+            <div class="card-title">
+                ${meeting.title}
+                ${isPaused ? '<span class="paused-badge">PAUSED</span>' : ''}
+            </div>
             <div class="card-actions">
                 <button class="card-action-btn card-edit-btn" data-id="${meeting.id}" title="Edit">
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -588,11 +607,12 @@ function createMeetingCard(meeting) {
             <div class="card-platform">
                 <span>${meeting.platform}</span>
                 <span>(${capitalizeFirst(meeting.meetingLanguage)})</span>
+                ${pausedInfo}
             </div>
         </div>
-        <button class="btn-start card-start-btn" data-id="${meeting.id}">
-            <span class="start-icon">X</span>
-            <span>Start</span>
+        <button class="${buttonClass}" data-id="${meeting.id}">
+            <span class="start-icon">${buttonIcon}</span>
+            <span>${buttonText}</span>
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                 <path d="M6 12L10 8L6 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
@@ -667,6 +687,80 @@ function startMeetingById(meetingId) {
         } else {
             console.error('Failed to start meeting');
             alert('Failed to start meeting. Please try again.');
+            // Revert state and phase
+            sessionActive = false;
+            stopTimer();
+            setActivePhase('before');
+            setState(STATE.CARDS_LIST);
+        }
+    });
+}
+
+// Resume a paused meeting by ID
+function resumeMeetingById(meetingId) {
+    const meeting = savedMeetings.find(m => m.id === meetingId);
+    if (!meeting) return;
+
+    activeMeetingId = meetingId;
+
+    // Update In Meeting view with meeting data
+    if (elements.activeMeetingTitle) {
+        elements.activeMeetingTitle.textContent = meeting.title || 'Meeting';
+    }
+    if (elements.activeMeetingSubtitle) {
+        elements.activeMeetingSubtitle.textContent = meeting.subtitle || 'No description';
+    }
+    if (elements.activeMeetingPlatform) {
+        elements.activeMeetingPlatform.textContent = meeting.platform || 'Web Browser';
+    }
+    if (elements.activeMeetingLanguage) {
+        elements.activeMeetingLanguage.textContent = capitalizeFirst(meeting.meetingLanguage || 'English');
+    }
+
+    // Resume session timer from where it was paused
+    sessionActive = true;
+    // Adjust start time to account for elapsed time before pause
+    const elapsedTime = meeting.elapsedTime || 0;
+    sessionStartTime = Date.now() - elapsedTime;
+    startTimer();
+
+    // Update phase to "In the Meeting"
+    setActivePhase('during');
+
+    // Transition to In Meeting state
+    setState(STATE.IN_MEETING);
+
+    // Send message to background script to resume the meeting
+    chrome.runtime.sendMessage({
+        type: 'RESUME_MEETING',
+        sessionId: meeting.sessionId, // The DB session ID
+        meetingId: meetingId,
+        meeting: meeting
+    }, (response) => {
+        if (response && response.success) {
+            console.log('Meeting resumed successfully');
+            console.log('Session ID:', response.sessionId);
+            console.log('Elapsed Time:', response.elapsedTime);
+
+            // Update meeting to remove paused state
+            const index = savedMeetings.findIndex(m => m.id === meetingId);
+            if (index !== -1) {
+                savedMeetings[index].paused = false;
+                savedMeetings[index].status = 'active';
+                delete savedMeetings[index].elapsedTime;
+                saveMeetingsData();
+            }
+
+            // Store session info
+            if (response.sessionId) {
+                chrome.storage.local.set({
+                    activeSessionId: response.sessionId,
+                    consoleToken: response.consoleToken
+                });
+            }
+        } else {
+            console.error('Failed to resume meeting:', response?.error);
+            showAlert('Failed to resume meeting: ' + (response?.error || 'Unknown error'), 'error');
             // Revert state and phase
             sessionActive = false;
             stopTimer();
@@ -840,12 +934,30 @@ async function handleDisconnectMeeting(e) {
         return;
     }
 
-    // Send message to background to disconnect
+    // Store meeting ID and calculate elapsed time before disconnect
+    const meetingId = activeMeetingId;
+    const elapsedTime = sessionStartTime ? Date.now() - sessionStartTime : 0;
+
+    // Send message to background to pause (not cancel) the meeting
     chrome.runtime.sendMessage({
         type: 'DISCONNECT_MEETING',
         sessionId: activeMeetingId
     }, (response) => {
-        console.log('Disconnected from meeting');
+        console.log('Meeting paused:', response);
+
+        // Mark the meeting as paused in savedMeetings
+        if (meetingId && response?.success) {
+            const index = savedMeetings.findIndex(m => m.id === meetingId);
+            if (index !== -1) {
+                savedMeetings[index].paused = true;
+                savedMeetings[index].status = 'paused';
+                savedMeetings[index].elapsedTime = response.elapsedTime || elapsedTime;
+                savedMeetings[index].sessionId = response.sessionId; // Store DB session ID for resume
+                saveMeetingsData();
+                console.log('Meeting marked as paused:', meetingId);
+            }
+        }
+
         endMeetingSession();
     });
 }

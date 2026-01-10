@@ -13,9 +13,7 @@ import {
   ArrowLeft,
   Camera,
   MessageSquare,
-  ListChecks,
-  Zap,
-  CheckCircle2
+  RefreshCw
 } from 'lucide-react';
 
 export function LiveConsolePage() {
@@ -45,7 +43,6 @@ export function LiveConsolePage() {
       }
     };
     fetchCredits();
-    // Refresh credits every 30 seconds
     const interval = setInterval(fetchCredits, 30000);
     return () => clearInterval(interval);
   }, []);
@@ -92,245 +89,200 @@ export function LiveConsolePage() {
     setTimeout(() => setLoading(false), 3000);
   };
 
-  return (
-    <div className="min-h-screen bg-background flex flex-col p-4">
-      {/* Header */}
-      <header className="bg-card text-foreground shadow-sm rounded-xl mb-6 border border-border">
-        <div className="px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link
-              to="/dashboard"
-              className="p-2 bg-muted rounded-lg hover:bg-muted/80 transition-colors text-muted-foreground hover:text-foreground"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </Link>
+  const handleRefresh = () => {
+    window.location.reload();
+  };
 
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-primary/10 rounded-lg text-primary">
-                <Mic className="w-6 h-6" />
-              </div>
+  return (
+    <div className="min-h-screen bg-[#1a1a2e] text-white flex">
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col">
+        {/* Header */}
+        <header className="px-6 py-4 flex items-center justify-center border-b border-white/10 relative">
+          <Link
+            to="/dashboard"
+            className="absolute left-6 p-2 text-gray-400 hover:text-white transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </Link>
+          <div className="flex items-center gap-2">
+            <span className="text-2xl">🦊</span>
+            <h1 className="text-2xl font-bold text-[#ff6b35]">Stealth Console</h1>
+          </div>
+        </header>
+
+        {/* Status Bar */}
+        <div className="px-6 py-4 border-b border-white/10">
+          <div className="flex items-center gap-2">
+            <span className={`w-2.5 h-2.5 rounded-full ${sessionStatus === 'active'
+              ? 'bg-green-500 animate-pulse'
+              : sessionStatus === 'session_found'
+                ? 'bg-yellow-500 animate-pulse'
+                : 'bg-red-500'
+              }`} />
+            <span className="text-gray-300">
+              Started meeting : <strong className="text-white">
+                {sessionStatus === 'active'
+                  ? 'Interview in progress'
+                  : sessionStatus === 'session_found'
+                    ? 'Session found - Waiting'
+                    : 'No started interview.'}
+              </strong>
+            </span>
+            <button
+              onClick={handleRefresh}
+              className="text-[#ff6b35] hover:text-[#ff8c42] text-sm font-medium ml-2 flex items-center gap-1"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              Refresh
+            </button>
+          </div>
+        </div>
+
+        {/* Main Content */}
+        <div className="flex-1 overflow-auto p-6">
+          {/* Show guide until transcription data arrives */}
+          {!finalizedText && transcripts.length === 0 ? (
+            <div className="space-y-6">
+              {/* How to connect */}
               <div>
-                <h1 className="text-lg font-bold text-foreground">Interview Copilot Console</h1>
-                <div className="flex items-center gap-2 text-sm font-medium">
-                  <span
-                    className={`w-2 h-2 rounded-full ${sessionStatus === 'active'
-                      ? 'bg-success animate-pulse'
-                      : sessionStatus === 'session_found'
-                        ? 'bg-warning animate-pulse'
-                        : 'bg-muted-foreground'
-                      }`}
-                  />
-                  <span className="text-muted-foreground">
-                    {sessionStatus === 'active'
-                      ? 'Live - Receiving Data'
-                      : sessionStatus === 'session_found'
-                        ? 'Session Found - Waiting for Data'
-                        : 'Waiting for Session'}
-                  </span>
+                <h2 className="flex items-center gap-2 text-white font-medium mb-4">
+                  <span className="text-green-500">✓</span>
+                  How to connect the meeting?
+                </h2>
+                <div className="space-y-3 ml-6 text-gray-300 text-sm">
+                  <p>① Click our Chrome extension icon in the meeting page, before "Ask to Join".</p>
+                  <p>② Click "Connect" from our extension page.</p>
+                  <p>③ Select "Entire Screen" and click "Share".</p>
+                  <p>④ (<span className="text-[#ff6b35]">🔥 NOTE!</span>) Hide the screen-sharing widget.</p>
+
+                  <div className="my-4 ml-4">
+                    <div className="inline-flex items-center gap-2 bg-white/10 border border-[#ff6b35] rounded-lg px-3 py-2 text-sm">
+                      <span className="w-2 h-2 bg-[#ff6b35] rounded-sm"></span>
+                      <span className="text-white">www.ntro.io is sharing your screen.</span>
+                      <button className="bg-white/20 text-white px-3 py-1 rounded text-xs">Stop sharing</button>
+                      <button className="bg-[#ff6b35] text-white px-3 py-1 rounded text-xs">Hide</button>
+                    </div>
+                  </div>
+
+                  <p>⑤ Now ready to go. Ask to join!</p>
+                </div>
+              </div>
+
+              {/* Feature Descriptions */}
+              <div className="space-y-4 mt-8">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                    <Code2 className="w-4 h-4 text-blue-500" />
+                  </div>
+                  <span className="text-white font-medium">Code</span>
+                  <span className="text-gray-400">: Get the best code solution.</span>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-purple-500/20 rounded-lg flex items-center justify-center">
+                    <BookOpen className="w-4 h-4 text-purple-500" />
+                  </div>
+                  <span className="text-white font-medium">Explain</span>
+                  <span className="text-gray-400">: Crack "How to modify this code to use Array?"-like sudden questions.</span>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-amber-500/20 rounded-lg flex items-center justify-center">
+                    <Sparkles className="w-4 h-4 text-amber-500" />
+                  </div>
+                  <span className="text-white font-medium">Help Me</span>
+                  <span className="text-gray-400">: Trigger AI hint to crush tricky interview question.</span>
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-      </header>
+          ) : (
+            /* Transcript/Hints View - shown once transcription data arrives */
+            <div className="h-full">
+              {/* Tabs */}
+              <div className="flex gap-2 mb-4">
+                <button
+                  onClick={() => setActivePanel('transcript')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activePanel === 'transcript'
+                    ? 'bg-[#ff6b35] text-white'
+                    : 'bg-white/10 text-gray-300 hover:bg-white/20'
+                    }`}
+                >
+                  <FileText className="w-4 h-4 inline mr-2" />
+                  Transcript
+                </button>
+                <button
+                  onClick={() => setActivePanel('hints')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activePanel === 'hints'
+                    ? 'bg-[#ff6b35] text-white'
+                    : 'bg-white/10 text-gray-300 hover:bg-white/20'
+                    }`}
+                >
+                  <Lightbulb className="w-4 h-4 inline mr-2" />
+                  AI Assistance
+                </button>
+              </div>
 
-      {/* Main Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 flex-1">
-        {/* Transcript + Hints */}
-        <div className="flex flex-col flex-1 min-h-0">
-          {/* Tabs */}
-          <div className="flex bg-card rounded-lg p-1 mb-4 border border-border">
-            <button
-              onClick={() => setActivePanel('transcript')}
-              className={`flex-1 py-2.5 rounded-md text-sm font-medium transition-all ${activePanel === 'transcript'
-                ? 'bg-primary text-primary-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                }`}
-            >
-              <FileText className="w-4 h-4 inline mr-2" />
-              Transcript
-            </button>
-
-            <button
-              onClick={() => setActivePanel('hints')}
-              className={`flex-1 py-2.5 rounded-md text-sm font-medium transition-all ${activePanel === 'hints'
-                ? 'bg-primary text-primary-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                }`}
-            >
-              <Lightbulb className="w-4 h-4 inline mr-2" />
-              AI Assistance
-            </button>
-          </div>
-
-          {/* Content */}
-          <div className="bg-card rounded-xl flex-1 overflow-hidden border border-border relative shadow-sm">
-            {activePanel === 'transcript' && (
+              {/* Content Panel */}
               <div
                 ref={transcriptRef}
                 onScroll={handleScroll}
-                className="absolute inset-0 overflow-y-auto p-6"
+                className="bg-[#16162a] rounded-xl p-6 h-[calc(100vh-280px)] overflow-y-auto"
               >
-                {!connected ? (
-                  <div className="max-w-2xl mx-auto">
-                    {/* Header */}
-                    <div className="text-center mb-8">
-                      <div className="w-20 h-20 bg-gradient-to-br from-primary/20 to-primary/5 rounded-2xl flex items-center justify-center mb-5 mx-auto border border-primary/20 shadow-lg shadow-primary/5">
-                        <Mic className="w-10 h-10 text-primary" />
+                {activePanel === 'transcript' ? (
+                  <>
+                    {!finalizedText && transcripts.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center h-full text-gray-400">
+                        <Mic className="w-12 h-12 mb-4 opacity-50" />
+                        <p className="font-medium">Listening for audio...</p>
+                        <p className="text-sm opacity-70">Speak clearly to see transcription</p>
                       </div>
-                      <h2 className="text-2xl font-bold text-foreground mb-2">Welcome to Interview Copilot</h2>
-                      <p className="text-muted-foreground">Your AI-powered interview assistant</p>
-                    </div>
-
-                    {/* How to Start */}
-                    <div className="bg-gradient-to-br from-card to-muted/20 rounded-2xl p-6 mb-5 border border-border shadow-sm">
-                      <div className="flex items-center gap-3 mb-5">
-                        <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
-                          <ListChecks className="w-5 h-5 text-primary" />
-                        </div>
-                        <h3 className="text-lg font-semibold text-foreground">How to Start</h3>
-                      </div>
-                      <div className="space-y-4">
-                        <div className="flex items-start gap-4">
-                          <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0 text-sm font-semibold text-muted-foreground">1</div>
-                          <div>
-                            <p className="text-foreground font-medium">Open your meeting platform</p>
-                            <p className="text-sm text-muted-foreground">Zoom, Google Meet, Teams, or any video call</p>
-                          </div>
-                        </div>
-                        <div className="flex items-start gap-4">
-                          <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0 text-sm font-semibold text-muted-foreground">2</div>
-                          <div>
-                            <p className="text-foreground font-medium">Click the extension icon</p>
-                            <p className="text-sm text-muted-foreground">Find Interview Copilot in your browser toolbar</p>
-                          </div>
-                        </div>
-                        <div className="flex items-start gap-4">
-                          <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0 text-sm font-semibold text-muted-foreground">3</div>
-                          <div>
-                            <p className="text-foreground font-medium">Fill interview details & start session</p>
-                            <p className="text-sm text-muted-foreground">Enter role, type, and tech stack, then click Start</p>
-                          </div>
-                        </div>
-                        <div className="flex items-start gap-4">
-                          <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-                            <CheckCircle2 className="w-4 h-4 text-primary" />
-                          </div>
-                          <div>
-                            <p className="text-foreground font-medium">You're ready!</p>
-                            <p className="text-sm text-muted-foreground">Transcript and AI assistance will appear here</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Assistance Buttons */}
-                    <div className="bg-gradient-to-br from-card to-muted/20 rounded-2xl p-6 mb-5 border border-border shadow-sm">
-                      <div className="flex items-center gap-3 mb-5">
-                        <div className="w-10 h-10 bg-amber-500/10 rounded-xl flex items-center justify-center">
-                          <Zap className="w-5 h-5 text-amber-500" />
-                        </div>
-                        <h3 className="text-lg font-semibold text-foreground">Quick Actions</h3>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/30 border border-border/50">
-                          <div className="w-9 h-9 rounded-lg bg-amber-500/10 flex items-center justify-center">
-                            <Sparkles className="w-4 h-4 text-amber-500" />
-                          </div>
-                          <div>
-                            <p className="text-foreground font-medium text-sm">Help Me</p>
-                            <p className="text-xs text-muted-foreground">Contextual tips</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3 p-3 rounded-xl bg-primary/5 border border-primary/20">
-                          <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
-                            <MessageSquare className="w-4 h-4 text-primary" />
-                          </div>
-                          <div>
-                            <p className="text-foreground font-medium text-sm">Generate Answer</p>
-                            <p className="text-xs text-muted-foreground">Full response</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/30 border border-border/50">
-                          <div className="w-9 h-9 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                            <Code2 className="w-4 h-4 text-blue-500" />
-                          </div>
-                          <div>
-                            <p className="text-foreground font-medium text-sm">Code</p>
-                            <p className="text-xs text-muted-foreground">Code snippets</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/30 border border-border/50">
-                          <div className="w-9 h-9 rounded-lg bg-purple-500/10 flex items-center justify-center">
-                            <BookOpen className="w-4 h-4 text-purple-500" />
-                          </div>
-                          <div>
-                            <p className="text-foreground font-medium text-sm">Explain</p>
-                            <p className="text-xs text-muted-foreground">Concepts explained</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/30 border border-border/50 sm:col-span-2">
-                          <div className="w-9 h-9 rounded-lg bg-green-500/10 flex items-center justify-center">
-                            <Camera className="w-4 h-4 text-green-500" />
-                          </div>
-                          <div>
-                            <p className="text-foreground font-medium text-sm">Snap</p>
-                            <p className="text-xs text-muted-foreground">Capture screen for context analysis</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Pro Tips */}
-                    <div className="bg-gradient-to-br from-card to-muted/20 rounded-2xl p-6 border border-border shadow-sm">
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
-                          <Lightbulb className="w-5 h-5 text-primary" />
-                        </div>
-                        <h3 className="text-lg font-semibold text-foreground">Pro Tips</h3>
-                      </div>
-                      <ul className="space-y-3 text-sm">
-                        <li className="flex items-start gap-3">
-                          <CheckCircle2 className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
-                          <span className="text-muted-foreground">Use the <span className="text-foreground font-medium">Custom Prompt</span> box for specific questions</span>
-                        </li>
-                        <li className="flex items-start gap-3">
-                          <CheckCircle2 className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
-                          <span className="text-muted-foreground">AI uses your live transcript for context-aware responses</span>
-                        </li>
-                        <li className="flex items-start gap-3">
-                          <CheckCircle2 className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
-                          <span className="text-muted-foreground">Click <span className="text-foreground font-medium">Finish Meeting</span> in extension when done</span>
-                        </li>
-                      </ul>
-                    </div>
-                  </div>
-                ) : !finalizedText && transcripts.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-                    <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
-                      <Mic className="w-8 h-8 opacity-50" />
-                    </div>
-                    <p className="font-medium">Listening for audio...</p>
-                    <p className="text-sm opacity-70">Speak clearly to see transcription</p>
-                  </div>
+                    ) : (
+                      <p className="text-white leading-7 whitespace-pre-wrap text-lg">
+                        {finalizedText ||
+                          transcripts.map((t, i) => (
+                            <span key={i} className="mr-1">{t.text}</span>
+                          ))}
+                      </p>
+                    )}
+                  </>
                 ) : (
-                  <p className="text-foreground leading-7 whitespace-pre-wrap text-lg">
-                    {finalizedText ||
-                      transcripts.map((t, i) => (
-                        <span key={i} className="mr-1">
-                          {t.text}
-                        </span>
-                      ))}
-                  </p>
+                  <>
+                    {loading && (
+                      <div className="flex items-center justify-center py-8 text-gray-400 animate-pulse">
+                        <Sparkles className="w-5 h-5 mr-2" />
+                        AI is analyzing...
+                      </div>
+                    )}
+
+                    {!loading && hints.length === 0 && (
+                      <div className="flex flex-col items-center justify-center h-full text-gray-400">
+                        <Lightbulb className="w-12 h-12 mb-4 opacity-50" />
+                        <p className="font-medium">No hints yet</p>
+                        <p className="text-sm opacity-70">Ask for help or wait for AI insights</p>
+                      </div>
+                    )}
+
+                    {!loading && hints.map((h, i) => (
+                      <div key={i} className="bg-white/5 border border-white/10 rounded-lg p-5 mb-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">Insight</span>
+                          <span className="text-xs text-gray-500">{h.timestamp}</span>
+                        </div>
+                        <div className="text-white whitespace-pre-wrap leading-relaxed">
+                          {h.hint || h.text}
+                        </div>
+                      </div>
+                    ))}
+                  </>
                 )}
 
                 {userScrolledUp && (
                   <button
-                    className="sticky bottom-4 mx-auto bg-primary text-primary-foreground text-sm font-medium px-4 py-2 rounded-full flex items-center gap-2 shadow-lg hover:bg-primary/90 transition-all"
+                    className="sticky bottom-4 mx-auto bg-[#ff6b35] text-white text-sm font-medium px-4 py-2 rounded-full flex items-center gap-2 shadow-lg hover:bg-[#ff8c42] transition-all"
                     onClick={() => {
                       setUserScrolledUp(false);
-                      transcriptRef.current!.scrollTop =
-                        transcriptRef.current!.scrollHeight;
+                      transcriptRef.current!.scrollTop = transcriptRef.current!.scrollHeight;
                     }}
                   >
                     <ArrowDown className="w-4 h-4" />
@@ -338,137 +290,65 @@ export function LiveConsolePage() {
                   </button>
                 )}
               </div>
-            )}
-
-            {activePanel === 'hints' && (
-              <div className="absolute inset-0 overflow-y-auto p-4 space-y-4">
-                {loading && (
-                  <div className="flex items-center justify-center py-8 text-muted-foreground animate-pulse">
-                    <Sparkles className="w-5 h-5 mr-2" />
-                    AI is analyzing...
-                  </div>
-                )}
-
-                {!loading && hints.length === 0 && (
-                  <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-                    <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
-                      <Lightbulb className="w-8 h-8 opacity-50" />
-                    </div>
-                    <p className="font-medium">No hints yet</p>
-                    <p className="text-sm opacity-70">Ask for help or wait for AI insights</p>
-                  </div>
-                )}
-
-                {!loading &&
-                  hints.map((h, i) => (
-                    <div
-                      key={i}
-                      className="bg-muted/30 border border-border rounded-lg p-5 shadow-sm"
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Insight</span>
-                        <span className="text-xs text-muted-foreground">{h.timestamp}</span>
-                      </div>
-                      <div className="text-foreground whitespace-pre-wrap leading-relaxed">
-                        {h.hint || h.text}
-                      </div>
-                    </div>
-                  ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Actions Sidebar */}
-        <div className="space-y-6 min-w-[300px]">
-          {/* Quick Actions */}
-          <div className="bg-card rounded-xl p-5 border border-border shadow-sm">
-            <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-4 border-b border-border pb-2">
-              Quick Actions
-            </h2>
-
-            <div className="space-y-3">
-              <button
-                onClick={() => requestHint('help')}
-                disabled={!connected || loading}
-                className="w-full flex items-center justify-center gap-3 px-4 py-4 rounded-lg font-semibold text-foreground bg-background border border-input hover:bg-muted hover:border-primary/30 transition-all shadow-sm disabled:opacity-50"
-              >
-                <Sparkles className="w-5 h-5 text-amber-500" />
-                <span>Help Me</span>
-              </button>
-
-              <button
-                onClick={() => requestHint('answer')}
-                disabled={!connected || loading}
-                className="w-full flex items-center justify-center gap-3 px-4 py-4 rounded-lg font-bold text-primary-foreground bg-primary hover:bg-primary/90 transition-all shadow-md shadow-primary/20 disabled:opacity-50"
-              >
-                <MessageSquare className="w-5 h-5" />
-                <span>Generate Answer</span>
-              </button>
-
-              <div className="grid grid-cols-3 gap-3">
-                <button
-                  onClick={() => requestHint('code')}
-                  disabled={!connected || loading}
-                  className="flex flex-col items-center justify-center gap-2 px-3 py-4 rounded-lg font-medium text-foreground bg-background border border-input hover:bg-muted transition-all shadow-sm disabled:opacity-50"
-                >
-                  <Code2 className="w-5 h-5 text-blue-500" />
-                  <span>Code</span>
-                </button>
-
-                <button
-                  onClick={() => requestHint('explain')}
-                  disabled={!connected || loading}
-                  className="flex flex-col items-center justify-center gap-2 px-3 py-4 rounded-lg font-medium text-foreground bg-background border border-input hover:bg-muted transition-all shadow-sm disabled:opacity-50"
-                >
-                  <BookOpen className="w-5 h-5 text-purple-500" />
-                  <span>Explain</span>
-                </button>
-
-                <button
-                  onClick={() => {
-                    setActivePanel('hints');
-                    sendCommand('TAKE_SCREENSHOT', { trigger: 'console' });
-                  }}
-                  disabled={!connected || loading}
-                  className="flex flex-col items-center justify-center gap-2 px-3 py-4 rounded-lg font-medium text-foreground bg-background border border-input hover:bg-muted transition-all shadow-sm disabled:opacity-50"
-                >
-                  <Camera className="w-5 h-5 text-green-500" />
-                  <span>Snap</span>
-                </button>
-              </div>
             </div>
-          </div>
-
-          {/* Quick Prompt */}
-          <div className="bg-card rounded-xl p-5 border border-border shadow-sm">
-            <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-4 border-b border-border pb-2">
-              Custom Prompt
-            </h2>
-            <textarea
-              value={quickPrompt}
-              onChange={(e) => setQuickPrompt(e.target.value)}
-              placeholder="Ask a specific question..."
-              className="w-full h-24 text-sm bg-muted/50 border border-input rounded-lg p-3 text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none resize-none placeholder-muted-foreground"
-            />
-            <button
-              onClick={handleQuickPrompt}
-              disabled={!connected || loading}
-              className="w-full mt-3 bg-primary text-primary-foreground font-bold py-3 rounded-lg hover:bg-primary/90 transition-all shadow disabled:opacity-50 flex items-center justify-center gap-2"
-            >
-              <span>Send Request</span>
-            </button>
-          </div>
-
-          {/* Credits */}
-          <div className="bg-card border border-border rounded-xl p-4 flex items-center justify-between shadow-sm">
-            <span className="text-sm font-medium text-muted-foreground">Available Credits</span>
-            <div className="flex items-center gap-1.5">
-              <span className="text-xl font-bold text-foreground">{credits}</span>
-              <span className="text-xs text-muted-foreground">left</span>
-            </div>
-          </div>
+          )}
         </div>
+      </div>
+
+      {/* Right Sidebar - Matching Overlay Buttons */}
+      <div className="w-20 bg-[#16162a] border-l border-white/10 flex flex-col items-center py-6 gap-4">
+        {/* Help Button */}
+        <button
+          onClick={() => requestHint('help')}
+          disabled={!connected || loading}
+          className="w-14 h-14 rounded-xl bg-[#2a2f48] hover:bg-[#3a3f58] flex flex-col items-center justify-center gap-1 transition-colors disabled:opacity-50"
+        >
+          <Sparkles className="w-5 h-5 text-gray-400" />
+          <span className="text-[10px] text-gray-500">Help</span>
+        </button>
+
+        {/* Answer Button - Orange accent like overlay */}
+        <button
+          onClick={() => requestHint('answer')}
+          disabled={!connected || loading}
+          className="w-14 h-14 rounded-xl bg-[#ff6b35]/20 border border-[#ff6b35]/30 hover:bg-[#ff6b35]/30 flex flex-col items-center justify-center gap-1 transition-colors disabled:opacity-50"
+        >
+          <MessageSquare className="w-5 h-5 text-[#ff6b35]" />
+          <span className="text-[10px] text-[#ff6b35]/80">Answer</span>
+        </button>
+
+        {/* Code Button - Blue */}
+        <button
+          onClick={() => requestHint('code')}
+          disabled={!connected || loading}
+          className="w-14 h-14 rounded-xl bg-blue-500 hover:bg-blue-600 flex flex-col items-center justify-center gap-1 transition-colors disabled:opacity-50"
+        >
+          <Code2 className="w-5 h-5 text-white" />
+          <span className="text-[10px] text-white/80">Code</span>
+        </button>
+
+        {/* Explain Button - Purple */}
+        <button
+          onClick={() => requestHint('explain')}
+          disabled={!connected || loading}
+          className="w-14 h-14 rounded-xl bg-purple-500 hover:bg-purple-600 flex flex-col items-center justify-center gap-1 transition-colors disabled:opacity-50"
+        >
+          <BookOpen className="w-5 h-5 text-white" />
+          <span className="text-[10px] text-white/80">Explain</span>
+        </button>
+
+        {/* Screen/Snap Button - Orange */}
+        <button
+          onClick={() => {
+            setActivePanel('hints');
+            sendCommand('TAKE_SCREENSHOT', { trigger: 'console' });
+          }}
+          disabled={!connected || loading}
+          className="w-14 h-14 rounded-xl bg-[#ff6b35] hover:bg-[#ff8c42] flex flex-col items-center justify-center gap-1 transition-colors disabled:opacity-50"
+        >
+          <Camera className="w-5 h-5 text-white" />
+          <span className="text-[10px] text-white/80">Snap</span>
+        </button>
       </div>
     </div>
   );

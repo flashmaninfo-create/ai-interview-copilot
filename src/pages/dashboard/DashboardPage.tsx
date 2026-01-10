@@ -45,9 +45,6 @@ export function DashboardPage() {
     }, []);
 
     const completedCount = recentSessions.filter((s) => s.status === 'completed').length;
-    const avgScore = recentSessions
-        .filter((s) => s.score !== null)
-        .reduce((acc, s, _, arr) => acc + (s.score || 0) / arr.length, 0);
 
     const getStatusColor = (status: SessionSummary['status']) => {
         const colors = {
@@ -129,12 +126,6 @@ export function DashboardPage() {
                         {loading ? '—' : completedCount}
                     </div>
                 </div>
-                <div className="bg-card p-6 rounded-xl border border-border shadow-sm">
-                    <div className="text-sm text-muted-foreground font-medium mb-2">Avg. Score</div>
-                    <div className="text-3xl font-bold text-foreground">
-                        {loading ? '—' : avgScore > 0 ? avgScore.toFixed(1) : '—'}
-                    </div>
-                </div>
             </div>
 
             {/* Quick Actions */}
@@ -206,11 +197,6 @@ export function DashboardPage() {
                                     </p>
                                 </div>
                                 <div className="flex items-center gap-4">
-                                    {session.score !== null && (
-                                        <span className="text-sm font-medium text-foreground">
-                                            Score: {session.score}
-                                        </span>
-                                    )}
                                     <span className={`px-2 py-1 rounded-full text-xs font-medium capitalize ${getStatusColor(session.status)}`}>
                                         {session.status}
                                     </span>

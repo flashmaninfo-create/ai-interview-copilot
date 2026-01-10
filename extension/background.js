@@ -97,6 +97,39 @@ class BackgroundService {
         await this.handleLogout(sendResponse);
         break;
 
+      case 'START_MEETING':
+        // Map START_MEETING from popup to START_SESSION
+        // Extract meeting data and format for startSession
+        const meetingData = msg.meeting || msg.data || {};
+
+        // Get active tab for the meeting
+        const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+
+        const sessionData = {
+          tabId: activeTab?.id,
+          meetingUrl: meetingData.meetingUrl || activeTab?.url,
+          interviewContext: {
+            role: meetingData.title || meetingData.scenario || 'Interview',
+            type: meetingData.scenario === 'job-interview' ? 'technical' : 'mixed',
+            scenario: meetingData.scenario,
+            language: meetingData.meetingLanguage,
+            platform: meetingData.platform
+          }
+        };
+
+        await this.startSession(sessionData, sendResponse);
+        break;
+
+      case 'FINISH_MEETING':
+        // Finish meeting = stop session (deducts credits)
+        await this.stopSession(sendResponse);
+        break;
+
+      case 'DISCONNECT_MEETING':
+        // Disconnect = cancel session (no credit deduction)
+        await this.cancelSession(sendResponse);
+        break;
+
       case 'START_SESSION':
         await this.startSession(msg.data, sendResponse);
         break;
@@ -124,6 +157,7 @@ class BackgroundService {
       case 'GET_SESSION_STATUS':
         sendResponse({
           active: this.sessionActive,
+          sessionId: this.state.data.activeSession?.id || null,
           tabId: this.tabId,
           mode: this.state.data.settings.mode,
           credits: this.state.data.credits,
@@ -506,7 +540,7 @@ class BackgroundService {
         console.log('[Background] Content script injected manually');
 
         // Wait longer for initialization (increased from 500ms to 1000ms)
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 300));
       } catch (error) {
         console.error('[Background] Failed to inject content script:', error.message);
         return;
@@ -536,7 +570,7 @@ class BackgroundService {
         console.log(`[Background] SESSION_STARTED attempt ${attempt}/${maxRetries} failed:`, err.message);
         if (attempt < maxRetries) {
           // Wait before retrying (exponential backoff: 500ms, 1000ms, 2000ms)
-          await new Promise(resolve => setTimeout(resolve, 500 * attempt));
+          await new Promise(resolve => setTimeout(resolve, 200));
         }
       }
     }
@@ -1062,7 +1096,7 @@ class BackgroundService {
             isFinal: true
           }
         });
-      }, 500); // 500ms debounce for console (was 1500ms)
+      }, 200); // 200ms debounce for console (reduced from 500ms)
     }
 
     // Save to storage for fallback polling

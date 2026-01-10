@@ -1,62 +1,80 @@
+import { useState, useEffect } from 'react';
 import Icon from '../../../components/ui/AppIcon';
 import { useNavigate } from 'react-router-dom';
+import { adminService } from '../../../lib/services/adminService';
+
+interface PricingTier {
+  id: string;
+  name: string;
+  credits: string;
+  price: number | string;
+  description: string;
+  features: string[];
+  cta: string;
+  popular: boolean;
+}
 
 const PricingSection = () => {
   const navigate = useNavigate();
+  const [pricingTiers, setPricingTiers] = useState<PricingTier[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const pricingTiers = [
-    {
-      id: 'trial',
-      name: 'Free Trial',
-      credits: '20 credits',
-      price: 0,
-      description: 'Perfect for testing the platform',
-      features: [
-        '20 credits to start',
-        'Basic AI assistance',
-        'Chrome Extension access',
-        'Single device mode',
-        'Email support'
-      ],
-      cta: 'Start Free Trial',
-      popular: false
-    },
-    {
-      id: 'professional',
-      name: 'Professional Pack',
-      credits: '180 credits',
-      price: '₹1299',
-      description: 'Most popular choice for serious job seekers',
-      features: [
-        '180 minutes of interview time',
-        '3 hours of practice time',
-        'Advanced analytics',
-        'Priority email support',
-        '10% savings vs starter',
-        'All features included'
-      ],
-      cta: 'Buy Professional Pack',
-      popular: true
-    },
-    {
-      id: 'premium',
-      name: 'Premium Pack',
-      credits: '360 credits',
-      price: '₹2399',
-      description: 'Best value for comprehensive interview preparation',
-      features: [
-        '360 minutes of interview time',
-        '6 hours of practice time',
-        'Premium analytics dashboard',
-        '24/7 chat support',
-        '20% savings vs starter',
-        'Career coaching session',
-        'Priority AI processing'
-      ],
-      cta: 'Buy Premium Pack',
-      popular: false
-    }
-  ];
+  useEffect(() => {
+    const fetchPlans = async () => {
+      try {
+        setLoading(true);
+        const plans = await adminService.getCreditPlans();
+        
+        // Filter to only active plans and transform to UI format
+        const activePlans = plans.filter(plan => plan.active);
+        
+        const transformedTiers: PricingTier[] = activePlans.map((plan) => {
+          // Format price with INR currency (always use ₹)
+          const formattedPrice = plan.price === 0 
+            ? 0 
+            : `₹${plan.price}`;
+          
+          // Generate description based on plan details
+          let description = '';
+          if (plan.price === 0) {
+            description = 'Perfect for testing the platform';
+          } else if (plan.popular) {
+            description = 'Most popular choice for serious job seekers';
+          } else if (plan.credits >= 300) {
+            description = 'Best value for comprehensive interview preparation';
+          } else {
+            description = 'Great for getting started with interviews';
+          }
+
+          // Generate CTA text
+          const cta = plan.price === 0 
+            ? 'Start Free Trial' 
+            : `Buy ${plan.name}`;
+
+          return {
+            id: plan.id,
+            name: plan.name,
+            credits: `${plan.credits} credits`,
+            price: formattedPrice,
+            description,
+            features: plan.features,
+            cta,
+            popular: plan.popular || false
+          };
+        });
+
+        setPricingTiers(transformedTiers);
+      } catch (err) {
+        console.error('Failed to fetch pricing plans:', err);
+        setError('Failed to load pricing. Please try again later.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPlans();
+  }, []);
 
   const handleCTAClick = () => {
     // Navigate to payment page for all tiers
@@ -79,7 +97,41 @@ const PricingSection = () => {
           </p>
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-8 mb-12">
+        {/* Loading State */}
+        {loading && (
+          <div className="grid lg:grid-cols-3 gap-8 mb-12">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-card rounded-2xl shadow-xl border border-border p-8 animate-pulse">
+                <div className="h-8 bg-muted rounded mb-4 w-3/4"></div>
+                <div className="h-4 bg-muted rounded mb-6 w-1/2"></div>
+                <div className="h-12 bg-muted rounded mb-6 w-1/3"></div>
+                <div className="h-12 bg-muted rounded mb-8"></div>
+                <div className="space-y-3">
+                  {[1, 2, 3, 4].map((j) => (
+                    <div key={j} className="h-4 bg-muted rounded w-full"></div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && !loading && (
+          <div className="text-center py-12 mb-12 bg-card rounded-2xl border border-border">
+            <Icon name="ExclamationCircleIcon" size={48} className="text-error mx-auto mb-4" />
+            <p className="text-lg text-foreground mb-2">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="text-accent hover:underline"
+            >
+              Try again
+            </button>
+          </div>
+        )}
+
+        {/* Pricing Tiers Grid */}
+        {!loading && !error && <div className="grid lg:grid-cols-3 gap-8 mb-12">
           {pricingTiers?.map((tier) => (
             <div
               key={tier?.id}
@@ -102,9 +154,9 @@ const PricingSection = () => {
 
                 <div className="mb-6">
                   <div className="flex items-baseline gap-2">
-                    <span className="text-4xl font-bold text-foreground">{typeof tier?.price === 'number' ? `$${tier?.price}` : tier?.price}</span>
-                    {typeof tier?.price === 'number' && tier?.price > 0 && (
-                      <span className="text-muted-foreground">/ month</span>
+                    <span className="text-4xl font-bold text-foreground">{typeof tier?.price === 'number' ? (tier?.price === 0 ? 'Free' : `$${tier?.price}`) : tier?.price}</span>
+                    {tier?.price !== 0 && typeof tier?.price !== 'number' && (
+                      <span className="text-muted-foreground">/ pack</span>
                     )}
                   </div>
                 </div>
@@ -131,7 +183,7 @@ const PricingSection = () => {
               </div>
             </div>
           ))}
-        </div>
+        </div>}
 
         <div className="bg-card rounded-2xl p-8 shadow-card border border-border">
           <h3 className="font-headline text-xl font-semibold text-foreground mb-4 text-center">

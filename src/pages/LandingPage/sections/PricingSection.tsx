@@ -1,8 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import Icon from '../../../components/ui/AppIcon';
 import { useNavigate } from 'react-router-dom';
-import { planService } from '../../../lib/services/planService';
-import type { Database } from '../../../types/database.types';
+import { adminService } from '../../../lib/services/adminService';
 
 interface PricingTier {
   id: string;
@@ -17,47 +16,58 @@ interface PricingTier {
 
 const PricingSection = () => {
   const navigate = useNavigate();
-  const [tiers, setTiers] = useState<PricingTier[]>([]);
+  const [pricingTiers, setPricingTiers] = useState<PricingTier[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchPlans = async () => {
       try {
-        const { data } = await planService.getActivePlans();
+        setLoading(true);
+        const plans = await adminService.getCreditPlans();
         
-        // DEBUG: Log raw data from database
-        console.log('[PricingSection] Raw DB data:', data);
+        // Filter to only active plans and transform to UI format
+        const activePlans = plans.filter(plan => plan.active);
         
-        // Transform DB plans to UI pricing tiers
-        const transformedTiers: PricingTier[] = data.map(plan => {
-          // Parse features safely
-          let features: string[] = [];
-          if (Array.isArray(plan.features)) {
-            features = plan.features.map(f => String(f));
+        const transformedTiers: PricingTier[] = activePlans.map((plan) => {
+          // Format price with INR currency (always use ₹)
+          const formattedPrice = plan.price === 0 
+            ? 0 
+            : `₹${plan.price}`;
+          
+          // Generate description based on plan details
+          let description = '';
+          if (plan.price === 0) {
+            description = 'Perfect for testing the platform';
+          } else if (plan.popular) {
+            description = 'Most popular choice for serious job seekers';
+          } else if (plan.credits >= 300) {
+            description = 'Best value for comprehensive interview preparation';
+          } else {
+            description = 'Great for getting started with interviews';
           }
+
+          // Generate CTA text
+          const cta = plan.price === 0 
+            ? 'Start Free Trial' 
+            : `Buy ${plan.name}`;
 
           return {
             id: plan.id,
             name: plan.name,
-            credits: `${plan.credits_monthly} credits`,
-            price: plan.price_monthly === 0 ? 0 : plan.price_monthly,
-            description: plan.summary || '',
-            features: features,
-            cta: plan.price_monthly === 0 ? 'Start Free Trial' : `Buy ${plan.name}`,
-            popular: plan.slug === 'professional' // maintain logic for highlighting
+            credits: `${plan.credits} credits`,
+            price: formattedPrice,
+            description,
+            features: plan.features,
+            cta,
+            popular: plan.popular || false
           };
         });
-        
-        // DEBUG: Log transformed data
-        console.log('[PricingSection] Transformed tiers:', transformedTiers);
 
-        if (transformedTiers.length > 0) {
-            setTiers(transformedTiers);
-        } else {
-             setTiers([]);
-        }
-      } catch (error) {
-        console.error('Error fetching plans:', error);
+        setPricingTiers(transformedTiers);
+      } catch (err) {
+        console.error('Failed to fetch pricing plans:', err);
+        setError('Failed to load pricing. Please try again later.');
       } finally {
         setLoading(false);
       }
@@ -95,13 +105,23 @@ const PricingSection = () => {
           </p>
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-8 mb-12">
-          {tiers.length === 0 ? (
-             <div className="col-span-3 text-center py-12 bg-card rounded-2xl border border-border">
-                <p className="text-muted-foreground">No pricing plans currently available.</p>
-             </div>
-          ) : (
-             tiers.map((tier) => (
+        {/* Error State */}
+        {error && !loading && (
+          <div className="text-center py-12 mb-12 bg-card rounded-2xl border border-border">
+            <Icon name="ExclamationCircleIcon" size={48} className="text-error mx-auto mb-4" />
+            <p className="text-lg text-foreground mb-2">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="text-accent hover:underline"
+            >
+              Try again
+            </button>
+          </div>
+        )}
+
+        {/* Pricing Tiers Grid */}
+        {!loading && !error && <div className="grid lg:grid-cols-3 gap-8 mb-12">
+          {pricingTiers?.map((tier) => (
             <div
               key={tier.id}
               className={`bg-card rounded-2xl shadow-xl border overflow-hidden transition-all duration-250 hover:shadow-2xl ${
@@ -123,9 +143,9 @@ const PricingSection = () => {
 
                 <div className="mb-6">
                   <div className="flex items-baseline gap-2">
-                    <span className="text-4xl font-bold text-foreground">{typeof tier.price === 'number' ? `₹${tier.price}` : tier.price}</span>
-                    {typeof tier.price === 'number' && tier.price > 0 && (
-                      <span className="text-muted-foreground">/ month</span>
+                    <span className="text-4xl font-bold text-foreground">{typeof tier?.price === 'number' ? (tier?.price === 0 ? 'Free' : `₹${tier?.price}`) : tier?.price}</span>
+                    {tier?.price !== 0 && typeof tier?.price !== 'number' && (
+                      <span className="text-muted-foreground">/ pack</span>
                     )}
                   </div>
                 </div>
@@ -151,9 +171,8 @@ const PricingSection = () => {
                 </div>
               </div>
             </div>
-          ))
-          )}
-        </div>
+          ))}
+        </div>}
 
         <div className="bg-card rounded-2xl p-8 shadow-card border border-border">
           <h3 className="font-headline text-xl font-semibold text-foreground mb-4 text-center">

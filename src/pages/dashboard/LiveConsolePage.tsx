@@ -8,13 +8,13 @@ import {
   Sparkles,
   Code2,
   BookOpen,
-  FileText,
   ArrowDown,
   ArrowLeft,
   Camera,
   MessageSquare,
   RefreshCw,
   Send,
+  X,
   Loader2
 } from 'lucide-react';
 
@@ -24,6 +24,7 @@ export function LiveConsolePage() {
     transcripts,
     finalizedText,
     hints,
+    screenshots,
     sessionStatus,
     sendCommand
   } = useConsoleSync();
@@ -33,6 +34,8 @@ export function LiveConsolePage() {
   const [userScrolledUp, setUserScrolledUp] = useState(false);
   const [loading, setLoading] = useState(false);
   const [quickPrompt, setQuickPrompt] = useState('');
+  const [activeTab, setActiveTab] = useState<'hints' | 'screenshots'>('hints');
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
 
   /* ---------------- Fetch Credits (Unused) ---------------- */
@@ -261,6 +264,28 @@ export function LiveConsolePage() {
               {/* AI Assistance Column - Flexible Rest Width (Left) */}
               <div className="flex-1 bg-[#1f1f1f] border-r border-white/5 flex flex-col relative">
 
+                {/* Tabs */}
+                <div className="flex items-center px-4 pt-4 pb-2 gap-4 border-b border-white/5">
+                  <button
+                    onClick={() => setActiveTab('hints')}
+                    className={`text-sm font-medium pb-2 border-b-2 transition-colors ${activeTab === 'hints'
+                      ? 'text-white border-[#ff6b35]'
+                      : 'text-gray-400 border-transparent hover:text-gray-300'
+                      }`}
+                  >
+                    Hints ({hints.length})
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('screenshots')}
+                    className={`text-sm font-medium pb-2 border-b-2 transition-colors ${activeTab === 'screenshots'
+                      ? 'text-white border-[#ff6b35]'
+                      : 'text-gray-400 border-transparent hover:text-gray-300'
+                      }`}
+                  >
+                    Screenshots ({screenshots.length})
+                  </button>
+                </div>
+
                 <div className="flex-1 overflow-y-auto p-4">
                   {loading && (
                     <div className="bg-white/5 border border-white/10 rounded-lg p-5 mb-4 backdrop-blur-sm animate-in fade-in slide-in-from-bottom-2">
@@ -275,25 +300,62 @@ export function LiveConsolePage() {
                     </div>
                   )}
 
-                  {!loading && hints.length === 0 && (
-                    <div className="flex flex-col items-center justify-center h-full text-gray-400">
-                      <Lightbulb className="w-12 h-12 mb-4 opacity-50" />
-                      <p className="font-medium">No hints yet</p>
-                      <p className="text-sm opacity-70">Ask for help or wait for AI insights</p>
-                    </div>
+                  {/* HINTS TAB */}
+                  {activeTab === 'hints' && (
+                    <>
+                      {!loading && hints.length === 0 && (
+                        <div className="flex flex-col items-center justify-center h-full text-gray-400">
+                          <Lightbulb className="w-12 h-12 mb-4 opacity-50" />
+                          <p className="font-medium">No hints yet</p>
+                          <p className="text-sm opacity-70">Ask for help or wait for AI insights</p>
+                        </div>
+                      )}
+
+                      {!loading && hints.map((h, i) => (
+                        <div key={i} className="bg-white/5 border border-white/10 rounded-lg p-5 mb-4">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">Insight</span>
+                            <span className="text-xs text-gray-500">{h.timestamp}</span>
+                          </div>
+                          <div className="text-white whitespace-pre-wrap leading-relaxed">
+                            {h.hint || h.text}
+                          </div>
+                        </div>
+                      ))}
+                    </>
                   )}
 
-                  {!loading && hints.map((h, i) => (
-                    <div key={i} className="bg-white/5 border border-white/10 rounded-lg p-5 mb-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">Insight</span>
-                        <span className="text-xs text-gray-500">{h.timestamp}</span>
+                  {/* SCREENSHOTS TAB */}
+                  {activeTab === 'screenshots' && (
+                    <>
+                      {screenshots.length === 0 && (
+                        <div className="flex flex-col items-center justify-center h-full text-gray-400">
+                          <Camera className="w-12 h-12 mb-4 opacity-50" />
+                          <p className="font-medium">No screenshots yet</p>
+                          <p className="text-sm opacity-70">Use the 'Snap' button to capture</p>
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-2 gap-3">
+                        {screenshots.map((s, i) => (
+                          <div
+                            key={i}
+                            className="group relative aspect-video bg-black rounded-lg overflow-hidden border border-white/10 hover:border-[#ff6b35] transition-colors cursor-pointer"
+                            onClick={() => setSelectedImage(s.url)}
+                          >
+                            <img
+                              src={s.url}
+                              alt={`Screenshot ${i}`}
+                              className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
+                            />
+                            <div className="absolute bottom-0 left-0 right-0 bg-black/60 p-2 text-[10px] text-gray-300 backdrop-blur-sm">
+                              {new Date(Number(s.timestamp || Date.now())).toLocaleTimeString()}
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                      <div className="text-white whitespace-pre-wrap leading-relaxed">
-                        {h.hint || h.text}
-                      </div>
-                    </div>
-                  ))}
+                    </>
+                  )}
                 </div>
 
                 {/* Quick Prompt Box - Persistent at Bottom */}
@@ -358,8 +420,26 @@ export function LiveConsolePage() {
         </div>
       </div>
 
+      {/* Image Modal */}
+      {selectedImage && (
+        <div 
+          className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-center justify-center p-8 animate-in fade-in"
+          onClick={() => setSelectedImage(null)}
+        >
+          <button 
+            className="absolute top-4 right-4 text-white/50 hover:text-white transition-colors"
+            onClick={() => setSelectedImage(null)}
+          >
+            <X className="w-8 h-8" />
+          </button>
+          <img 
+            src={selectedImage} 
+            alt="Full size" 
+            className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+          />
+        </div>
+      )}
+
     </div>
-
-
   );
 }

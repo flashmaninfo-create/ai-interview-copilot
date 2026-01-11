@@ -7,6 +7,7 @@ import { ConsoleSync } from './lib/console-sync.js';
 import { supabaseREST } from './lib/supabase-config.js';
 import { TranscriptionManager } from './lib/transcription-manager.js';
 import { InterviewContextManager } from './lib/interview-context-manager.js';
+import { ReportGenerator } from './lib/report-generator.js';
 
 class BackgroundService {
   constructor() {
@@ -22,6 +23,8 @@ class BackgroundService {
     // Rolling interview context for instant AI responses
     this.interviewContext = new InterviewContextManager();
     this.aiService.setContextManager(this.interviewContext);
+    
+    this.reportGenerator = new ReportGenerator();
 
     this.sessionActive = false;
     this.tabId = null;
@@ -195,6 +198,14 @@ class BackgroundService {
 
       case 'CONSOLE_CONNECT':
         await this.connectConsole(msg.data, sender, sendResponse);
+        break;
+
+      case 'SAVE_FEEDBACK':
+        await this.handleSaveFeedback(msg.data, sendResponse);
+        break;
+
+      case 'DOWNLOAD_REPORT':
+        await this.handleDownloadReport(msg.data, sendResponse);
         break;
 
       case 'GET_CREDITS':
@@ -1658,6 +1669,48 @@ class BackgroundService {
   }
 
   // NOTE: Full pauseSession() and resumeSession() 
+  async handleSaveFeedback(data, sendResponse) {
+    try {
+      const { sessionId, ratingMeeting, ratingApp, feedback } = data;
+      console.log('[Background] Saving feedback for session:', sessionId);
+
+      if (!sessionId) {
+        throw new Error('No session ID provided');
+      }
+
+      // Prepare update payload
+      const updates = {};
+      if (ratingMeeting) updates.rating_meeting = ratingMeeting;
+      if (ratingApp) updates.rating_app = ratingApp;
+      if (feedback) updates.feedback_text = feedback;
+
+      // Update session in Supabase
+      const result = await supabaseREST.update('interview_sessions', updates, { id: sessionId });
+      
+      console.log('[Background] Feedback saved successfully');
+      sendResponse({ success: true });
+    } catch (error) {
+      console.error('[Background] Failed to save feedback:', error);
+      sendResponse({ success: false, error: error.message });
+    }
+  }
+
+  async handleDownloadReport(data, sendResponse) {
+    try {
+      const { sessionId } = data;
+      console.log('[Background] Generating report for session:', sessionId);
+
+      if (!sessionId) {
+        throw new Error('No session ID provided');
+      }
+
+      const markdownContent = await this.reportGenerator.generateSessionReport(sessionId);
+      sendResponse({ success: true, content: markdownContent });
+    } catch (error) {
+      console.error('[Background] Failed to generate report:', error);
+      sendResponse({ success: false, error: error.message });
+    }
+  }
 }
 
 // Initialize background service

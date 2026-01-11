@@ -22,8 +22,8 @@ const DASHBOARD_URLS = {
     LOCAL: 'http://localhost:5173'
 };
 
-// Default to production, can be changed via settings
-let DASHBOARD_URL = DASHBOARD_URLS.PRODUCTION;
+// Default to local for development, can be changed via settings
+let DASHBOARD_URL = DASHBOARD_URLS.LOCAL;
 
 // Helper function to get dashboard URL (can be extended to read from storage)
 function getDashboardUrl() {

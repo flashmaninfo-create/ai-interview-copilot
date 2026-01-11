@@ -13,7 +13,9 @@ import {
   ArrowLeft,
   Camera,
   MessageSquare,
-  RefreshCw
+  RefreshCw,
+  Send,
+  Loader2
 } from 'lucide-react';
 
 export function LiveConsolePage() {
@@ -29,7 +31,6 @@ export function LiveConsolePage() {
   /* ---------------- State ---------------- */
   const transcriptRef = useRef<HTMLDivElement>(null);
   const [userScrolledUp, setUserScrolledUp] = useState(false);
-  const [activePanel, setActivePanel] = useState<'transcript' | 'hints'>('transcript');
   const [loading, setLoading] = useState(false);
 
 
@@ -66,7 +67,6 @@ export function LiveConsolePage() {
   /* ---------------- Actions ---------------- */
   const requestHint = async (type: string) => {
     setLoading(true);
-    setActivePanel('hints');
 
     await sendCommand('REQUEST_HINT', {
       requestType: type,
@@ -76,6 +76,10 @@ export function LiveConsolePage() {
     setTimeout(() => setLoading(false), 3000);
   };
 
+  const handleQuickPrompt = async () => {
+    if (!quickPrompt.trim()) return;
+
+    setLoading(true);
 
 
   const handleRefresh = () => {
@@ -83,8 +87,62 @@ export function LiveConsolePage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#1a1a2e] text-white flex">
-      {/* Main Content Area */}
+    <div className="h-screen overflow-hidden bg-[#242424] text-white flex">
+      {/* Left Sidebar - Matching Overlay Buttons */}
+      <div className="w-20 bg-[#242424] border-r border-white/10 flex flex-col items-center pt-20 pb-6 gap-4">
+        {/* Help Button */}
+        <button
+          onClick={() => requestHint('help')}
+          disabled={!connected || loading}
+          className="w-14 h-14 rounded-xl bg-[#2a2f48] hover:bg-[#3a3f58] flex flex-col items-center justify-center gap-1 transition-colors disabled:opacity-50"
+        >
+          <Sparkles className="w-5 h-5 text-gray-400" />
+          <span className="text-[10px] text-gray-500">Help</span>
+        </button>
+
+        {/* Answer Button - Orange accent like overlay */}
+        <button
+          onClick={() => requestHint('answer')}
+          disabled={!connected || loading}
+          className="w-14 h-14 rounded-xl bg-[#ff6b35]/20 border border-[#ff6b35]/30 hover:bg-[#ff6b35]/30 flex flex-col items-center justify-center gap-1 transition-colors disabled:opacity-50"
+        >
+          <MessageSquare className="w-5 h-5 text-[#ff6b35]" />
+          <span className="text-[10px] text-[#ff6b35]/80">Answer</span>
+        </button>
+
+        {/* Code Button - Blue */}
+        <button
+          onClick={() => requestHint('code')}
+          disabled={!connected || loading}
+          className="w-14 h-14 rounded-xl bg-blue-500 hover:bg-blue-600 flex flex-col items-center justify-center gap-1 transition-colors disabled:opacity-50"
+        >
+          <Code2 className="w-5 h-5 text-white" />
+          <span className="text-[10px] text-white/80">Code</span>
+        </button>
+
+        {/* Explain Button - Purple */}
+        <button
+          onClick={() => requestHint('explain')}
+          disabled={!connected || loading}
+          className="w-14 h-14 rounded-xl bg-purple-500 hover:bg-purple-600 flex flex-col items-center justify-center gap-1 transition-colors disabled:opacity-50"
+        >
+          <BookOpen className="w-5 h-5 text-white" />
+          <span className="text-[10px] text-white/80">Explain</span>
+        </button>
+
+        {/* Screen/Snap Button - Orange */}
+        <button
+          onClick={() => {
+            sendCommand('TAKE_SCREENSHOT', { trigger: 'console' });
+          }}
+          disabled={!connected || loading}
+          className="w-14 h-14 rounded-xl bg-[#ff6b35] hover:bg-[#ff8c42] flex flex-col items-center justify-center gap-1 transition-colors disabled:opacity-50"
+        >
+          <Camera className="w-5 h-5 text-white" />
+          <span className="text-[10px] text-white/80">Snap</span>
+        </button>
+      </div>
+
       <div className="flex-1 flex flex-col">
         {/* Header */}
         <header className="px-6 py-4 flex items-center justify-center border-b border-white/10 relative">
@@ -100,7 +158,7 @@ export function LiveConsolePage() {
           </div>
         </header>
 
-        {/* Status Bar */}
+
         <div className="px-6 py-4 border-b border-white/10">
           <div className="flex items-center gap-2">
             <span className={`w-2.5 h-2.5 rounded-full ${sessionStatus === 'active'
@@ -129,7 +187,7 @@ export function LiveConsolePage() {
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 overflow-auto p-6">
+        <div className={`flex-1 ${(!finalizedText && transcripts.length === 0) ? 'overflow-auto p-6' : 'overflow-hidden flex flex-col'}`}>
           {/* Show guide until transcription data arrives */}
           {!finalizedText && transcripts.length === 0 ? (
             <div className="space-y-6">
@@ -187,158 +245,111 @@ export function LiveConsolePage() {
             </div>
           ) : (
             /* Transcript/Hints View - shown once transcription data arrives */
-            <div className="h-full">
-              {/* Tabs */}
-              <div className="flex gap-2 mb-4">
-                <button
-                  onClick={() => setActivePanel('transcript')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activePanel === 'transcript'
-                    ? 'bg-[#ff6b35] text-white'
-                    : 'bg-white/10 text-gray-300 hover:bg-white/20'
-                    }`}
-                >
-                  <FileText className="w-4 h-4 inline mr-2" />
-                  Transcript
-                </button>
-                <button
-                  onClick={() => setActivePanel('hints')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activePanel === 'hints'
-                    ? 'bg-[#ff6b35] text-white'
-                    : 'bg-white/10 text-gray-300 hover:bg-white/20'
-                    }`}
-                >
-                  <Lightbulb className="w-4 h-4 inline mr-2" />
-                  AI Assistance
-                </button>
+            /* Transcript/Hints View - Side-by-Side */
+            <div className="flex-1 min-h-0 flex">
+
+              {/* AI Assistance Column - Flexible Rest Width (Left) */}
+              <div className="flex-1 bg-[#1f1f1f] border-r border-white/5 flex flex-col relative">
+
+                <div className="flex-1 overflow-y-auto p-4">
+                  {loading && (
+                    <div className="bg-white/5 border border-white/10 rounded-lg p-5 mb-4 backdrop-blur-sm animate-in fade-in slide-in-from-bottom-2">
+                      <div className="flex items-center gap-4">
+                        <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center shrink-0">
+                          <Loader2 className="w-4 h-4 text-[#ff6b35] animate-spin" />
+                        </div>
+                        <div className="text-gray-300 text-sm">
+                          AI is analyzing...
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {!loading && hints.length === 0 && (
+                    <div className="flex flex-col items-center justify-center h-full text-gray-400">
+                      <Lightbulb className="w-12 h-12 mb-4 opacity-50" />
+                      <p className="font-medium">No hints yet</p>
+                      <p className="text-sm opacity-70">Ask for help or wait for AI insights</p>
+                    </div>
+                  )}
+
+                  {!loading && hints.map((h, i) => (
+                    <div key={i} className="bg-white/5 border border-white/10 rounded-lg p-5 mb-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">Insight</span>
+                        <span className="text-xs text-gray-500">{h.timestamp}</span>
+                      </div>
+                      <div className="text-white whitespace-pre-wrap leading-relaxed">
+                        {h.hint || h.text}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Quick Prompt Box - Persistent at Bottom */}
+                <div className="p-4 border-t border-white/10 shrink-0 flex justify-center bg-[#1f1f1f]">
+                  <div className="flex gap-2 w-full max-w-md">
+                    <input
+                      type="text"
+                      value={quickPrompt}
+                      onChange={(e) => setQuickPrompt(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleQuickPrompt()}
+                      placeholder="Ask AI anything..."
+                      className="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-[#ff6b35] transition-colors"
+                    />
+                    <button
+                      onClick={handleQuickPrompt}
+                      disabled={loading || !quickPrompt.trim()}
+                      className="bg-[#ff6b35] hover:bg-[#ff8c42] disabled:opacity-50 disabled:cursor-not-allowed text-white p-2 rounded-lg transition-colors"
+                    >
+                      <Send className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
               </div>
 
-              {/* Content Panel */}
-              <div
-                ref={transcriptRef}
-                onScroll={handleScroll}
-                className="bg-[#16162a] rounded-xl p-6 h-[calc(100vh-280px)] overflow-y-auto"
-              >
-                {activePanel === 'transcript' ? (
-                  <>
-                    {!finalizedText && transcripts.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center h-full text-gray-400">
-                        <Mic className="w-12 h-12 mb-4 opacity-50" />
-                        <p className="font-medium">Listening for audio...</p>
-                        <p className="text-sm opacity-70">Speak clearly to see transcription</p>
-                      </div>
-                    ) : (
-                      <p className="text-white leading-7 whitespace-pre-wrap text-lg">
-                        {finalizedText ||
-                          transcripts.map((t, i) => (
-                            <span key={i} className="mr-1">{t.text}</span>
-                          ))}
-                      </p>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    {loading && (
-                      <div className="flex items-center justify-center py-8 text-gray-400 animate-pulse">
-                        <Sparkles className="w-5 h-5 mr-2" />
-                        AI is analyzing...
-                      </div>
-                    )}
-
-                    {!loading && hints.length === 0 && (
-                      <div className="flex flex-col items-center justify-center h-full text-gray-400">
-                        <Lightbulb className="w-12 h-12 mb-4 opacity-50" />
-                        <p className="font-medium">No hints yet</p>
-                        <p className="text-sm opacity-70">Ask for help or wait for AI insights</p>
-                      </div>
-                    )}
-
-                    {!loading && hints.map((h, i) => (
-                      <div key={i} className="bg-white/5 border border-white/10 rounded-lg p-5 mb-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">Insight</span>
-                          <span className="text-xs text-gray-500">{h.timestamp}</span>
-                        </div>
-                        <div className="text-white whitespace-pre-wrap leading-relaxed">
-                          {h.hint || h.text}
-                        </div>
-                      </div>
-                    ))}
-                  </>
-                )}
-
+              {/* Transcript Column - 30% + 50px Width (Right) */}
+              <div className="w-[calc(30%+50px)] bg-[#1a1a1a] border-l border-white/5 flex flex-col relative">
+                <div
+                  ref={transcriptRef}
+                  onScroll={handleScroll}
+                  className="flex-1 overflow-y-auto p-4"
+                >
+                  {!finalizedText && transcripts.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full text-gray-400">
+                      <Mic className="w-8 h-8 mb-3 opacity-50" />
+                      <p className="text-sm font-medium">Listening...</p>
+                    </div>
+                  ) : (
+                    <p className="text-white leading-7 whitespace-pre-wrap text-base font-mono">
+                      {finalizedText ||
+                        transcripts.map((t, i) => (
+                          <span key={i} className="mr-1">{t.text}</span>
+                        ))}
+                    </p>
+                  )}
+                </div>
                 {userScrolledUp && (
                   <button
-                    className="sticky bottom-4 mx-auto bg-[#ff6b35] text-white text-sm font-medium px-4 py-2 rounded-full flex items-center gap-2 shadow-lg hover:bg-[#ff8c42] transition-all"
+                    className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-[#ff6b35] text-white text-xs font-medium px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg hover:bg-[#ff8c42] transition-all"
                     onClick={() => {
                       setUserScrolledUp(false);
                       transcriptRef.current!.scrollTop = transcriptRef.current!.scrollHeight;
                     }}
                   >
-                    <ArrowDown className="w-4 h-4" />
+                    <ArrowDown className="w-3 h-3" />
                     Jump to Latest
                   </button>
                 )}
               </div>
+
             </div>
           )}
         </div>
       </div>
 
-      {/* Right Sidebar - Matching Overlay Buttons */}
-      <div className="w-20 bg-[#16162a] border-l border-white/10 flex flex-col items-center py-6 gap-4">
-        {/* Help Button */}
-        <button
-          onClick={() => requestHint('help')}
-          disabled={!connected || loading}
-          className="w-14 h-14 rounded-xl bg-[#2a2f48] hover:bg-[#3a3f58] flex flex-col items-center justify-center gap-1 transition-colors disabled:opacity-50"
-        >
-          <Sparkles className="w-5 h-5 text-gray-400" />
-          <span className="text-[10px] text-gray-500">Help</span>
-        </button>
-
-        {/* Answer Button - Orange accent like overlay */}
-        <button
-          onClick={() => requestHint('answer')}
-          disabled={!connected || loading}
-          className="w-14 h-14 rounded-xl bg-[#ff6b35]/20 border border-[#ff6b35]/30 hover:bg-[#ff6b35]/30 flex flex-col items-center justify-center gap-1 transition-colors disabled:opacity-50"
-        >
-          <MessageSquare className="w-5 h-5 text-[#ff6b35]" />
-          <span className="text-[10px] text-[#ff6b35]/80">Answer</span>
-        </button>
-
-        {/* Code Button - Blue */}
-        <button
-          onClick={() => requestHint('code')}
-          disabled={!connected || loading}
-          className="w-14 h-14 rounded-xl bg-blue-500 hover:bg-blue-600 flex flex-col items-center justify-center gap-1 transition-colors disabled:opacity-50"
-        >
-          <Code2 className="w-5 h-5 text-white" />
-          <span className="text-[10px] text-white/80">Code</span>
-        </button>
-
-        {/* Explain Button - Purple */}
-        <button
-          onClick={() => requestHint('explain')}
-          disabled={!connected || loading}
-          className="w-14 h-14 rounded-xl bg-purple-500 hover:bg-purple-600 flex flex-col items-center justify-center gap-1 transition-colors disabled:opacity-50"
-        >
-          <BookOpen className="w-5 h-5 text-white" />
-          <span className="text-[10px] text-white/80">Explain</span>
-        </button>
-
-        {/* Screen/Snap Button - Orange */}
-        <button
-          onClick={() => {
-            setActivePanel('hints');
-            sendCommand('TAKE_SCREENSHOT', { trigger: 'console' });
-          }}
-          disabled={!connected || loading}
-          className="w-14 h-14 rounded-xl bg-[#ff6b35] hover:bg-[#ff8c42] flex flex-col items-center justify-center gap-1 transition-colors disabled:opacity-50"
-        >
-          <Camera className="w-5 h-5 text-white" />
-          <span className="text-[10px] text-white/80">Snap</span>
-        </button>
-      </div>
     </div>
+
+
   );
 }

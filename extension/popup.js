@@ -127,9 +127,37 @@ function initializeElements() {
     elements.isDesktopCall = document.getElementById('isDesktopCall');
     elements.meetingLanguageInput = document.getElementById('meetingLanguageInput');
     elements.translationLanguageInput = document.getElementById('translationLanguageInput');
-    elements.additionalInfoInput = document.getElementById('additionalInfoInput');
-    elements.keywordsInput = document.getElementById('keywordsInput');
-    elements.keywordsTags = document.getElementById('keywordsTags');
+
+    // Dynamic Fields
+    elements.roleInput = document.getElementById('roleInput');
+    elements.companyInput = document.getElementById('companyInput');
+    elements.experienceInput = document.getElementById('experienceInput');
+    elements.interviewTypeInput = document.getElementById('interviewTypeInput');
+    elements.techStackInput = document.getElementById('techStackInput');
+    elements.jdInput = document.getElementById('jdInput');
+
+    elements.hrRoleInput = document.getElementById('hrRoleInput');
+    elements.hrCompanyInput = document.getElementById('hrCompanyInput');
+    elements.hrRecruiterInput = document.getElementById('hrRecruiterInput');
+    elements.hrCultureInput = document.getElementById('hrCultureInput');
+
+    elements.teamProjectInput = document.getElementById('teamProjectInput');
+    elements.teamRoleInput = document.getElementById('teamRoleInput');
+    elements.teamUpdateInput = document.getElementById('teamUpdateInput');
+
+    elements.clientNameInput = document.getElementById('clientNameInput');
+    elements.clientContextInput = document.getElementById('clientContextInput');
+
+    elements.consultingClientInput = document.getElementById('consultingClientInput');
+    elements.consultingTopicInput = document.getElementById('consultingTopicInput');
+    elements.consultingProblemInput = document.getElementById('consultingProblemInput');
+
+    elements.casualTopicInput = document.getElementById('casualTopicInput');
+    elements.casualParticipantsInput = document.getElementById('casualParticipantsInput');
+
+    elements.assessmentPlatformInput = document.getElementById('assessmentPlatformInput');
+    elements.assessmentLanguageInput = document.getElementById('assessmentLanguageInput');
+    elements.assessmentTypeInput = document.getElementById('assessmentTypeInput');
 
     // In Meeting elements
     elements.activeMeetingTitle = document.getElementById('activeMeetingTitle');
@@ -148,20 +176,8 @@ function initializeElements() {
     elements.planDetails = document.getElementById('planDetails');
 
     // Auth elements
-    elements.authForm = document.getElementById('authForm');
-    elements.authFullName = document.getElementById('authFullName');
-    elements.authEmail = document.getElementById('authEmail');
-    elements.authPassword = document.getElementById('authPassword');
-    elements.authConfirmPassword = document.getElementById('authConfirmPassword');
-    elements.authTitle = document.getElementById('authTitle');
-    elements.authSubtitle = document.getElementById('authSubtitle');
-    elements.authSubmitBtn = document.getElementById('authSubmitBtn');
-    elements.authToggleText = document.getElementById('authToggleText');
-    elements.authToggleLink = document.getElementById('authToggleLink');
-    elements.fullNameGroup = document.getElementById('fullNameGroup');
-    elements.confirmPasswordGroup = document.getElementById('confirmPasswordGroup');
-    elements.passwordHint = document.getElementById('passwordHint');
-    elements.authTerms = document.getElementById('authTerms');
+    elements.loginBtn = document.getElementById('loginBtn');
+    elements.signupBtn = document.getElementById('signupBtn');
 }
 
 // ===== EVENT LISTENERS =====
@@ -192,28 +208,29 @@ function attachEventListeners() {
         });
     }
 
-    // Auth form and toggle
-    if (elements.authForm) {
-        elements.authForm.addEventListener('submit', handleAuthSubmit);
-    }
-    if (elements.authToggleLink) {
-        elements.authToggleLink.addEventListener('click', handleAuthToggle);
+    // Auth buttons (External Links)
+    elements.loginBtn?.addEventListener('click', () => {
+        chrome.tabs.create({ url: 'http://localhost:5173/login' });
+    });
+
+    elements.signupBtn?.addEventListener('click', () => {
+        chrome.tabs.create({ url: 'http://localhost:5173/signup' });
+    });
+
+    // Scenario change
+    if (elements.scenarioInput) {
+        elements.scenarioInput.addEventListener('change', updateScenarioFields);
+        // Initialize fields based on default
+        updateScenarioFields();
     }
 
-    // Keywords input - add tag on Enter
-    if (elements.keywordsInput) {
-        elements.keywordsInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                const keyword = elements.keywordsInput.value.trim();
-                if (keyword && !currentKeywords.includes(keyword)) {
-                    currentKeywords.push(keyword);
-                    renderKeywordTags();
-                }
-                elements.keywordsInput.value = '';
-            }
-        });
-    }
+    // Auto-save draft
+    Object.values(elements).forEach(el => {
+        if (el && (el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.tagName === 'TEXTAREA')) {
+            el.addEventListener('input', saveDraft);
+            el.addEventListener('change', saveDraft);
+        }
+    });
 
     // Event delegation for dynamically created card buttons
     if (elements.cardsContainer) {
@@ -289,26 +306,129 @@ function setActivePhase(phase) {
 // ===== EVENT HANDLERS =====
 function handleCreateNew(e) {
     e.preventDefault();
-    clearForm();
-    setState(STATE.FORM);
+
+    // Check for draft
+    chrome.storage.local.get(['meetingDraft'], (result) => {
+        if (result.meetingDraft) {
+            restoreDraft(result.meetingDraft);
+        } else {
+            clearForm();
+        }
+        setState(STATE.FORM);
+    });
+}
+
+// Toggle fields based on scenario
+function updateScenarioFields() {
+    const scenario = elements.scenarioInput?.value || 'job-interview';
+    const scenarios = ['job-interview', 'hr-interview', 'team-meeting', 'client-meeting', 'consulting', 'casual-conversation', 'online-assessment'];
+
+    // Hide all first
+    scenarios.forEach(type => {
+        const el = document.getElementById(`scenarioFields-${type}`);
+        if (el) el.style.display = 'none';
+    });
+
+    // Show target
+    const targetEl = document.getElementById(`scenarioFields-${scenario}`);
+    if (targetEl) targetEl.style.display = 'block';
 }
 
 async function handleSave(e) {
     e.preventDefault();
+
+    // Clear previous errors
+    clearAllErrors();
 
     // Validate form
     const scenario = elements.scenarioInput.value;
     const meetingUrl = elements.meetingUrlInput.value;
     const meetingLanguage = elements.meetingLanguageInput.value;
 
+    let valid = true;
+
     if (!scenario) {
-        showAlert('Please select a scenario', 'warning');
-        return;
+        validateField(elements.scenarioInput, 'Scenario is required');
+        valid = false;
     }
 
     if (!meetingUrl) {
-        showAlert('Please enter a meeting URL', 'warning');
-        return;
+        validateField(elements.meetingUrlInput, 'Meeting URL is required');
+        valid = false;
+    }
+
+    // Mandatory fields validation
+    if (scenario === 'job-interview') {
+        if (!elements.roleInput.value.trim()) {
+            validateField(elements.roleInput, 'Field is necessary');
+            valid = false;
+        }
+        if (!elements.companyInput.value.trim()) {
+            validateField(elements.companyInput, 'Field is necessary');
+            valid = false;
+        }
+    } else if (scenario === 'hr-interview') {
+        if (!elements.hrRoleInput.value.trim()) {
+            validateField(elements.hrRoleInput, 'Field is necessary');
+            valid = false;
+        }
+        if (!elements.hrCompanyInput.value.trim()) {
+            validateField(elements.hrCompanyInput, 'Field is necessary');
+            valid = false;
+        }
+    }
+
+    if (!valid) return;
+
+    // Gather context based on scenario
+    let interviewContext = {};
+
+    if (scenario === 'job-interview') {
+        interviewContext = {
+            role: elements.roleInput?.value || '',
+            companyName: elements.companyInput?.value || '',
+            experienceLevel: elements.experienceInput?.value || 'senior',
+            interviewType: elements.interviewTypeInput?.value || 'technical',
+            techStack: elements.techStackInput?.value || '',
+            jobDescription: elements.jdInput?.value || ''
+        };
+    } else if (scenario === 'hr-interview') {
+        interviewContext = {
+            role: elements.hrRoleInput?.value || '',
+            companyName: elements.hrCompanyInput?.value || '',
+            recruiterName: elements.hrRecruiterInput?.value || '',
+            cultureValues: elements.hrCultureInput?.value || '',
+            interviewType: 'hr'
+        };
+    } else if (scenario === 'team-meeting') {
+        interviewContext = {
+            teamName: elements.teamProjectInput?.value || '',
+            role: elements.teamRoleInput?.value || '',
+            updates: elements.teamUpdateInput?.value || ''
+        };
+    } else if (scenario === 'client-meeting') {
+        interviewContext = {
+            clientName: elements.clientNameInput?.value || '',
+            goal: elements.clientContextInput?.value || '',
+            role: 'Participant'
+        };
+    } else if (scenario === 'consulting') {
+        interviewContext = {
+            clientName: elements.consultingClientInput?.value || '',
+            topic: elements.consultingTopicInput?.value || '',
+            problemStatement: elements.consultingProblemInput?.value || ''
+        };
+    } else if (scenario === 'casual-conversation') {
+        interviewContext = {
+            topic: elements.casualTopicInput?.value || '',
+            participants: elements.casualParticipantsInput?.value || ''
+        };
+    } else if (scenario === 'online-assessment') {
+        interviewContext = {
+            platform: elements.assessmentPlatformInput?.value || '',
+            language: elements.assessmentLanguageInput?.value || '',
+            type: elements.assessmentTypeInput?.value || 'algo'
+        };
     }
 
     // Check if editing existing meeting
@@ -321,15 +441,38 @@ async function handleSave(e) {
         meetingUrl: meetingUrl,
         isDesktopCall: elements.isDesktopCall.checked,
         meetingLanguage: meetingLanguage,
-        translationLanguage: elements.translationLanguageInput.value,
-        additionalInfo: elements.additionalInfoInput?.value || '',
-        keywords: [...currentKeywords],
+        translationLanguage: elements.translationLanguageInput?.value || 'none',
+
+        // Context
+        interviewContext: interviewContext,
+
+        // Backward compatibility
+        additionalInfo: JSON.stringify(interviewContext),
+        keywords: [],
+
         createdAt: editingId ? savedMeetings.find(m => m.id === editingId)?.createdAt : new Date().toISOString(),
         updatedAt: new Date().toISOString()
     };
 
     // Generate title and subtitle based on scenario
     meeting.title = getScenarioTitle(scenario);
+
+    if (scenario === 'job-interview' && interviewContext.companyName) {
+        meeting.title = `Interview with ${interviewContext.companyName}`;
+    } else if (scenario === 'hr-interview' && interviewContext.companyName) {
+        meeting.title = `HR Interview at ${interviewContext.companyName}`;
+    } else if (scenario === 'team-meeting' && interviewContext.teamName) {
+        meeting.title = `Team Meeting: ${interviewContext.teamName}`;
+    } else if (scenario === 'client-meeting' && interviewContext.clientName) {
+        meeting.title = `Meeting with ${interviewContext.clientName}`;
+    } else if (scenario === 'consulting' && interviewContext.clientName) {
+        meeting.title = `Consulting: ${interviewContext.clientName}`;
+    } else if (scenario === 'casual-conversation' && interviewContext.topic) {
+        meeting.title = `Casual: ${interviewContext.topic}`;
+    } else if (scenario === 'online-assessment' && interviewContext.platform) {
+        meeting.title = `Assessment: ${interviewContext.platform}`;
+    }
+
     meeting.subtitle = getMeetingSubtitle(meetingUrl);
     meeting.platform = meeting.isDesktopCall ? 'Desktop' : 'Web Browser';
 
@@ -347,47 +490,22 @@ async function handleSave(e) {
 
     saveMeetingsData();
 
-    // Reset keywords
-    currentKeywords = [];
-    renderKeywordTags();
+    // Clear draft
+    chrome.storage.local.remove('meetingDraft');
 
     // Render all cards
     renderMeetingCards();
     setState(STATE.CARDS_LIST);
 }
 
-// Render keyword tags in the form
-function renderKeywordTags() {
-    if (!elements.keywordsTags) return;
-
-    elements.keywordsTags.innerHTML = currentKeywords.map((keyword, index) => `
-        <span class="keyword-tag">
-            ${keyword}
-            <span class="keyword-tag-remove" data-index="${index}">×</span>
-        </span>
-    `).join('');
-
-    // Add click listeners to remove buttons
-    elements.keywordsTags.querySelectorAll('.keyword-tag-remove').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const index = parseInt(btn.dataset.index);
-            currentKeywords.splice(index, 1);
-            renderKeywordTags();
-        });
-    });
-}
-
 function handleBack(e) {
     e.preventDefault();
 
     // Clear editing mode if active
+    // Clear editing mode if active
     if (elements.saveBtn.dataset.editingId) {
         delete elements.saveBtn.dataset.editingId;
     }
-
-    // Clear keywords
-    currentKeywords = [];
-    renderKeywordTags();
 
     if (savedMeetings.length > 0) {
         // If there are saved meetings, go back to cards list
@@ -484,45 +602,7 @@ function stopTimer() {
     }
 }
 
-// Handle Finish Meeting
-function handleFinishMeeting(e) {
-    e.preventDefault();
-
-    if (!confirm('Are you sure you want to finish this meeting?')) {
-        return;
-    }
-
-    // Send finish meeting message
-    chrome.runtime.sendMessage({
-        type: 'FINISH_MEETING',
-        sessionId: currentMeeting?.id
-    }, (response) => {
-        if (response && response.success) {
-            console.log('Meeting finished successfully');
-            endMeetingSession();
-        } else {
-            alert('Failed to finish meeting. Please try again.');
-        }
-    });
-}
-
-// Handle Disconnect Meeting
-function handleDisconnectMeeting(e) {
-    e.preventDefault();
-
-    if (!confirm('Disconnect from the meeting? You can reconnect later without losing your session.')) {
-        return;
-    }
-
-    // Send disconnect message
-    chrome.runtime.sendMessage({
-        type: 'DISCONNECT_MEETING',
-        sessionId: currentMeeting?.id
-    }, (response) => {
-        console.log('Disconnected from meeting');
-        endMeetingSession(); // Don't clear meeting data
-    });
-}
+// Duplicate handlers removed - see below
 
 // End meeting session
 function endMeetingSession() {
@@ -776,18 +856,54 @@ function editMeetingById(meetingId) {
     if (!meeting) return;
 
     // Populate form with meeting data
-    elements.scenarioInput.value = meeting.scenario || '';
+    elements.scenarioInput.value = meeting.scenario || 'job-interview';
+    updateScenarioFields();
+
+    const ctx = meeting.interviewContext || {};
+
+    // Dynamic fields
+    // Job
+    if (elements.roleInput) elements.roleInput.value = ctx.role || '';
+    if (elements.companyInput) elements.companyInput.value = ctx.companyName || '';
+    if (elements.experienceInput) elements.experienceInput.value = ctx.experienceLevel || 'senior';
+    if (elements.interviewTypeInput) elements.interviewTypeInput.value = ctx.interviewType || 'technical';
+    if (elements.techStackInput) elements.techStackInput.value = ctx.techStack || '';
+    if (elements.jdInput) elements.jdInput.value = ctx.jobDescription || '';
+
+    // HR
+    if (elements.hrRoleInput) elements.hrRoleInput.value = ctx.role || '';
+    if (elements.hrCompanyInput) elements.hrCompanyInput.value = ctx.companyName || '';
+    if (elements.hrRecruiterInput) elements.hrRecruiterInput.value = ctx.recruiterName || '';
+    if (elements.hrCultureInput) elements.hrCultureInput.value = ctx.cultureValues || '';
+
+    // Team
+    if (elements.teamProjectInput) elements.teamProjectInput.value = ctx.teamName || '';
+    if (elements.teamRoleInput) elements.teamRoleInput.value = ctx.role || '';
+    if (elements.teamUpdateInput) elements.teamUpdateInput.value = ctx.updates || '';
+
+    // Client
+    if (elements.clientNameInput) elements.clientNameInput.value = ctx.clientName || '';
+    if (elements.clientContextInput) elements.clientContextInput.value = ctx.goal || '';
+
+    // Consulting
+    if (elements.consultingClientInput) elements.consultingClientInput.value = ctx.clientName || '';
+    if (elements.consultingTopicInput) elements.consultingTopicInput.value = ctx.topic || '';
+    if (elements.consultingProblemInput) elements.consultingProblemInput.value = ctx.problemStatement || '';
+
+    // Casual
+    if (elements.casualTopicInput) elements.casualTopicInput.value = ctx.topic || '';
+    if (elements.casualParticipantsInput) elements.casualParticipantsInput.value = ctx.participants || '';
+
+    // Assessment
+    if (elements.assessmentPlatformInput) elements.assessmentPlatformInput.value = ctx.platform || '';
+    if (elements.assessmentLanguageInput) elements.assessmentLanguageInput.value = ctx.language || '';
+    if (elements.assessmentTypeInput) elements.assessmentTypeInput.value = ctx.type || 'algo';
+
+
     elements.meetingUrlInput.value = meeting.meetingUrl || '';
     elements.isDesktopCall.checked = meeting.isDesktopCall || false;
     elements.meetingLanguageInput.value = meeting.meetingLanguage || 'english';
     elements.translationLanguageInput.value = meeting.translationLanguage || 'none';
-
-    // Load additional info and keywords
-    if (elements.additionalInfoInput) {
-        elements.additionalInfoInput.value = meeting.additionalInfo || '';
-    }
-    currentKeywords = meeting.keywords ? [...meeting.keywords] : [];
-    renderKeywordTags();
 
     // Store the ID so we can update instead of create
     elements.saveBtn.dataset.editingId = meetingId;
@@ -826,10 +942,11 @@ function handleEdit(e) {
     setState(STATE.FORM);
 }
 
-function handleDelete(e) {
+async function handleDelete(e) {
     e.preventDefault();
 
-    if (!confirm('Are you sure you want to delete this meeting?')) {
+    const confirmed = await showConfirm('Are you sure you want to delete this meeting?');
+    if (!confirmed) {
         return;
     }
 
@@ -856,12 +973,13 @@ function handleUseThisPage(e) {
     });
 }
 
-function handleLogout(e) {
+async function handleLogout(e) {
     e.preventDefault();
 
     // Check if session is active
     if (sessionActive) {
-        if (!confirm('You have an active meeting session. Logging out will disconnect you. Continue?')) {
+        const confirmed = await showConfirm('You have an active meeting session. Logging out will disconnect you. Continue?');
+        if (!confirmed) {
             return;
         }
         // Stop session
@@ -958,21 +1076,11 @@ async function handleDisconnectMeeting(e) {
             }
         }
 
+        endMeetingSession(); // Updates UI to show card list
     });
 }
 
-function handleLogout(e) {
-    if (e) e.preventDefault();
-    if (confirm('Are you sure you want to logout?')) {
-        chrome.storage.local.remove(['user', 'credits', 'savedMeetings', 'activeSessionId', 'consoleToken'], () => {
-            elements.userName.textContent = 'User';
-            elements.creditsAmount.textContent = '$0.00';
-            savedMeetings = [];
-            currentKeywords = [];
-            setState(STATE.LOGIN);
-        });
-    }
-}
+// Duplicate handleLogout removed
 
 function handleDashboard(e) {
     if (e) e.preventDefault();
@@ -1289,6 +1397,15 @@ function loadUserInfo() {
     chrome.storage.local.get(['user', 'credits'], (result) => {
         if (result.user) {
             elements.userName.textContent = result.user.name || result.user.email || 'User';
+
+            // Request fresh credits in background
+            chrome.runtime.sendMessage({ type: 'GET_CREDITS' }, (response) => {
+                if (response && response.success !== undefined) {
+                    // Note: response.credits might be 0, which is falsy, check undefined
+                    const amount = response.credits || 0;
+                    elements.creditsAmount.textContent = `$${amount.toFixed(2)}`;
+                }
+            });
         }
 
         if (result.credits !== undefined) {
@@ -1298,15 +1415,177 @@ function loadUserInfo() {
 }
 
 // ===== HELPER FUNCTIONS =====
+function validateField(input, message) {
+    if (!input) return;
+    clearError(input);
+    input.classList.add('input-error');
+
+    // Create error message
+    const msg = document.createElement('div');
+    msg.className = 'error-message';
+    msg.textContent = message;
+
+    // Insert after input
+    input.parentNode.appendChild(msg);
+
+    // Add listener to clear on input
+    input.addEventListener('input', () => clearError(input), { once: true });
+}
+
+function clearError(input) {
+    if (!input) return;
+    input.classList.remove('input-error');
+    const parent = input.parentNode;
+    if (parent) {
+        const msg = parent.querySelector('.error-message');
+        if (msg) msg.remove();
+    }
+}
+
+function clearAllErrors() {
+    const inputs = document.querySelectorAll('.input-error');
+    inputs.forEach(clearError);
+}
+
+function saveDraft() {
+    // Only save if we are in form view and NOT editing (or editing is fine?)
+    // User asked for "filled and closed without saving" - usually implies new.
+    // If editingId is present, we might NOT want to overwrite "draft" or maybe we do?
+    // Let's safe draft regardless.
+
+    // Gather all values
+    const draft = {};
+    if (elements.scenarioInput) draft.scenario = elements.scenarioInput.value;
+    if (elements.meetingUrlInput) draft.meetingUrl = elements.meetingUrlInput.value;
+    if (elements.isDesktopCall) draft.isDesktopCall = elements.isDesktopCall.checked;
+    if (elements.meetingLanguageInput) draft.meetingLanguage = elements.meetingLanguageInput.value;
+    if (elements.translationLanguageInput) draft.translationLanguage = elements.translationLanguageInput.value;
+
+    // Dynamic
+    if (elements.roleInput) draft.role = elements.roleInput.value;
+    if (elements.companyInput) draft.company = elements.companyInput.value;
+    if (elements.experienceInput) draft.experience = elements.experienceInput.value;
+    if (elements.interviewTypeInput) draft.interviewType = elements.interviewTypeInput.value;
+    if (elements.techStackInput) draft.techStack = elements.techStackInput.value;
+    if (elements.jdInput) draft.jd = elements.jdInput.value;
+
+    if (elements.hrRoleInput) draft.hrRole = elements.hrRoleInput.value;
+    if (elements.hrCompanyInput) draft.hrCompany = elements.hrCompanyInput.value;
+    if (elements.hrRecruiterInput) draft.hrRecruiter = elements.hrRecruiterInput.value;
+    if (elements.hrCultureInput) draft.hrCulture = elements.hrCultureInput.value;
+
+    if (elements.teamProjectInput) draft.teamProject = elements.teamProjectInput.value;
+    if (elements.teamRoleInput) draft.teamRole = elements.teamRoleInput.value;
+    if (elements.teamUpdateInput) draft.teamUpdate = elements.teamUpdateInput.value;
+
+    if (elements.clientNameInput) draft.clientName = elements.clientNameInput.value;
+    if (elements.clientContextInput) draft.clientContext = elements.clientContextInput.value;
+
+    if (elements.consultingClientInput) draft.consultingClient = elements.consultingClientInput.value;
+    if (elements.consultingTopicInput) draft.consultingTopic = elements.consultingTopicInput.value;
+    if (elements.consultingProblemInput) draft.consultingProblem = elements.consultingProblemInput.value;
+
+    if (elements.casualTopicInput) draft.casualTopic = elements.casualTopicInput.value;
+    if (elements.casualParticipantsInput) draft.casualParticipants = elements.casualParticipantsInput.value;
+
+    if (elements.assessmentPlatformInput) draft.assessmentPlatform = elements.assessmentPlatformInput.value;
+    if (elements.assessmentLanguageInput) draft.assessmentLanguage = elements.assessmentLanguageInput.value;
+    if (elements.assessmentTypeInput) draft.assessmentType = elements.assessmentTypeInput.value;
+
+    chrome.storage.local.set({ meetingDraft: draft });
+}
+
+function restoreDraft(draft) {
+    if (!draft) return;
+
+    if (draft.scenario && elements.scenarioInput) {
+        elements.scenarioInput.value = draft.scenario;
+        updateScenarioFields();
+    }
+
+    if (draft.meetingUrl && elements.meetingUrlInput) elements.meetingUrlInput.value = draft.meetingUrl;
+    if (draft.isDesktopCall !== undefined && elements.isDesktopCall) elements.isDesktopCall.checked = draft.isDesktopCall;
+    if (draft.meetingLanguage && elements.meetingLanguageInput) elements.meetingLanguageInput.value = draft.meetingLanguage;
+    if (draft.translationLanguage && elements.translationLanguageInput) elements.translationLanguageInput.value = draft.translationLanguage;
+
+    if (draft.role && elements.roleInput) elements.roleInput.value = draft.role;
+    if (draft.company && elements.companyInput) elements.companyInput.value = draft.company;
+    if (draft.experience && elements.experienceInput) elements.experienceInput.value = draft.experience;
+    if (draft.interviewType && elements.interviewTypeInput) elements.interviewTypeInput.value = draft.interviewType;
+    if (draft.techStack && elements.techStackInput) elements.techStackInput.value = draft.techStack;
+    if (draft.jd && elements.jdInput) elements.jdInput.value = draft.jd;
+
+    if (draft.hrRole && elements.hrRoleInput) elements.hrRoleInput.value = draft.hrRole;
+    if (draft.hrCompany && elements.hrCompanyInput) elements.hrCompanyInput.value = draft.hrCompany;
+    if (draft.hrRecruiter && elements.hrRecruiterInput) elements.hrRecruiterInput.value = draft.hrRecruiter;
+    if (draft.hrCulture && elements.hrCultureInput) elements.hrCultureInput.value = draft.hrCulture;
+
+    if (draft.teamProject && elements.teamProjectInput) elements.teamProjectInput.value = draft.teamProject;
+    if (draft.teamRole && elements.teamRoleInput) elements.teamRoleInput.value = draft.teamRole;
+    if (draft.teamUpdate && elements.teamUpdateInput) elements.teamUpdateInput.value = draft.teamUpdate;
+
+    if (draft.clientName && elements.clientNameInput) elements.clientNameInput.value = draft.clientName;
+    if (draft.clientContext && elements.clientContextInput) elements.clientContextInput.value = draft.clientContext;
+
+    if (draft.consultingClient && elements.consultingClientInput) elements.consultingClientInput.value = draft.consultingClient;
+    if (draft.consultingTopic && elements.consultingTopicInput) elements.consultingTopicInput.value = draft.consultingTopic;
+    if (draft.consultingProblem && elements.consultingProblemInput) elements.consultingProblemInput.value = draft.consultingProblem;
+
+    if (draft.casualTopic && elements.casualTopicInput) elements.casualTopicInput.value = draft.casualTopic;
+    if (draft.casualParticipants && elements.casualParticipantsInput) elements.casualParticipantsInput.value = draft.casualParticipants;
+
+    if (draft.assessmentPlatform && elements.assessmentPlatformInput) elements.assessmentPlatformInput.value = draft.assessmentPlatform;
+    if (draft.assessmentLanguage && elements.assessmentLanguageInput) elements.assessmentLanguageInput.value = draft.assessmentLanguage;
+    if (draft.assessmentType && elements.assessmentTypeInput) elements.assessmentTypeInput.value = draft.assessmentType;
+}
+
 function clearForm() {
-    elements.scenarioInput.value = '';
+    chrome.storage.local.remove('meetingDraft');
+
+    elements.scenarioInput.value = 'job-interview';
+    updateScenarioFields();
+
     elements.meetingUrlInput.value = '';
     elements.isDesktopCall.checked = false;
     elements.meetingLanguageInput.value = 'english';
     elements.translationLanguageInput.value = 'none';
-    if (elements.additionalInfoInput) elements.additionalInfoInput.value = '';
-    currentKeywords = [];
-    renderKeywordTags();
+
+    // Job
+    if (elements.roleInput) elements.roleInput.value = '';
+    if (elements.companyInput) elements.companyInput.value = '';
+    if (elements.experienceInput) elements.experienceInput.value = 'senior';
+    if (elements.interviewTypeInput) elements.interviewTypeInput.value = 'technical';
+    if (elements.techStackInput) elements.techStackInput.value = '';
+    if (elements.jdInput) elements.jdInput.value = '';
+
+    // HR
+    if (elements.hrRoleInput) elements.hrRoleInput.value = '';
+    if (elements.hrCompanyInput) elements.hrCompanyInput.value = '';
+    if (elements.hrRecruiterInput) elements.hrRecruiterInput.value = '';
+    if (elements.hrCultureInput) elements.hrCultureInput.value = '';
+
+    // Team
+    if (elements.teamProjectInput) elements.teamProjectInput.value = '';
+    if (elements.teamRoleInput) elements.teamRoleInput.value = '';
+    if (elements.teamUpdateInput) elements.teamUpdateInput.value = '';
+
+    // Client
+    if (elements.clientNameInput) elements.clientNameInput.value = '';
+    if (elements.clientContextInput) elements.clientContextInput.value = '';
+
+    // Consulting
+    if (elements.consultingClientInput) elements.consultingClientInput.value = '';
+    if (elements.consultingTopicInput) elements.consultingTopicInput.value = '';
+    if (elements.consultingProblemInput) elements.consultingProblemInput.value = '';
+
+    // Casual
+    if (elements.casualTopicInput) elements.casualTopicInput.value = '';
+    if (elements.casualParticipantsInput) elements.casualParticipantsInput.value = '';
+
+    // Assessment
+    if (elements.assessmentPlatformInput) elements.assessmentPlatformInput.value = '';
+    if (elements.assessmentLanguageInput) elements.assessmentLanguageInput.value = '';
+    if (elements.assessmentTypeInput) elements.assessmentTypeInput.value = 'algo';
 }
 
 function updateCard(meeting) {
@@ -1321,10 +1600,12 @@ function updateCard(meeting) {
 function getScenarioTitle(scenario) {
     const titles = {
         'job-interview': 'Job Interview',
+        'hr-interview': 'HR Interview',
+        'team-meeting': 'Team Meeting',
         'client-meeting': 'Client Meeting',
-        'team-standup': 'Team Standup',
-        'presentation': 'Presentation',
-        'other': 'Meeting'
+        'consulting': 'Consulting',
+        'casual-conversation': 'Casual Conversation',
+        'online-assessment': 'Online Assessment'
     };
     return titles[scenario] || 'Meeting';
 }

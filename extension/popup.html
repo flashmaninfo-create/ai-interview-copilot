@@ -139,54 +139,24 @@
                     <div class="auth-form-side">
                         <div class="auth-form-container">
                             <div class="auth-header">
-                                <h1 id="authTitle">Welcome Back</h1>
-                                <p id="authSubtitle">Sign in to continue your interview preparation</p>
+                                <h1>Welcome</h1>
+                                <p>Please log in via our secure dashboard to access Interview Copilot.</p>
                             </div>
 
-                            <form id="authForm" class="auth-form">
-                                <!-- Full Name (only shown in signup mode) -->
-                                <div class="auth-input-group" id="fullNameGroup" style="display: none;">
-                                    <label for="authFullName">Full Name <span
-                                            class="optional-text">(optional)</span></label>
-                                    <input type="text" id="authFullName" placeholder="John Doe" autocomplete="name">
-                                </div>
-
-                                <div class="auth-input-group">
-                                    <label for="authEmail">Email</label>
-                                    <input type="email" id="authEmail" placeholder="you@example.com" required
-                                        autocomplete="email">
-                                </div>
-
-                                <div class="auth-input-group">
-                                    <label for="authPassword">Password</label>
-                                    <input type="password" id="authPassword" placeholder="Enter your password" required
-                                        autocomplete="current-password">
-                                    <small class="password-hint" id="passwordHint" style="display: none;">Must be at
-                                        least 6 characters</small>
-                                </div>
-
-                                <!-- Confirm Password (only shown in signup mode) -->
-                                <div class="auth-input-group" id="confirmPasswordGroup" style="display: none;">
-                                    <label for="authConfirmPassword">Confirm Password</label>
-                                    <input type="password" id="authConfirmPassword" placeholder="Re-enter your password"
-                                        autocomplete="new-password">
-                                </div>
-
-                                <button type="submit" class="auth-submit-btn" id="authSubmitBtn">
-                                    Sign In
+                            <div class="auth-buttons-container"
+                                style="display: flex; flex-direction: column; gap: 15px; margin-top: 30px;">
+                                <button id="loginBtn" class="auth-submit-btn">
+                                    Log In via Dashboard
                                 </button>
-                            </form>
-
-                            <div class="auth-footer">
-                                <span id="authToggleText">Don't have an account?</span>
-                                <a href="#" id="authToggleLink">Sign Up</a>
+                                <button id="signupBtn" class="auth-submit-btn"
+                                    style="background: transparent; border: 1px solid #ddd; color: #333;">
+                                    Create New Account
+                                </button>
                             </div>
 
-                            <div class="auth-terms" id="authTerms" style="display: none;">
-                                By signing up, you agree to our <a href="http://localhost:5173/terms"
-                                    target="_blank">Terms of Service</a> and <a href="http://localhost:5173/privacy"
-                                    target="_blank">Privacy Policy</a>
-                            </div>
+                            <p style="margin-top: 20px; font-size: 13px; color: #666; text-align: center;">
+                                Once logged in, click the extension icon again to start.
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -214,13 +184,167 @@
                     <div class="form-group">
                         <label for="scenarioInput">Scenario</label>
                         <select id="scenarioInput" class="form-control">
-                            <option value="">Select scenario</option>
                             <option value="job-interview">Job Interview</option>
+                            <option value="hr-interview">HR Interview</option>
+                            <option value="team-meeting">Team Meeting</option>
                             <option value="client-meeting">Client Meeting</option>
-                            <option value="team-standup">Team Standup</option>
-                            <option value="presentation">Presentation</option>
-                            <option value="other">Other</option>
+                            <option value="consulting">Consulting</option>
+                            <option value="casual-conversation">Casual Conversation</option>
+                            <option value="online-assessment">Online Assessment</option>
                         </select>
+                    </div>
+
+                    <!-- Dynamic Scenario Fields -->
+                    <div id="dynamicFieldsContainer">
+                        <!-- 1. Job Interview -->
+                        <div id="scenarioFields-job-interview" class="scenario-fields">
+                            <div class="form-group">
+                                <label for="roleInput">Target Role</label>
+                                <input type="text" id="roleInput" class="form-control"
+                                    placeholder="e.g. Senior Frontend Engineer">
+                            </div>
+                            <div class="form-group">
+                                <label for="companyInput">Company</label>
+                                <input type="text" id="companyInput" class="form-control" placeholder="e.g. Google">
+                            </div>
+                            <div style="display: flex; gap: 10px;">
+                                <div class="form-group" style="flex: 1;">
+                                    <label for="experienceInput">Level</label>
+                                    <select id="experienceInput" class="form-control">
+                                        <option value="junior">Junior</option>
+                                        <option value="mid">Mid-Level</option>
+                                        <option value="senior" selected>Senior</option>
+                                        <option value="lead">Lead/Staff</option>
+                                    </select>
+                                </div>
+                                <div class="form-group" style="flex: 1;">
+                                    <label for="interviewTypeInput">Type</label>
+                                    <select id="interviewTypeInput" class="form-control">
+                                        <option value="technical">Technical</option>
+                                        <option value="behavioral">Behavioral</option>
+                                        <option value="system-design">System Design</option>
+                                        <option value="hr">HR Screen</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="techStackInput">Tech Stack / Keywords</label>
+                                <input type="text" id="techStackInput" class="form-control"
+                                    placeholder="React, Node.js, AWS...">
+                            </div>
+                            <div class="form-group">
+                                <label for="jdInput">Job Description</label>
+                                <textarea id="jdInput" class="form-control" rows="3"
+                                    placeholder="Paste JD key points..."></textarea>
+                            </div>
+                        </div>
+
+                        <!-- 2. HR Interview -->
+                        <div id="scenarioFields-hr-interview" class="scenario-fields" style="display: none;">
+                            <div class="form-group">
+                                <label for="hrRoleInput">Target Role</label>
+                                <input type="text" id="hrRoleInput" class="form-control"
+                                    placeholder="e.g. Product Manager">
+                            </div>
+                            <div class="form-group">
+                                <label for="hrCompanyInput">Company</label>
+                                <input type="text" id="hrCompanyInput" class="form-control" placeholder="e.g. Amazon">
+                            </div>
+                            <div class="form-group">
+                                <label for="hrRecruiterInput">Recruiter Name</label>
+                                <input type="text" id="hrRecruiterInput" class="form-control"
+                                    placeholder="e.g. Sarah Smith">
+                            </div>
+                            <div class="form-group">
+                                <label for="hrCultureInput">Key Values / Culture</label>
+                                <textarea id="hrCultureInput" class="form-control" rows="3"
+                                    placeholder="Leadership principles..."></textarea>
+                            </div>
+                        </div>
+
+                        <!-- 3. Team Meeting -->
+                        <div id="scenarioFields-team-meeting" class="scenario-fields" style="display: none;">
+                            <div class="form-group">
+                                <label for="teamProjectInput">Team / Project Name</label>
+                                <input type="text" id="teamProjectInput" class="form-control"
+                                    placeholder="e.g. Mobile App Squad">
+                            </div>
+                            <div class="form-group">
+                                <label for="teamRoleInput">My Role</label>
+                                <input type="text" id="teamRoleInput" class="form-control" placeholder="e.g. Lead Dev">
+                            </div>
+                            <div class="form-group">
+                                <label for="teamUpdateInput">Agenda / Updates</label>
+                                <textarea id="teamUpdateInput" class="form-control" rows="3"
+                                    placeholder="Key updates to share..."></textarea>
+                            </div>
+                        </div>
+
+                        <!-- 4. Client Meeting -->
+                        <div id="scenarioFields-client-meeting" class="scenario-fields" style="display: none;">
+                            <div class="form-group">
+                                <label for="clientNameInput">Client Name</label>
+                                <input type="text" id="clientNameInput" class="form-control">
+                            </div>
+                            <div class="form-group">
+                                <label for="clientContextInput">Goal / Context</label>
+                                <textarea id="clientContextInput" class="form-control" rows="3"
+                                    placeholder="Meeting goal..."></textarea>
+                            </div>
+                        </div>
+
+                        <!-- 5. Consulting -->
+                        <div id="scenarioFields-consulting" class="scenario-fields" style="display: none;">
+                            <div class="form-group">
+                                <label for="consultingClientInput">Client / Organization</label>
+                                <input type="text" id="consultingClientInput" class="form-control">
+                            </div>
+                            <div class="form-group">
+                                <label for="consultingTopicInput">Focus Area / Topic</label>
+                                <input type="text" id="consultingTopicInput" class="form-control"
+                                    placeholder="e.g. Strategy">
+                            </div>
+                            <div class="form-group">
+                                <label for="consultingProblemInput">Problem Statement</label>
+                                <textarea id="consultingProblemInput" class="form-control" rows="3"
+                                    placeholder="Problem to solve..."></textarea>
+                            </div>
+                        </div>
+
+                        <!-- 6. Casual Conversation -->
+                        <div id="scenarioFields-casual-conversation" class="scenario-fields" style="display: none;">
+                            <div class="form-group">
+                                <label for="casualTopicInput">Topic / Context</label>
+                                <input type="text" id="casualTopicInput" class="form-control"
+                                    placeholder="e.g. Coffee Chat">
+                            </div>
+                            <div class="form-group">
+                                <label for="casualParticipantsInput">Participants</label>
+                                <input type="text" id="casualParticipantsInput" class="form-control">
+                            </div>
+                        </div>
+
+                        <!-- 7. Online Assessment -->
+                        <div id="scenarioFields-online-assessment" class="scenario-fields" style="display: none;">
+                            <div class="form-group">
+                                <label for="assessmentPlatformInput">Platform</label>
+                                <input type="text" id="assessmentPlatformInput" class="form-control"
+                                    placeholder="e.g. HackerRank">
+                            </div>
+                            <div class="form-group">
+                                <label for="assessmentLanguageInput">Programming Language</label>
+                                <input type="text" id="assessmentLanguageInput" class="form-control"
+                                    placeholder="e.g. Python">
+                            </div>
+                            <div class="form-group">
+                                <label for="assessmentTypeInput">Type</label>
+                                <select id="assessmentTypeInput" class="form-control">
+                                    <option value="algo">Algorithms</option>
+                                    <option value="system-design">System Design</option>
+                                    <option value="frontend">Frontend</option>
+                                </select>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="form-group">

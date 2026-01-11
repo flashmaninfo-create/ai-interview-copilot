@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useConsoleSync } from '../../hooks/useConsoleSync';
-import { creditService } from '../../lib/services/creditService';
+
 import {
   Mic,
   Lightbulb,
@@ -32,10 +32,12 @@ export function LiveConsolePage() {
   const transcriptRef = useRef<HTMLDivElement>(null);
   const [userScrolledUp, setUserScrolledUp] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [quickPrompt, setQuickPrompt] = useState('');
+
+
+  /* ---------------- Fetch Credits (Unused) ---------------- */
+  /*
   const [credits, setCredits] = useState<number>(0);
 
-  /* ---------------- Fetch Credits ---------------- */
   useEffect(() => {
     const fetchCredits = async () => {
       const result = await creditService.getBalance();
@@ -47,6 +49,7 @@ export function LiveConsolePage() {
     const interval = setInterval(fetchCredits, 30000);
     return () => clearInterval(interval);
   }, []);
+  */
 
   /* ---------------- Auto scroll ---------------- */
   useEffect(() => {
@@ -78,15 +81,6 @@ export function LiveConsolePage() {
 
     setLoading(true);
 
-    await sendCommand('REQUEST_HINT', {
-      requestType: 'custom',
-      trigger: 'manual',
-      customPrompt: quickPrompt
-    });
-
-    setQuickPrompt('');
-    setTimeout(() => setLoading(false), 3000);
-  };
 
   const handleRefresh = () => {
     window.location.reload();
@@ -212,7 +206,7 @@ export function LiveConsolePage() {
                   <div className="my-4 ml-4">
                     <div className="inline-flex items-center gap-2 bg-white/10 border border-[#ff6b35] rounded-lg px-3 py-2 text-sm">
                       <span className="w-2 h-2 bg-[#ff6b35] rounded-sm"></span>
-                      <span className="text-white">www.ntro.io is sharing your screen.</span>
+                      <span className="text-white">www.xtroon.io is sharing your screen.</span>
                       <button className="bg-white/20 text-white px-3 py-1 rounded text-xs">Stop sharing</button>
                       <button className="bg-[#ff6b35] text-white px-3 py-1 rounded text-xs">Hide</button>
                     </div>

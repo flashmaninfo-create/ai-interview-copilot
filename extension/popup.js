@@ -1006,16 +1006,16 @@ async function handleLogout(e) {
     // Clear all user data
     chrome.storage.local.clear(() => {
         // Send message to background to clear session
-        chrome.runtime.sendMessage({ type: 'LOGOUT' });
+        chrome.runtime.sendMessage({ type: 'LOGOUT' }, () => {
+            // Clear local state
+            savedMeetings = [];
+            activeMeetingId = null;
 
-        // Clear local state
-        savedMeetings = [];
-        activeMeetingId = null;
-
-        // Return to empty state (login view would go here if implemented)
-        setState(STATE.EMPTY);
-
-        console.log('Logged out successfully');
+            console.log('Logged out successfully');
+            
+            // Reload the popup to show logged-out state
+            window.location.reload();
+        });
     });
 }
 

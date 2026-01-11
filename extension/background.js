@@ -349,6 +349,8 @@ class BackgroundService {
 
   async handleLogout(sendResponse) {
     try {
+      console.log('[Background] Handling logout');
+      
       // Stop any active session
       if (this.sessionActive) {
         await this.stopSession(() => { });
@@ -358,6 +360,28 @@ class BackgroundService {
       this.state.data.user = null;
       await this.state.save();
 
+      // Send CLEAR_AUTH message to all dashboard tabs to clear localStorage
+      const tabs = await chrome.tabs.query({});
+      for (const tab of tabs) {
+        if (tab.url && (tab.url.includes('localhost:5173') || tab.url.includes('interview-copilot.com'))) {
+          try {
+            await chrome.tabs.sendMessage(tab.id, { type: 'CLEAR_AUTH' });
+            console.log('[Background] Sent CLEAR_AUTH to tab:', tab.id);
+          } catch (error) {
+            // Tab might not have content script, ignore
+            console.log('[Background] Could not send CLEAR_AUTH to tab:', tab.id);
+          }
+        }
+      }
+
+      // Set flag to ignore AUTH_SYNC for 5 seconds to prevent immediate re-authentication
+      this.ignoreAuthSync = true;
+      setTimeout(() => {
+        this.ignoreAuthSync = false;
+        console.log('[Background] Re-enabled AUTH_SYNC processing');
+      }, 5000);
+
+      console.log('[Background] Logout completed, AUTH_SYNC ignored for 5 seconds');
       sendResponse({ success: true });
 
     } catch (error) {
@@ -1584,6 +1608,13 @@ class BackgroundService {
   async handleAuthSync(msg, sendResponse) {
     try {
       console.log('[Background] Received AUTH_SYNC', msg.user?.id);
+
+      // Ignore AUTH_SYNC if we just logged out
+      if (this.ignoreAuthSync) {
+        console.log('[Background] Ignoring AUTH_SYNC due to recent logout');
+        sendResponse({ success: false, ignored: true });
+        return;
+      }
 
       if (msg.user && msg.token) {
         const updates = {

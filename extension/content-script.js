@@ -564,6 +564,26 @@
                 showOverlay();
                 sendResponse({ success: true });
                 break;
+
+            case 'CLEAR_AUTH':
+                // Clear all Supabase auth tokens from localStorage
+                console.log('[Content] Clearing auth tokens from localStorage');
+                for (let i = localStorage.length - 1; i >= 0; i--) {
+                    const key = localStorage.key(i);
+                    if (key && (key.startsWith('sb-') && key.endsWith('-auth-token'))) {
+                        localStorage.removeItem(key);
+                        console.log('[Content] Removed auth token:', key);
+                    }
+                }
+                
+                // Stop auth polling temporarily (will restart on page reload if needed)
+                if (typeof authPollInterval !== 'undefined' && authPollInterval) {
+                    clearInterval(authPollInterval);
+                    console.log('[Content] Stopped auth polling');
+                }
+                
+                sendResponse({ success: true });
+                break;
         }
 
         return true;

@@ -74,7 +74,7 @@ const Header = () => {
             </svg>
           </div>
           <span className="font-headline text-2xl font-semibold text-primary">
-            Interview Copilot
+            Xtroone
           </span>
         </Link>
 

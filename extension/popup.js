@@ -1224,7 +1224,7 @@ function handleAuthToggle(e) {
     } else {
         // Switch to signup mode
         elements.authTitle.textContent = 'Create Account';
-        elements.authSubtitle.textContent = 'Join to get your AI Interview Copilot';
+        elements.authSubtitle.textContent = 'Join to get your AI Xtroone';
         elements.authSubmitBtn.textContent = 'Sign Up';
         elements.authToggleText.textContent = 'Already have an account?';
         elements.authToggleLink.textContent = 'Sign In';

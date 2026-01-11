@@ -1,4 +1,4 @@
-// Interview Copilot - Content Script
+// Xtroone - Content Script
 // Overlay that matches console dashboard design
 
 (function () {
@@ -9,7 +9,7 @@
     }
     window.__interviewCopilotLoaded = true;
 
-    console.log('[Content] Interview Copilot content script loaded');
+    console.log('[Content] Xtroone content script loaded');
 
     let overlay = null;
     let isMinimized = false;
@@ -32,7 +32,7 @@
       <div class="ic-header">
         <div class="ic-title">
           <span class="ic-status-dot"></span>
-          Interview Copilot
+          Xtroone
         </div>
         <div class="ic-controls">
           <button class="ic-btn ic-btn-icon" id="ic-minimize" title="Minimize">

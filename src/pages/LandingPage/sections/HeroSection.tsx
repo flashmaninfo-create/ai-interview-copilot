@@ -27,7 +27,7 @@ const HeroSection = ({ onDemoClick }: HeroSectionProps) => {
             </h1>
 
             <p className="text-xl text-primary-foreground/90 leading-relaxed">
-              Interview Copilot listens to the interviewer, transcribes questions instantly, and gives you accurate, role-specific answers — discreetly.
+              Xtroone listens to the interviewer, transcribes questions instantly, and gives you accurate, role-specific answers — discreetly.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4">

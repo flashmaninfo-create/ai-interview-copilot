@@ -36,7 +36,7 @@ export function FeaturesPage() {
     <div className="bg-background min-h-screen relative overflow-hidden text-slate-200" ref={containerRef}>
       <SEO 
         title="Features" 
-        description="Explore the powerful features of Interview Copilot: Real-time transcription, AI hints, and live coding assistance."
+        description="Explore the powerful features of Xtroone: Real-time transcription, AI hints, and live coding assistance."
       />
 
       <main className="pt-24 pb-16">

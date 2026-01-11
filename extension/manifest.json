@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Interview Copilot",
+  "name": "Xtroone",
   "version": "1.0.0",
   "description": "AI-powered interview assistant for conversational interviews, live coding, and online assessments",
   "permissions": [

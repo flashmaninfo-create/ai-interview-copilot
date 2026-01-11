@@ -54,11 +54,11 @@ export function Navbar({ variant = 'dark' }: NavbarProps) {
           <Link to="/" className="flex items-center gap-2 group">
             <img 
               src="/1.svg" 
-              alt="Interview Copilot" 
+              alt="Xtroone" 
               className="w-8 h-8 rounded-lg shadow-lg group-hover:shadow-primary/25 transition-all"
             />
             <span className={cn("font-bold text-lg", isLight && !isScrolled ? "text-slate-900" : isLight && isScrolled ? "text-slate-900" : "text-white")}>
-              Interview Copilot
+              Xtroone
             </span>
           </Link>
 

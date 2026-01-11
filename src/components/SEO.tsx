@@ -7,7 +7,7 @@ interface SEOProps {
   type?: string;
 }
 
-export function SEO({ title, description, name = 'Interview Copilot', type = 'website' }: SEOProps) {
+export function SEO({ title, description, name = 'Xtroone', type = 'website' }: SEOProps) {
   return (
     <Helmet>
       {/* Standard metadata tags */}

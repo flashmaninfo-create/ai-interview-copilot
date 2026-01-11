@@ -113,6 +113,7 @@ function initializeElements() {
     elements.finishMeetingBtn = document.getElementById('finishMeetingBtn');
     elements.disconnectMeetingBtn = document.getElementById('disconnectMeetingBtn');
     elements.logoutBtn = document.getElementById('logoutBtn');
+    console.log('Logout button found:', elements.logoutBtn);
     elements.dashboardBtn = document.getElementById('dashboardBtn');
     elements.refreshBtn = document.getElementById('refreshBtn');
     elements.useThisPageLink = document.getElementById('useThisPageLink');
@@ -196,7 +197,12 @@ function attachEventListeners() {
     elements.openConsoleLinkInMeeting?.addEventListener('click', handleDashboard);
 
     // Footer buttons
-    elements.logoutBtn?.addEventListener('click', handleLogout);
+    if (elements.logoutBtn) {
+        elements.logoutBtn.addEventListener('click', handleLogout);
+        console.log('Logout event listener attached successfully');
+    } else {
+        console.error('Logout button not found during event listener attachment');
+    }
     elements.dashboardBtn?.addEventListener('click', handleDashboard);
 
     // Upgrade link
@@ -252,6 +258,15 @@ function attachEventListeners() {
             }
         });
     }
+
+    // Fallback: Ensure logout button has event listener (direct DOM query)
+    setTimeout(() => {
+        const logoutBtnDirect = document.getElementById('logoutBtn');
+        if (logoutBtnDirect && !logoutBtnDirect.onclick) {
+            console.log('Attaching fallback logout listener via direct DOM query');
+            logoutBtnDirect.addEventListener('click', handleLogout);
+        }
+    }, 100);
 }
 
 // ===== STATE TRANSITIONS =====
@@ -974,6 +989,7 @@ function handleUseThisPage(e) {
 }
 
 async function handleLogout(e) {
+    console.log('Logout button clicked');
     e.preventDefault();
 
     // Check if session is active

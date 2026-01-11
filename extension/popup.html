@@ -501,6 +501,52 @@
                     </a>
                 </div>
             </div>
+
+            <!-- Feedback View -->
+            <div class="view-content" id="feedbackView" style="display: none;">
+                <div class="feedback-container">
+                    <div class="meeting-finished-header">
+                        <div class="meeting-subtitle">Senior AI Platform Engineer</div>
+                        <button class="download-feedback-btn" id="downloadFeedbackBtn">
+                           Download AI Feedback 
+                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                               <polyline points="7 10 12 15 17 10"></polyline>
+                               <line x1="12" y1="15" x2="12" y2="3"></line>
+                           </svg>
+                        </button>
+                    </div>
+
+                    <div class="feedback-section">
+                        <label>How was your meeting?</label>
+                        <div class="rating-buttons" id="meetingRatingGroup">
+                             <button class="rating-pill" data-value="1">Worst</button>
+                             <button class="rating-pill" data-value="2">Bad</button>
+                             <button class="rating-pill" data-value="3">So So</button>
+                             <button class="rating-pill" data-value="4">Good</button>
+                             <button class="rating-pill" data-value="5">Perfect</button>
+                        </div>
+                    </div>
+
+                    <div class="feedback-section">
+                        <label>How was Xtroone.io?</label>
+                        <div class="star-rating" id="appRatingGroup">
+                             <span class="star" data-value="1">★</span>
+                             <span class="star" data-value="2">★</span>
+                             <span class="star" data-value="3">★</span>
+                             <span class="star" data-value="4">★</span>
+                             <span class="star" data-value="5">★</span>
+                        </div>
+                    </div>
+
+                    <div class="feedback-section">
+                        <label>Feedback (Optional)</label>
+                        <textarea id="feedbackText" class="feedback-input" placeholder="We are hungry with your feedback..."></textarea>
+                    </div>
+
+                    <button class="btn btn-primary btn-large btn-done" id="submitFeedbackBtn">Done</button>
+                </div>
+            </div>
         </div>
     </div>
 

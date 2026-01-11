@@ -1368,3 +1368,143 @@ body {
     margin-top: 4px;
     font-weight: 500;
 }
+
+/* Feedback Screen Styles */
+.feedback-container {
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    height: 100%;
+    color: white;
+}
+
+.meeting-finished-header {
+    margin-bottom: 32px;
+}
+
+.meeting-finished-title {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: #ffffff;
+}
+
+.meeting-subtitle {
+    font-size: 14px;
+    color: #a1a1aa;
+    margin-bottom: 24px;
+}
+
+.download-feedback-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 24px;
+    background: #27272a;
+    border: 1px solid #3f3f46;
+    border-radius: 8px;
+    color: #fafafa;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    width: 100%;
+    justify-content: center;
+    max-width: 300px;
+}
+
+.download-feedback-btn:hover {
+    background: #3f3f46;
+    border-color: #52525b;
+}
+
+.feedback-section {
+    margin-bottom: 28px;
+    width: 100%;
+    text-align: left;
+    max-width: 380px;
+}
+
+.feedback-section label {
+    display: block;
+    font-size: 13px;
+    color: #d4d4d8;
+    margin-bottom: 12px;
+    font-weight: 500;
+}
+
+.rating-buttons {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+}
+
+.rating-pill {
+    flex: 1;
+    padding: 10px 4px;
+    background: #18181b;
+    border: 1px solid #27272a;
+    border-radius: 6px;
+    color: #71717a;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+}
+
+.rating-pill:hover {
+    background: #27272a;
+    color: #d4d4d8;
+}
+
+.rating-pill.active {
+    background: rgba(37, 99, 235, 0.15);
+    border-color: #2563eb;
+    color: #60a5fa;
+}
+
+.star-rating {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    padding: 8px 0;
+}
+
+.star {
+    font-size: 28px;
+    color: #3f3f46;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.star:hover,
+.star.active {
+    color: #fbbf24;
+}
+
+.feedback-input {
+    width: 100%;
+    height: 100px;
+    background: #18181b;
+    border: 1px solid #27272a;
+    border-radius: 8px;
+    padding: 12px;
+    color: #fafafa;
+    font-family: inherit;
+    font-size: 13px;
+    resize: none;
+    line-height: 1.5;
+}
+
+.feedback-input:focus {
+    outline: none;
+    border-color: #ff6b35;
+}
+
+.btn-done {
+    width: 100%;
+    margin-top: 12px;
+    max-width: 380px;
+}

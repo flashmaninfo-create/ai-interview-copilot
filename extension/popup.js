@@ -4,7 +4,8 @@ const STATE = {
     EMPTY: 'empty',
     FORM: 'form',
     CARDS_LIST: 'cards-list',
-    IN_MEETING: 'in-meeting'
+    IN_MEETING: 'in-meeting',
+    FEEDBACK: 'feedback'
 };
 
 let currentState = STATE.EMPTY;
@@ -37,7 +38,9 @@ const elements = {
     emptyStateView: null,
     formView: null,
     cardsListView: null,
+    cardsListView: null,
     inMeetingView: null,
+    feedbackView: null,
 
     // Buttons
     createNewBtn: null,
@@ -76,7 +79,15 @@ const elements = {
     activeMeetingSubtitle: null,
     activeMeetingPlatform: null,
     activeMeetingLanguage: null,
+    activeMeetingLanguage: null,
     sessionTimer: null,
+
+    // Feedback elements
+    downloadFeedbackBtn: null,
+    meetingRatingGroup: null,
+    appRatingGroup: null,
+    feedbackText: null,
+    submitFeedbackBtn: null,
 
     // Phase navigation
     phaseItems: null,
@@ -186,6 +197,14 @@ function initializeElements() {
     elements.activeMeetingLanguage = document.getElementById('activeMeetingLanguage');
     elements.sessionTimer = document.getElementById('sessionTimer');
 
+    // Feedback elements
+    elements.feedbackView = document.getElementById('feedbackView');
+    elements.downloadFeedbackBtn = document.getElementById('downloadFeedbackBtn');
+    elements.meetingRatingGroup = document.getElementById('meetingRatingGroup');
+    elements.appRatingGroup = document.getElementById('appRatingGroup');
+    elements.feedbackText = document.getElementById('feedbackText');
+    elements.submitFeedbackBtn = document.getElementById('submitFeedbackBtn');
+
     // Phase navigation
     elements.phaseItems = document.querySelectorAll('.phase-item');
 
@@ -288,6 +307,38 @@ function attachEventListeners() {
         });
     }
 
+    // Feedback Listeners
+    if (elements.downloadFeedbackBtn) {
+        elements.downloadFeedbackBtn.addEventListener('click', handleDownloadFeedback);
+    }
+    if (elements.submitFeedbackBtn) {
+        elements.submitFeedbackBtn.addEventListener('click', handleSubmitFeedback);
+    }
+    
+    // Rating selection logic
+    if (elements.meetingRatingGroup) {
+        elements.meetingRatingGroup.addEventListener('click', (e) => {
+            if (e.target.classList.contains('rating-pill')) {
+                // Remove active from siblings
+                Array.from(elements.meetingRatingGroup.children).forEach(c => c.classList.remove('active'));
+                e.target.classList.add('active');
+            }
+        });
+    }
+    if (elements.appRatingGroup) {
+        elements.appRatingGroup.addEventListener('click', (e) => {
+            if (e.target.classList.contains('star')) {
+                const value = parseInt(e.target.dataset.value);
+                Array.from(elements.appRatingGroup.children).forEach(c => {
+                    const starVal = parseInt(c.dataset.value);
+                    if (starVal <= value) c.classList.add('active');
+                    else c.classList.remove('active');
+                });
+                elements.appRatingGroup.dataset.selectedValue = value;
+            }
+        });
+    }
+
     // Fallback: Ensure logout button has event listener (direct DOM query)
     setTimeout(() => {
         const logoutBtnDirect = document.getElementById('logoutBtn');
@@ -329,6 +380,19 @@ function setState(newState) {
         case STATE.IN_MEETING:
             if (elements.inMeetingView) elements.inMeetingView.style.display = 'block';
             setActivePhase('during');
+            break;
+        case STATE.FEEDBACK:
+            if (elements.feedbackView) {
+                elements.feedbackView.style.display = 'block';
+                // Reset form state
+                if (elements.feedbackText) elements.feedbackText.value = '';
+                if (elements.meetingRatingGroup) Array.from(elements.meetingRatingGroup.children).forEach(c => c.classList.remove('active'));
+                if (elements.appRatingGroup) {
+                    Array.from(elements.appRatingGroup.children).forEach(c => c.classList.remove('active'));
+                    delete elements.appRatingGroup.dataset.selectedValue;
+                }
+            }
+            setActivePhase('after');
             break;
     }
 }
@@ -651,22 +715,107 @@ function stopTimer() {
 // Duplicate handlers removed - see below
 
 // End meeting session
+// End meeting session
 function endMeetingSession() {
     sessionActive = false;
     stopTimer();
 
-    // Clear active meeting
-    activeMeetingId = null;
+    // Show Feedback View instead of CARDS_LIST directly
+    setState(STATE.FEEDBACK);
+    
+    // We don't clear activeMeetingId yet because we need it for feedback  
+    // Clear session storage but keep activeSessionId for a bit? 
+    // Actually, background handles the session logic. We just need the ID for the API call.
+    // chrome.storage.local.remove(['activeSessionId', 'consoleToken']);
 
-    // Clear session storage
-    chrome.storage.local.remove(['activeSessionId', 'consoleToken']);
+    // Reset phase to "After the Meeting" happens in setState(STATE.FEEDBACK)
+}
 
-    // Reset phase to "Before the Meeting"
-    setActivePhase('before');
+// Feedback Handlers
+async function handleDownloadFeedback() {
+    if (!activeMeetingId) return;
 
-    // Return to cards list
-    renderMeetingCards();
-    setState(STATE.CARDS_LIST);
+    const originalText = elements.downloadFeedbackBtn.innerHTML;
+    elements.downloadFeedbackBtn.innerHTML = 'Generating...';
+    elements.downloadFeedbackBtn.disabled = true;
+
+    try {
+        console.log('Requesting report for:', activeMeetingId);
+        const response = await chrome.runtime.sendMessage({
+            type: 'DOWNLOAD_REPORT',
+            data: { sessionId: activeMeetingId }
+        });
+
+        if (response && response.success && response.content) {
+            // Trigger download
+            const blob = new Blob([response.content], { type: 'text/markdown' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `interview-report-${new Date().toISOString().split('T')[0]}.md`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        } else {
+            alert('Failed to generate report. Please try again.');
+        }
+    } catch (error) {
+        console.error('Download error:', error);
+        alert('Error: ' + error.message);
+    } finally {
+        elements.downloadFeedbackBtn.innerHTML = originalText;
+        elements.downloadFeedbackBtn.disabled = false;
+    }
+}
+
+async function handleSubmitFeedback() {
+    if (!activeMeetingId) {
+        setState(STATE.CARDS_LIST);
+        renderSavedMeetings();
+        return;
+    }
+
+    // Collect data
+    const feedbackText = elements.feedbackText ? elements.feedbackText.value : '';
+    
+    // Get ratings
+    let meetingRating = 0;
+    if (elements.meetingRatingGroup) {
+        const activeOption = elements.meetingRatingGroup.querySelector('.active');
+        if (activeOption) meetingRating = parseInt(activeOption.dataset.value);
+    }
+
+    let appRating = 0;
+    if (elements.appRatingGroup && elements.appRatingGroup.dataset.selectedValue) {
+        appRating = parseInt(elements.appRatingGroup.dataset.selectedValue);
+    }
+
+    elements.submitFeedbackBtn.innerHTML = 'Saving...';
+    elements.submitFeedbackBtn.disabled = true;
+
+    try {
+        await chrome.runtime.sendMessage({
+            type: 'SAVE_FEEDBACK',
+            data: {
+                sessionId: activeMeetingId,
+                ratingMeeting: meetingRating,
+                ratingApp: appRating,
+                feedback: feedbackText
+            }
+        });
+        
+    } catch (error) {
+        console.error('Feedback save error:', error);
+    } finally {
+        elements.submitFeedbackBtn.innerHTML = 'Done';
+        elements.submitFeedbackBtn.disabled = false;
+        
+        activeMeetingId = null;
+        chrome.storage.local.remove(['activeSessionId', 'consoleToken']);
+        renderSavedMeetings();
+        setState(STATE.CARDS_LIST);
+    }
 }
 
 // ===== MULTIPLE MEETINGS MANAGEMENT =====

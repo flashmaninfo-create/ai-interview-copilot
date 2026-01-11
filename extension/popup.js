@@ -175,6 +175,10 @@ function initializeElements() {
     elements.assessmentLanguageInput = document.getElementById('assessmentLanguageInput');
     elements.assessmentTypeInput = document.getElementById('assessmentTypeInput');
 
+    // Keywords
+    elements.keywordsInput = document.getElementById('keywordsInput');
+    elements.keywordsTags = document.getElementById('keywordsTags');
+
     // In Meeting elements
     elements.activeMeetingTitle = document.getElementById('activeMeetingTitle');
     elements.activeMeetingSubtitle = document.getElementById('activeMeetingSubtitle');
@@ -252,6 +256,16 @@ function attachEventListeners() {
             el.addEventListener('change', saveDraft);
         }
     });
+
+    // Keywords input
+    if (elements.keywordsInput) {
+        elements.keywordsInput.addEventListener('keydown', handleKeywordInput);
+    }
+
+    // Keywords tags (delegation for delete)
+    if (elements.keywordsTags) {
+        elements.keywordsTags.addEventListener('click', handleKeywordDelete);
+    }
 
     // Event delegation for dynamically created card buttons
     if (elements.cardsContainer) {
@@ -478,7 +492,9 @@ async function handleSave(e) {
 
         // Backward compatibility
         additionalInfo: JSON.stringify(interviewContext),
-        keywords: [],
+        // Backward compatibility
+        additionalInfo: JSON.stringify(interviewContext),
+        keywords: currentKeywords,
 
         createdAt: editingId ? savedMeetings.find(m => m.id === editingId)?.createdAt : new Date().toISOString(),
         updatedAt: new Date().toISOString()
@@ -933,7 +949,12 @@ function editMeetingById(meetingId) {
     elements.meetingUrlInput.value = meeting.meetingUrl || '';
     elements.isDesktopCall.checked = meeting.isDesktopCall || false;
     elements.meetingLanguageInput.value = meeting.meetingLanguage || 'english';
+
     elements.translationLanguageInput.value = meeting.translationLanguage || 'none';
+
+    // Keywords
+    currentKeywords = meeting.keywords || [];
+    renderKeywords();
 
     // Store the ID so we can update instead of create
     elements.saveBtn.dataset.editingId = meetingId;
@@ -1523,6 +1544,9 @@ function saveDraft() {
     if (elements.assessmentLanguageInput) draft.assessmentLanguage = elements.assessmentLanguageInput.value;
     if (elements.assessmentTypeInput) draft.assessmentType = elements.assessmentTypeInput.value;
 
+    // Keywords
+    draft.keywords = currentKeywords;
+
     chrome.storage.local.set({ meetingDraft: draft });
 }
 
@@ -1568,6 +1592,12 @@ function restoreDraft(draft) {
     if (draft.assessmentPlatform && elements.assessmentPlatformInput) elements.assessmentPlatformInput.value = draft.assessmentPlatform;
     if (draft.assessmentLanguage && elements.assessmentLanguageInput) elements.assessmentLanguageInput.value = draft.assessmentLanguage;
     if (draft.assessmentType && elements.assessmentTypeInput) elements.assessmentTypeInput.value = draft.assessmentType;
+
+    // Keywords
+    if (draft.keywords) {
+        currentKeywords = draft.keywords;
+        renderKeywords();
+    }
 }
 
 function clearForm() {
@@ -1617,6 +1647,62 @@ function clearForm() {
     if (elements.assessmentPlatformInput) elements.assessmentPlatformInput.value = '';
     if (elements.assessmentLanguageInput) elements.assessmentLanguageInput.value = '';
     if (elements.assessmentTypeInput) elements.assessmentTypeInput.value = 'algo';
+
+    // Keywords
+    currentKeywords = [];
+    renderKeywords();
+    if (elements.keywordsInput) elements.keywordsInput.value = '';
+}
+
+// ===== KEYWORD FUNCTIONS =====
+function handleKeywordInput(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault(); // Prevent form submission
+
+        const value = e.target.value.trim();
+        if (value && !currentKeywords.includes(value)) {
+            currentKeywords.push(value);
+            renderKeywords();
+            e.target.value = '';
+            
+            // Save draft
+            saveDraft();
+        } else if (currentKeywords.includes(value)) {
+            // Optional: highlight existing tag or show feedback
+            e.target.value = '';
+        }
+    }
+}
+
+function handleKeywordDelete(e) {
+    if (e.target.closest('.remove-tag-btn')) {
+        const tag = e.target.closest('.keyword-tag');
+        if (tag) {
+            const keyword = tag.dataset.keyword;
+            currentKeywords = currentKeywords.filter(k => k !== keyword);
+            renderKeywords();
+            
+            // Save draft
+            saveDraft();
+        }
+    }
+}
+
+function renderKeywords() {
+    if (!elements.keywordsTags) return;
+
+    elements.keywordsTags.innerHTML = '';
+    
+    currentKeywords.forEach(keyword => {
+        const tag = document.createElement('div');
+        tag.className = 'keyword-tag';
+        tag.dataset.keyword = keyword;
+        tag.innerHTML = `
+            <span>${keyword}</span>
+            <button class="remove-tag-btn">×</button>
+        `;
+        elements.keywordsTags.appendChild(tag);
+    });
 }
 
 function updateCard(meeting) {

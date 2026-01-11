@@ -68,7 +68,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                     <div className="h-16 flex items-center px-6 border-b border-border">
                         <Link to="/dashboard" className="text-xl font-bold text-primary tracking-tight flex items-center gap-2">
                             <img src="/1.svg" alt="Logo" className="w-8 h-8 rounded-lg" />
-                            Interview Copilot
+                            Xtroone
                         </Link>
                     </div>
 

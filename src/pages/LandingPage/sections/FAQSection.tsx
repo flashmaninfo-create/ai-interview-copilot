@@ -14,12 +14,12 @@ const FAQSection = () => {
     {
       id: 1,
       question: "Is my data recorded or stored?",
-      answer: "No. Interview Copilot uses audio-only transcription in real-time and does not record or store any video, audio, or transcription data. All processing happens live, and nothing is saved to our servers. Your privacy is our top priority."
+      answer: "No. Xtroone uses audio-only transcription in real-time and does not record or store any video, audio, or transcription data. All processing happens live, and nothing is saved to our servers. Your privacy is our top priority."
     },
     {
       id: 2,
       question: "Does this record video or screen?",
-      answer: "Absolutely not. Interview Copilot only listens to audio for transcription purposes. We do not capture, record, or store any video or screen content. The Chrome Extension overlay is visible only to you and does not interfere with screen sharing."
+      answer: "Absolutely not. Xtroone only listens to audio for transcription purposes. We do not capture, record, or store any video or screen content. The Chrome Extension overlay is visible only to you and does not interfere with screen sharing."
     },
     {
       id: 3,
@@ -29,7 +29,7 @@ const FAQSection = () => {
     {
       id: 4,
       question: "Does it work with Zoom / Teams / Meet?",
-      answer: "Yes. Interview Copilot works independently of your meeting platform. It captures system audio, so it's compatible with Zoom, Microsoft Teams, Google Meet, and any other video conferencing tool. No special integration required."
+      answer: "Yes. Xtroone works independently of your meeting platform. It captures system audio, so it's compatible with Zoom, Microsoft Teams, Google Meet, and any other video conferencing tool. No special integration required."
     },
     {
       id: 5,
@@ -39,7 +39,7 @@ const FAQSection = () => {
     {
       id: 6,
       question: "Is this detectable?",
-      answer: "Interview Copilot is designed to be discreet. The Chrome Extension overlay is only visible on your screen (not during screen sharing), and the Stealth Console runs on a separate device. We use standard browser APIs and do not inject any code into meeting platforms. However, we encourage users to use this tool responsibly and ethically."
+      answer: "Xtroone is designed to be discreet. The Chrome Extension overlay is only visible on your screen (not during screen sharing), and the Stealth Console runs on a separate device. We use standard browser APIs and do not inject any code into meeting platforms. However, we encourage users to use this tool responsibly and ethically."
     },
     {
       id: 7,

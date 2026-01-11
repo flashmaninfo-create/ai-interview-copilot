@@ -293,7 +293,7 @@ const ResponsibleAIUsePage = () => {
               <div>
                 <h3 className="font-semibold text-lg text-primary mb-2">Human Judgment Remains Essential</h3>
                 <p className="text-foreground/70">
-                  Interview Copilot is designed to augment your preparation, not replace critical thinking. Career decisions should always involve personal reflection, professional mentorship, and consideration of factors AI cannot fully understand.
+                  Xtroone is designed to augment your preparation, not replace critical thinking. Career decisions should always involve personal reflection, professional mentorship, and consideration of factors AI cannot fully understand.
                 </p>
               </div>
             </div>

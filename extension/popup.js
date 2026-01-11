@@ -15,6 +15,21 @@ let sessionStartTime = null;
 let timerInterval = null;
 let currentKeywords = []; // Keywords for current meeting form
 
+// ===== DASHBOARD URL CONFIGURATION =====
+const DASHBOARD_URLS = {
+    PRODUCTION: 'https://xtroone.com',
+    DEV: 'https://ai-interview-copilot-kappa.vercel.app',
+    LOCAL: 'http://localhost:5173'
+};
+
+// Default to local for development, can be changed via settings
+let DASHBOARD_URL = DASHBOARD_URLS.LOCAL;
+
+// Helper function to get dashboard URL (can be extended to read from storage)
+function getDashboardUrl() {
+    return DASHBOARD_URL;
+}
+
 // ===== DOM ELEMENTS =====
 const elements = {
     // Views
@@ -113,6 +128,7 @@ function initializeElements() {
     elements.finishMeetingBtn = document.getElementById('finishMeetingBtn');
     elements.disconnectMeetingBtn = document.getElementById('disconnectMeetingBtn');
     elements.logoutBtn = document.getElementById('logoutBtn');
+    console.log('Logout button found:', elements.logoutBtn);
     elements.dashboardBtn = document.getElementById('dashboardBtn');
     elements.refreshBtn = document.getElementById('refreshBtn');
     elements.useThisPageLink = document.getElementById('useThisPageLink');
@@ -159,6 +175,10 @@ function initializeElements() {
     elements.assessmentLanguageInput = document.getElementById('assessmentLanguageInput');
     elements.assessmentTypeInput = document.getElementById('assessmentTypeInput');
 
+    // Keywords
+    elements.keywordsInput = document.getElementById('keywordsInput');
+    elements.keywordsTags = document.getElementById('keywordsTags');
+
     // In Meeting elements
     elements.activeMeetingTitle = document.getElementById('activeMeetingTitle');
     elements.activeMeetingSubtitle = document.getElementById('activeMeetingSubtitle');
@@ -196,7 +216,12 @@ function attachEventListeners() {
     elements.openConsoleLinkInMeeting?.addEventListener('click', handleDashboard);
 
     // Footer buttons
-    elements.logoutBtn?.addEventListener('click', handleLogout);
+    if (elements.logoutBtn) {
+        elements.logoutBtn.addEventListener('click', handleLogout);
+        console.log('Logout event listener attached successfully');
+    } else {
+        console.error('Logout button not found during event listener attachment');
+    }
     elements.dashboardBtn?.addEventListener('click', handleDashboard);
 
     // Upgrade link
@@ -204,17 +229,17 @@ function attachEventListeners() {
     if (upgradeLink) {
         upgradeLink.addEventListener('click', (e) => {
             e.preventDefault();
-            chrome.tabs.create({ url: 'http://localhost:5173/pricing' });
+            chrome.tabs.create({ url: `${getDashboardUrl()}/pricing` });
         });
     }
 
     // Auth buttons (External Links)
     elements.loginBtn?.addEventListener('click', () => {
-        chrome.tabs.create({ url: 'http://localhost:5173/login' });
+        chrome.tabs.create({ url: `${getDashboardUrl()}/login` });
     });
 
     elements.signupBtn?.addEventListener('click', () => {
-        chrome.tabs.create({ url: 'http://localhost:5173/signup' });
+        chrome.tabs.create({ url: `${getDashboardUrl()}/signup` });
     });
 
     // Scenario change
@@ -231,6 +256,16 @@ function attachEventListeners() {
             el.addEventListener('change', saveDraft);
         }
     });
+
+    // Keywords input
+    if (elements.keywordsInput) {
+        elements.keywordsInput.addEventListener('keydown', handleKeywordInput);
+    }
+
+    // Keywords tags (delegation for delete)
+    if (elements.keywordsTags) {
+        elements.keywordsTags.addEventListener('click', handleKeywordDelete);
+    }
 
     // Event delegation for dynamically created card buttons
     if (elements.cardsContainer) {
@@ -252,6 +287,15 @@ function attachEventListeners() {
             }
         });
     }
+
+    // Fallback: Ensure logout button has event listener (direct DOM query)
+    setTimeout(() => {
+        const logoutBtnDirect = document.getElementById('logoutBtn');
+        if (logoutBtnDirect && !logoutBtnDirect.onclick) {
+            console.log('Attaching fallback logout listener via direct DOM query');
+            logoutBtnDirect.addEventListener('click', handleLogout);
+        }
+    }, 100);
 }
 
 // ===== STATE TRANSITIONS =====
@@ -448,7 +492,9 @@ async function handleSave(e) {
 
         // Backward compatibility
         additionalInfo: JSON.stringify(interviewContext),
-        keywords: [],
+        // Backward compatibility
+        additionalInfo: JSON.stringify(interviewContext),
+        keywords: currentKeywords,
 
         createdAt: editingId ? savedMeetings.find(m => m.id === editingId)?.createdAt : new Date().toISOString(),
         updatedAt: new Date().toISOString()
@@ -903,7 +949,12 @@ function editMeetingById(meetingId) {
     elements.meetingUrlInput.value = meeting.meetingUrl || '';
     elements.isDesktopCall.checked = meeting.isDesktopCall || false;
     elements.meetingLanguageInput.value = meeting.meetingLanguage || 'english';
+
     elements.translationLanguageInput.value = meeting.translationLanguage || 'none';
+
+    // Keywords
+    currentKeywords = meeting.keywords || [];
+    renderKeywords();
 
     // Store the ID so we can update instead of create
     elements.saveBtn.dataset.editingId = meetingId;
@@ -974,6 +1025,7 @@ function handleUseThisPage(e) {
 }
 
 async function handleLogout(e) {
+    console.log('Logout button clicked');
     e.preventDefault();
 
     // Check if session is active
@@ -990,16 +1042,16 @@ async function handleLogout(e) {
     // Clear all user data
     chrome.storage.local.clear(() => {
         // Send message to background to clear session
-        chrome.runtime.sendMessage({ type: 'LOGOUT' });
+        chrome.runtime.sendMessage({ type: 'LOGOUT' }, () => {
+            // Clear local state
+            savedMeetings = [];
+            activeMeetingId = null;
 
-        // Clear local state
-        savedMeetings = [];
-        activeMeetingId = null;
-
-        // Return to empty state (login view would go here if implemented)
-        setState(STATE.EMPTY);
-
-        console.log('Logged out successfully');
+            console.log('Logged out successfully');
+            
+            // Reload the popup to show logged-out state
+            window.location.reload();
+        });
     });
 }
 
@@ -1007,7 +1059,7 @@ function handleDashboard(e) {
     e.preventDefault();
 
     // Open dashboard in new tab
-    chrome.tabs.create({ url: 'http://localhost:5173/dashboard' });
+    chrome.tabs.create({ url: `${getDashboardUrl()}/dashboard` });
 }
 
 async function handleFinishMeeting(e) {
@@ -1193,7 +1245,7 @@ function handleAuthToggle(e) {
     } else {
         // Switch to signup mode
         elements.authTitle.textContent = 'Create Account';
-        elements.authSubtitle.textContent = 'Join to get your AI Interview Copilot';
+        elements.authSubtitle.textContent = 'Join to get your AI Xtroone';
         elements.authSubmitBtn.textContent = 'Sign Up';
         elements.authToggleText.textContent = 'Already have an account?';
         elements.authToggleLink.textContent = 'Sign In';
@@ -1492,6 +1544,9 @@ function saveDraft() {
     if (elements.assessmentLanguageInput) draft.assessmentLanguage = elements.assessmentLanguageInput.value;
     if (elements.assessmentTypeInput) draft.assessmentType = elements.assessmentTypeInput.value;
 
+    // Keywords
+    draft.keywords = currentKeywords;
+
     chrome.storage.local.set({ meetingDraft: draft });
 }
 
@@ -1537,6 +1592,12 @@ function restoreDraft(draft) {
     if (draft.assessmentPlatform && elements.assessmentPlatformInput) elements.assessmentPlatformInput.value = draft.assessmentPlatform;
     if (draft.assessmentLanguage && elements.assessmentLanguageInput) elements.assessmentLanguageInput.value = draft.assessmentLanguage;
     if (draft.assessmentType && elements.assessmentTypeInput) elements.assessmentTypeInput.value = draft.assessmentType;
+
+    // Keywords
+    if (draft.keywords) {
+        currentKeywords = draft.keywords;
+        renderKeywords();
+    }
 }
 
 function clearForm() {
@@ -1586,6 +1647,62 @@ function clearForm() {
     if (elements.assessmentPlatformInput) elements.assessmentPlatformInput.value = '';
     if (elements.assessmentLanguageInput) elements.assessmentLanguageInput.value = '';
     if (elements.assessmentTypeInput) elements.assessmentTypeInput.value = 'algo';
+
+    // Keywords
+    currentKeywords = [];
+    renderKeywords();
+    if (elements.keywordsInput) elements.keywordsInput.value = '';
+}
+
+// ===== KEYWORD FUNCTIONS =====
+function handleKeywordInput(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault(); // Prevent form submission
+
+        const value = e.target.value.trim();
+        if (value && !currentKeywords.includes(value)) {
+            currentKeywords.push(value);
+            renderKeywords();
+            e.target.value = '';
+            
+            // Save draft
+            saveDraft();
+        } else if (currentKeywords.includes(value)) {
+            // Optional: highlight existing tag or show feedback
+            e.target.value = '';
+        }
+    }
+}
+
+function handleKeywordDelete(e) {
+    if (e.target.closest('.remove-tag-btn')) {
+        const tag = e.target.closest('.keyword-tag');
+        if (tag) {
+            const keyword = tag.dataset.keyword;
+            currentKeywords = currentKeywords.filter(k => k !== keyword);
+            renderKeywords();
+            
+            // Save draft
+            saveDraft();
+        }
+    }
+}
+
+function renderKeywords() {
+    if (!elements.keywordsTags) return;
+
+    elements.keywordsTags.innerHTML = '';
+    
+    currentKeywords.forEach(keyword => {
+        const tag = document.createElement('div');
+        tag.className = 'keyword-tag';
+        tag.dataset.keyword = keyword;
+        tag.innerHTML = `
+            <span>${keyword}</span>
+            <button class="remove-tag-btn">×</button>
+        `;
+        elements.keywordsTags.appendChild(tag);
+    });
 }
 
 function updateCard(meeting) {

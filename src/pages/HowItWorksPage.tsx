@@ -36,7 +36,7 @@ export function HowItWorksPage() {
     <div className="bg-background min-h-screen text-slate-200">
       <SEO 
         title="How It Works" 
-        description="See how Interview Copilot helps you ace interviews in 4 simple steps. Install, setup, interview, and succeed."
+        description="See how Xtroone helps you ace interviews in 4 simple steps. Install, setup, interview, and succeed."
       />
       <main className="pt-24 pb-16">
         <Section className="text-center">

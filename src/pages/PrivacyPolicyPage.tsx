@@ -193,7 +193,7 @@ const PrivacyPolicyPage = () => {
           </h2>
           <div className="bg-card rounded-lg p-8 shadow-card">
             <p className="font-body text-lg text-foreground mb-6 leading-relaxed">
-              Interview Copilot is designed with privacy at its core. We collect only the minimum data necessary to provide real-time AI interview assistance. You maintain full control over your information, with the ability to view, download, or delete your data at any time.
+              Xtroone is designed with privacy at its core. We collect only the minimum data necessary to provide real-time AI interview assistance. You maintain full control over your information, with the ability to view, download, or delete your data at any time.
             </p>
             <p className="font-body text-lg text-foreground mb-6 leading-relaxed">
               <strong>What makes us different:</strong> We do NOT record your screen, capture your video, or listen to your microphone. Our Chrome Extension only processes interviewer audio for transcription, and all data is encrypted end-to-end.

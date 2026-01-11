@@ -15,7 +15,7 @@ const CTASection = () => {
         </h2>
 
         <p className="text-xl text-primary-foreground/90 mb-8 max-w-2xl mx-auto">
-          Join professionals who are using Interview Copilot to perform at their best when it matters most.
+          Join professionals who are using Xtroone to perform at their best when it matters most.
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">

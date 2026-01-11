@@ -1,4 +1,4 @@
-// Interview Copilot - Content Script
+// Xtroone - Content Script
 // Overlay that matches console dashboard design
 
 (function () {
@@ -9,7 +9,7 @@
     }
     window.__interviewCopilotLoaded = true;
 
-    console.log('[Content] Interview Copilot content script loaded');
+    console.log('[Content] Xtroone content script loaded');
 
     let overlay = null;
     let isMinimized = false;
@@ -32,7 +32,7 @@
       <div class="ic-header">
         <div class="ic-title">
           <span class="ic-status-dot"></span>
-          Interview Copilot
+          Xtroone
         </div>
         <div class="ic-controls">
           <button class="ic-btn ic-btn-icon" id="ic-minimize" title="Minimize">
@@ -321,7 +321,13 @@
 
     function openConsole(e) {
         e.preventDefault();
-        const url = `http://localhost:5173/dashboard/console`;
+        // Use production URL by default, can be made configurable
+        const dashboardUrl = window.location.host.includes('localhost') 
+            ? 'http://localhost:5173' 
+            : window.location.host.includes('vercel.app')
+                ? 'https://ai-interview-copilot-kappa.vercel.app'
+                : 'https://xtroone.com';
+        const url = `${dashboardUrl}/dashboard/console`;
         window.open(url, '_blank');
     }
 
@@ -564,6 +570,26 @@
                 showOverlay();
                 sendResponse({ success: true });
                 break;
+
+            case 'CLEAR_AUTH':
+                // Clear all Supabase auth tokens from localStorage
+                console.log('[Content] Clearing auth tokens from localStorage');
+                for (let i = localStorage.length - 1; i >= 0; i--) {
+                    const key = localStorage.key(i);
+                    if (key && (key.startsWith('sb-') && key.endsWith('-auth-token'))) {
+                        localStorage.removeItem(key);
+                        console.log('[Content] Removed auth token:', key);
+                    }
+                }
+                
+                // Stop auth polling temporarily (will restart on page reload if needed)
+                if (typeof authPollInterval !== 'undefined' && authPollInterval) {
+                    clearInterval(authPollInterval);
+                    console.log('[Content] Stopped auth polling');
+                }
+                
+                sendResponse({ success: true });
+                break;
         }
 
         return true;
@@ -620,7 +646,10 @@
 // Dashboard Auth Sync Logic
 // ==========================================
 (function () {
-    if (window.location.host.includes('localhost:5173') || window.location.host.includes('interview-copilot.com')) {
+    if (window.location.host.includes('localhost:5173') || 
+        window.location.host.includes('127.0.0.1:5173') ||
+        window.location.host.includes('xtroone.com') || 
+        window.location.host.includes('vercel.app')) {
         console.log('[Content] Checking for auth token on dashboard domain: ' + window.location.host);
 
         let authPollInterval;

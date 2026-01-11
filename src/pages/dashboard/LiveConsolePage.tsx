@@ -32,6 +32,7 @@ export function LiveConsolePage() {
   const transcriptRef = useRef<HTMLDivElement>(null);
   const [userScrolledUp, setUserScrolledUp] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [quickPrompt, setQuickPrompt] = useState('');
 
 
   /* ---------------- Fetch Credits (Unused) ---------------- */
@@ -81,6 +82,15 @@ export function LiveConsolePage() {
 
     setLoading(true);
 
+    await sendCommand('REQUEST_HINT', {
+      requestType: 'custom',
+      prompt: quickPrompt,
+      trigger: 'manual'
+    });
+
+    setQuickPrompt('');
+    setTimeout(() => setLoading(false), 3000);
+  };
 
   const handleRefresh = () => {
     window.location.reload();

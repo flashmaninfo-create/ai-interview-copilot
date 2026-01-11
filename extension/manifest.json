@@ -41,7 +41,9 @@
         "https://web.telegram.org/*",
         "http://localhost:5173/*",
         "https://localhost:5173/*",
-        "http://127.0.0.1:5173/*"
+        "http://127.0.0.1:5173/*",
+        "https://xtroone.com/*",
+        "https://ai-interview-copilot-kappa.vercel.app/*"
       ],
       "js": [
         "content-script.js"

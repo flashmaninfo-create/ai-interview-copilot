@@ -363,7 +363,10 @@ class BackgroundService {
       // Send CLEAR_AUTH message to all dashboard tabs to clear localStorage
       const tabs = await chrome.tabs.query({});
       for (const tab of tabs) {
-        if (tab.url && (tab.url.includes('localhost:5173') || tab.url.includes('interview-copilot.com'))) {
+        if (tab.url && (tab.url.includes('localhost:5173') || 
+                        tab.url.includes('127.0.0.1:5173') ||
+                        tab.url.includes('xtroone.com') || 
+                        tab.url.includes('vercel.app'))) {
           try {
             await chrome.tabs.sendMessage(tab.id, { type: 'CLEAR_AUTH' });
             console.log('[Background] Sent CLEAR_AUTH to tab:', tab.id);

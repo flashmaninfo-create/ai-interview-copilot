@@ -15,6 +15,21 @@ let sessionStartTime = null;
 let timerInterval = null;
 let currentKeywords = []; // Keywords for current meeting form
 
+// ===== DASHBOARD URL CONFIGURATION =====
+const DASHBOARD_URLS = {
+    PRODUCTION: 'https://xtroone.com',
+    DEV: 'https://ai-interview-copilot-kappa.vercel.app',
+    LOCAL: 'http://localhost:5173'
+};
+
+// Default to production, can be changed via settings
+let DASHBOARD_URL = DASHBOARD_URLS.PRODUCTION;
+
+// Helper function to get dashboard URL (can be extended to read from storage)
+function getDashboardUrl() {
+    return DASHBOARD_URL;
+}
+
 // ===== DOM ELEMENTS =====
 const elements = {
     // Views
@@ -210,17 +225,17 @@ function attachEventListeners() {
     if (upgradeLink) {
         upgradeLink.addEventListener('click', (e) => {
             e.preventDefault();
-            chrome.tabs.create({ url: 'http://localhost:5173/pricing' });
+            chrome.tabs.create({ url: `${getDashboardUrl()}/pricing` });
         });
     }
 
     // Auth buttons (External Links)
     elements.loginBtn?.addEventListener('click', () => {
-        chrome.tabs.create({ url: 'http://localhost:5173/login' });
+        chrome.tabs.create({ url: `${getDashboardUrl()}/login` });
     });
 
     elements.signupBtn?.addEventListener('click', () => {
-        chrome.tabs.create({ url: 'http://localhost:5173/signup' });
+        chrome.tabs.create({ url: `${getDashboardUrl()}/signup` });
     });
 
     // Scenario change
@@ -1023,7 +1038,7 @@ function handleDashboard(e) {
     e.preventDefault();
 
     // Open dashboard in new tab
-    chrome.tabs.create({ url: 'http://localhost:5173/dashboard' });
+    chrome.tabs.create({ url: `${getDashboardUrl()}/dashboard` });
 }
 
 async function handleFinishMeeting(e) {

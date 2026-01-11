@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Icon from '../../components/ui/AppIcon';
+import { useAuth } from '../../contexts/AuthContext';
 
 
 
@@ -8,6 +9,13 @@ const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState('');
+  const { isAuthenticated, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate('/');
+  };
 
   const navigationItems = [
     { label: 'How It Works', href: '/#how-it-works', description: 'AI coaching demo' },
@@ -92,12 +100,30 @@ const Header = () => {
               {item.label}
             </Link>
           ))}
-          <Link
-            to="/login"
-            className="font-cta rounded-lg bg-accent px-6 py-3 text-base font-semibold text-accent-foreground shadow-cta transition-all duration-250 ease-out hover:bg-accent/90 hover:shadow-lg"
-          >
-            Start Free Trial
-          </Link>
+          {isAuthenticated && (
+            <>
+              <Link
+                to="/dashboard"
+                className="font-body text-base font-medium transition-colors duration-250 ease-out hover:text-primary text-foreground"
+              >
+                Dashboard
+              </Link>
+              <button
+                onClick={handleLogout}
+                className="font-body text-base font-medium transition-colors duration-250 ease-out hover:text-primary text-foreground"
+              >
+                Logout
+              </button>
+            </>
+          )}
+          {!isAuthenticated && (
+            <Link
+              to="/login"
+              className="font-cta rounded-lg bg-accent px-6 py-3 text-base font-semibold text-accent-foreground shadow-cta transition-all duration-250 ease-out hover:bg-accent/90 hover:shadow-lg"
+            >
+              Start Free Trial
+            </Link>
+          )}
         </div>
 
         <button
@@ -129,13 +155,35 @@ const Header = () => {
                 {item.label}
               </Link>
             ))}
-            <Link
-              to="/login"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="font-cta mt-4 rounded-lg bg-accent px-6 py-4 text-lg font-semibold text-accent-foreground shadow-cta transition-all duration-250 ease-out hover:bg-accent/90 text-center"
-            >
-              Start Free Trial
-            </Link>
+            {isAuthenticated && (
+              <>
+                <Link
+                  to="/dashboard"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="font-body text-left text-lg font-medium transition-colors duration-250 ease-out hover:text-primary text-foreground"
+                >
+                  Dashboard
+                </Link>
+                <button
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    handleLogout();
+                  }}
+                  className="font-body text-left text-lg font-medium transition-colors duration-250 ease-out hover:text-primary text-foreground"
+                >
+                  Logout
+                </button>
+              </>
+            )}
+            {!isAuthenticated && (
+              <Link
+                to="/login"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="font-cta mt-4 rounded-lg bg-accent px-6 py-4 text-lg font-semibold text-accent-foreground shadow-cta transition-all duration-250 ease-out hover:bg-accent/90 text-center"
+              >
+                Start Free Trial
+              </Link>
+            )}
           </div>
         </div>
       )}

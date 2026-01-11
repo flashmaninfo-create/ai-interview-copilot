@@ -76,11 +76,11 @@ function App() {
               {/* Public Routes with Light Theme */}
               {/* ============================================ */}
               <Route path="/" element={<LandingPage />} />
+              <Route path="/pricing" element={<PricingPage />} />
               <Route element={<LandingLayout />}>
                 <Route path="/features" element={<FeaturesPage />} />
                 <Route path="/how-it-works" element={<HowItWorksPage />} />
                 <Route path="/about" element={<AboutPage />} />
-                <Route path="/pricing" element={<PricingPage />} />
               </Route>
 
               {/* Content Pages (matching footer links) */}

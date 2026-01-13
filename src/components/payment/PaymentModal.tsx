@@ -1,8 +1,14 @@
+/**
+ * Payment Modal
+ * 
+ * Shows payment summary and redirects to Razorpay hosted checkout.
+ */
+
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, CreditCard, Lock, CheckCircle, Loader2 } from 'lucide-react';
+import { X, Lock, Loader2, ExternalLink } from 'lucide-react';
 import { Button } from '../ui/Button';
-import { creditService } from '../../lib/services/creditService';
+import { supabase } from '../../lib/supabase';
 
 interface PaymentModalProps {
     isOpen: boolean;
@@ -14,37 +20,53 @@ interface PaymentModalProps {
 }
 
 export function PaymentModal({ isOpen, onClose, planName, amount, credits, planId }: PaymentModalProps) {
-    const [status, setStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
+    const [status, setStatus] = useState<'idle' | 'processing' | 'error'>('idle');
     const [errorMsg, setErrorMsg] = useState('');
 
     const handlePayment = async () => {
+        console.log('[Payment] Starting redirect checkout...');
         setStatus('processing');
-
-        // Simulate network delay for realism
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        setErrorMsg('');
 
         try {
-            const result = await creditService.purchaseCredits(
+            const payload = {
                 planId,
-                parseFloat(amount),
-                credits
-            );
+                planName,
+                amount: parseFloat(amount),
+                credits,
+            };
+            console.log('[Payment] Calling Edge Function with:', payload);
 
-            if (result.success) {
-                setStatus('success');
-                setTimeout(() => {
-                    onClose();
-                    setStatus('idle');
-                    // Force a reload or credit refresh event if needed, but the page should update on mount
-                    window.location.reload();
-                }, 2000);
-            } else {
-                setStatus('error');
-                setErrorMsg(result.error?.message || 'Payment failed');
+            // Call Edge Function to create payment link
+            const { data, error } = await supabase.functions.invoke('create-razorpay-order', {
+                body: payload
+            });
+
+            console.log('[Payment] Edge Function response:', { data, error });
+
+            if (error) {
+                console.error('[Payment] Edge function error:', error);
+                // Try to get more details from the error
+                const errorMessage = typeof error === 'object' 
+                    ? (error.message || JSON.stringify(error)) 
+                    : String(error);
+                throw new Error(errorMessage || 'Failed to create payment');
             }
-        } catch (err) {
+
+            if (!data?.success || !data?.paymentLinkUrl) {
+                console.error('[Payment] Invalid response:', data);
+                throw new Error(data?.error || 'Failed to create payment link');
+            }
+
+            console.log('[Payment] Redirecting to:', data.paymentLinkUrl);
+            
+            // Redirect to Razorpay hosted checkout
+            window.location.href = data.paymentLinkUrl;
+
+        } catch (err: any) {
+            console.error('[Payment] Exception:', err);
             setStatus('error');
-            setErrorMsg('Unexpected error occurred');
+            setErrorMsg(err.message || 'Unexpected error occurred');
         }
     };
 
@@ -73,11 +95,12 @@ export function PaymentModal({ isOpen, onClose, planName, amount, credits, planI
                                         <Lock className="w-4 h-4 text-green-400" />
                                         Secure Payment
                                     </h3>
-                                    <p className="text-sm text-slate-400 mt-1">Simulated Secure Checkout</p>
+                                    <p className="text-sm text-slate-400 mt-1">You'll be redirected to Razorpay</p>
                                 </div>
                                 <button
                                     onClick={onClose}
-                                    className="p-1 hover:bg-white/5 rounded-lg transition-colors text-slate-400 hover:text-white"
+                                    disabled={status === 'processing'}
+                                    className="p-1 hover:bg-white/5 rounded-lg transition-colors text-slate-400 hover:text-white disabled:opacity-50"
                                 >
                                     <X className="w-5 h-5" />
                                 </button>
@@ -85,75 +108,54 @@ export function PaymentModal({ isOpen, onClose, planName, amount, credits, planI
 
                             {/* Body */}
                             <div className="p-6">
-                                {status === 'success' ? (
-                                    <div className="text-center py-8">
-                                        <div className="w-16 h-16 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                                            <CheckCircle className="w-8 h-8 text-green-500" />
+                                <div className="space-y-6">
+                                    {/* Summary */}
+                                    <div className="bg-white/5 rounded-xl p-4 space-y-3">
+                                        <div className="flex justify-between text-sm">
+                                            <span className="text-slate-400">Plan</span>
+                                            <span className="text-white font-medium">{planName}</span>
                                         </div>
-                                        <h4 className="text-xl font-bold text-white mb-2">Payment Successful!</h4>
-                                        <p className="text-slate-400">
-                                            You have successfully purchased {planName}. <br />
-                                            <span className="text-green-400 font-bold">+{credits} Credits</span> added to your account.
-                                        </p>
+                                        <div className="flex justify-between text-sm">
+                                            <span className="text-slate-400">Credits Included</span>
+                                            <span className="text-white font-medium">{credits}</span>
+                                        </div>
+                                        <div className="h-px bg-white/10" />
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-slate-400">Total</span>
+                                            <span className="text-xl font-bold text-white">₹{amount}</span>
+                                        </div>
                                     </div>
-                                ) : (
-                                    <div className="space-y-6">
-                                        {/* Summary */}
-                                        <div className="bg-white/5 rounded-xl p-4 space-y-3">
-                                            <div className="flex justify-between text-sm">
-                                                <span className="text-slate-400">Plan</span>
-                                                <span className="text-white font-medium">{planName}</span>
-                                            </div>
-                                            <div className="flex justify-between text-sm">
-                                                <span className="text-slate-400">Credits Included</span>
-                                                <span className="text-white font-medium">{credits}</span>
-                                            </div>
-                                            <div className="h-px bg-white/10" />
-                                            <div className="flex justify-between items-center">
-                                                <span className="text-slate-400">Total</span>
-                                                <span className="text-xl font-bold text-white">${amount}</span>
-                                            </div>
-                                        </div>
 
-                                        {/* Fake Card Form */}
-                                        <div className="space-y-3 opacity-75 pointer-events-none select-none">
-                                            <label className="block text-xs uppercase tracking-wider text-slate-500 font-bold mb-1">
-                                                Card Details (Mock)
-                                            </label>
-                                            <div className="flex items-center gap-3 bg-black/20 border border-white/10 rounded-lg px-3 py-2.5">
-                                                <CreditCard className="w-5 h-5 text-slate-500" />
-                                                <span className="text-slate-300 font-mono">•••• •••• •••• 4242</span>
-                                            </div>
+                                    {errorMsg && (
+                                        <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-3 rounded-lg text-sm text-center">
+                                            {errorMsg}
                                         </div>
+                                    )}
 
-                                        {errorMsg && (
-                                            <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-3 rounded-lg text-sm text-center">
-                                                {errorMsg}
-                                            </div>
+                                    <Button
+                                        fullWidth
+                                        variant="primary"
+                                        onClick={handlePayment}
+                                        disabled={status === 'processing'}
+                                        className="h-12 text-base font-bold"
+                                    >
+                                        {status === 'processing' ? (
+                                            <>
+                                                <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                                                Redirecting...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <ExternalLink className="w-5 h-5 mr-2" />
+                                                Pay ₹{amount}
+                                            </>
                                         )}
+                                    </Button>
 
-                                        <Button
-                                            fullWidth
-                                            variant="primary"
-                                            onClick={handlePayment}
-                                            disabled={status === 'processing'}
-                                            className="h-12 text-base font-bold"
-                                        >
-                                            {status === 'processing' ? (
-                                                <>
-                                                    <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                                                    Processing...
-                                                </>
-                                            ) : (
-                                                `Pay $${amount}`
-                                            )}
-                                        </Button>
-
-                                        <p className="text-center text-xs text-slate-500 mt-4">
-                                            This is a simulated payment. No real money will be charged.
-                                        </p>
-                                    </div>
-                                )}
+                                    <p className="text-center text-xs text-slate-500 mt-4">
+                                        You'll be redirected to Razorpay's secure checkout page.
+                                    </p>
+                                </div>
                             </div>
                         </motion.div>
                     </div>

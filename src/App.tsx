@@ -24,6 +24,7 @@ import { HowItWorksPage } from './pages/HowItWorksPage';
 import { AboutPage } from './pages/AboutPage';
 import ContactPage from './pages/ContactPage';
 import { PricingPage } from './pages/PricingPage';
+import { PaymentCallbackPage } from './pages/PaymentCallbackPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 
 // Content Pages (from interview_copilot)
@@ -90,6 +91,7 @@ function App() {
               <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
               <Route path="/terms-of-service" element={<TermsOfServicePage />} />
               <Route path="/responsible-ai-use" element={<ResponsibleAIUsePage />} />
+              <Route path="/payment/callback" element={<PaymentCallbackPage />} />
 
 
               {/* ============================================ */}

@@ -355,15 +355,23 @@ export function useConsoleSync() {
                     }
                     if (type === 'HINT_RECEIVED' || type === 'EXTENSION_HINT') {
                         // Add unique ID and deduplicate
+                        console.log('[useConsoleSync] Processing hint data:', JSON.stringify(data));
                         const newHint = {
                             ...data,
-                            id: data.id || payload.new.id || Date.now()
+                            id: data.id || payload.new.id || Date.now(),
+                            // Ensure we have text to display (try multiple field names)
+                            text: data.text || data.hint || data.message || 'No hint text',
+                            hint: data.hint || data.text || data.message,
+                            timestamp: data.timestamp || new Date().toLocaleTimeString()
                         };
+                        console.log('[useConsoleSync] Adding hint:', newHint);
                         setHints(prev => {
                             // Prevent duplicates by checking existing ids
                             if (prev.some(h => h.id === newHint.id)) {
+                                console.log('[useConsoleSync] Hint already exists, skipping');
                                 return prev;
                             }
+                            console.log('[useConsoleSync] New hints count:', prev.length + 1);
                             return [newHint, ...prev];
                         });
                     }
@@ -388,17 +396,22 @@ export function useConsoleSync() {
     }, [sessionId, hasReceivedData]);
 
     const sendCommand = useCallback(async (type: string, data: any) => {
+        console.log('[useConsoleSync] sendCommand called:', type, 'sessionId:', sessionId);
         if (sessionId) {
             try {
-                await supabase.from('sync_messages' as any).insert({ // Cast to any to avoid type error if table missing in schema
+                console.log('[useConsoleSync] Sending command to Supabase:', type);
+                const result = await supabase.from('sync_messages' as any).insert({ // Cast to any to avoid type error if table missing in schema
                     session_id: sessionId,
                     message_type: type,
                     payload: data,
                     source: 'console'
                 });
+                console.log('[useConsoleSync] Command sent successfully:', result);
             } catch (err) {
                 console.error('[ConsoleSync] Failed to send command to Supabase:', err);
             }
+        } else {
+            console.warn('[useConsoleSync] Cannot send command - no sessionId!');
         }
     }, [sessionId]);
 

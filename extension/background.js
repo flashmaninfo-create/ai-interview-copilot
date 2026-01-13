@@ -72,15 +72,18 @@ class BackgroundService {
 
     // Listen for remote console commands (Supabase)
     this.consoleSync.onMessage((msg) => {
-      console.log('[Background] Received remote console command:', msg);
+      console.log('[Background] Received remote console command:', msg.type, 'Data:', JSON.stringify(msg.data));
 
       switch (msg.type) {
         case 'REQUEST_HINT':
+          console.log('[Background] Processing REQUEST_HINT from console, requestType:', msg.data?.requestType);
           this.requestHint({ ...msg.data, trigger: msg.data?.trigger || 'manual' });
           break;
         case 'TAKE_SCREENSHOT':
           this.takeScreenshot({ trigger: 'manual' });
           break;
+        default:
+          console.log('[Background] Unknown console command type:', msg.type);
       }
     });
   }
@@ -234,6 +237,10 @@ class BackgroundService {
           });
         }
         sendResponse({ success: true });
+        break;
+
+      case 'START_SCREEN_CAPTURE':
+        await this.startScreenCapture(msg.data, sendResponse);
         break;
 
       default:
@@ -713,6 +720,37 @@ class BackgroundService {
       console.log('[Background] Audio capture stopped and offscreen document closed');
     } catch (error) {
       console.log('[Background] Error stopping audio capture:', error.message);
+    }
+  }
+
+  // Start screen capture for Online Assessment flow
+  async startScreenCapture(data, sendResponse) {
+    try {
+      console.log('[Background] Starting screen capture for Online Assessment');
+
+      // Create offscreen document if not exists
+      await this.createOffscreenDocument();
+
+      // Send to offscreen document to start screen capture
+      // The offscreen document will use getDisplayMedia to prompt the user
+      const response = await chrome.runtime.sendMessage({
+        type: 'START_SCREEN_CAPTURE'
+      });
+
+      if (!response?.success) {
+        throw new Error(response?.error || 'Failed to start screen capture');
+      }
+
+      // Store the screen sharing state
+      this.screenSharingActive = true;
+      await chrome.storage.local.set({ screenSharingActive: true });
+
+      console.log('[Background] Screen capture started successfully');
+      sendResponse({ success: true });
+
+    } catch (error) {
+      console.error('[Background] Screen capture error:', error);
+      sendResponse({ success: false, error: error.message });
     }
   }
 
@@ -1265,15 +1303,31 @@ class BackgroundService {
         throw new Error('No credits remaining');
       }
 
+      // If screen sharing is active, capture a screenshot first
+      let currentScreenshot = null;
+      if (this.screenSharingActive) {
+        try {
+          console.log('[Background] Capturing screenshot from screen share...');
+          const screenshotResponse = await chrome.runtime.sendMessage({ type: 'CAPTURE_SCREENSHOT' });
+          if (screenshotResponse?.success && screenshotResponse.screenshot) {
+            currentScreenshot = screenshotResponse.screenshot;
+            console.log('[Background] Screenshot captured, size:', Math.round(currentScreenshot.length / 1024), 'KB');
+          }
+        } catch (screenshotError) {
+          console.warn('[Background] Could not capture screenshot:', screenshotError.message);
+        }
+      }
+
       // Prepare context
       const context = {
         transcripts: this.transcriptionBuffer.slice(-10), // Last 10 transcripts
-        screenshots: this.screenshotQueue.slice(),
+        screenshots: currentScreenshot ? [currentScreenshot] : this.screenshotQueue.slice(),
+        currentScreenshot: currentScreenshot, // Pass as separate field for AI
         language: this.state.data.settings.language,
         verbosity: this.state.data.settings.verbosity,
         userProfile: this.state.data.userProfile,
         requestType: data.requestType || 'hint',
-        customPrompt: data.customPrompt || null,
+        customPrompt: data.customPrompt || data.prompt || null,
         interviewContext: this.state.data.activeSession?.interviewContext || {}
       };
 

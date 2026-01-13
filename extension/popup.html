@@ -237,6 +237,16 @@
                                 <textarea id="jdInput" class="form-control" rows="3"
                                     placeholder="Paste JD key points..."></textarea>
                             </div>
+                            <div class="form-group">
+                                <label class="toggle-label">
+                                    <span>Live Coding Mode</span>
+                                    <div class="toggle-wrapper">
+                                        <input type="checkbox" id="jobLiveCodingInput" class="toggle-input">
+                                        <div class="toggle-slider"></div>
+                                    </div>
+                                </label>
+                                <div class="form-hint">Enable if the interview includes a live coding round. Opens Stealth Console for screen capture assistance.</div>
+                            </div>
                         </div>
 
                         <!-- 2. HR Interview -->
@@ -331,6 +341,18 @@
                                 <input type="text" id="assessmentPlatformInput" class="form-control"
                                     placeholder="e.g. HackerRank">
                             </div>
+                            
+                            <div class="form-group">
+                                <label class="toggle-label">
+                                    <span>Live Coding Mode</span>
+                                    <div class="toggle-wrapper">
+                                        <input type="checkbox" id="assessmentLiveCodingInput" class="toggle-input">
+                                        <div class="toggle-slider"></div>
+                                    </div>
+                                </label>
+                                <div class="form-hint">Enable real-time coding assistance</div>
+                            </div>
+
                             <div class="form-group">
                                 <label for="assessmentLanguageInput">Programming Language</label>
                                 <input type="text" id="assessmentLanguageInput" class="form-control"
@@ -343,6 +365,18 @@
                                     <option value="system-design">System Design</option>
                                     <option value="frontend">Frontend</option>
                                 </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="assessmentResumeInput">My Resume (Optional)</label>
+                                <textarea id="assessmentResumeInput" class="form-control" rows="3"
+                                    placeholder="Paste your resume content for better context..."></textarea>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="assessmentJdInput">Job Description (Optional)</label>
+                                <textarea id="assessmentJdInput" class="form-control" rows="3"
+                                    placeholder="Paste the job description..."></textarea>
                             </div>
                         </div>
                     </div>
@@ -499,6 +533,105 @@
                                 stroke-linejoin="round" />
                         </svg>
                     </a>
+                </div>
+            </div>
+
+            <!-- Stealth Console Setup View -->
+            <div class="view-content" id="stealthConsoleSetupView" style="display: none;">
+                <div class="stealth-setup-container">
+                    <div class="setup-header">
+                        <h2>Stealth Console Setup</h2>
+                        <p>Prepare your secondary device or monitor</p>
+                    </div>
+
+                    <!-- Live Coding Caution Alert -->
+                    <div class="caution-alert" id="liveCodingCaution">
+                        <div class="caution-icon">⚠️</div>
+                        <div class="caution-content">
+                            <strong>Important for Live Coding!</strong>
+                            <p>After clicking "Share Entire Screen", you'll see a widget saying:</p>
+                            <div class="caution-example">
+                                <span class="caution-dot"></span>
+                                <span>Xtroone.com is sharing your screen.</span>
+                                <span class="caution-hide-btn">Hide</span>
+                            </div>
+                            <p>Click <strong>"Hide"</strong> before your interviewer sees it!</p>
+                        </div>
+                    </div>
+
+                    <div class="setup-step-list">
+                        <!-- Step 1 -->
+                        <div class="setup-step">
+                            <div class="step-number">1</div>
+                            <div class="step-content">
+                                <h3>Open Stealth Console</h3>
+                                <p>Open this link on a secondary monitor or another device (phone/tablet).</p>
+                                <div class="console-link-box">
+                                    <a href="#" id="stealthConsoleLink" target="_blank">...</a>
+                                    <button class="copy-btn" id="copyConsoleLinkBtn">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                        </svg>
+                                    </button>
+                                </div>
+                                <div class="qr-placeholder" id="consoleQrCode">
+                                    <!-- QR Code will be generated here -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 2 -->
+                        <div class="setup-step">
+                            <div class="step-number">2</div>
+                            <div class="step-content">
+                                <h3>Link this page</h3>
+                                <p>Ensure this tab is the one where the interview will happen.</p>
+                                <div class="link-action-row">
+                                    <div class="current-url" id="setupCurrentUrl">https://...</div>
+                                    <button class="btn-sm btn-secondary" id="setupUseThisPageBtn">Use This Page</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 3: Share Screen -->
+                        <div class="setup-step">
+                            <div class="step-number">3</div>
+                            <div class="step-content">
+                                <h3>Share Your Screen</h3>
+                                <p>Allow the extension to see your screen so it can read questions and provide answers.</p>
+                                <div class="screen-share-action">
+                                    <button class="btn btn-primary" id="setupShareScreenBtn">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                                            <line x1="8" y1="21" x2="16" y2="21"></line>
+                                            <line x1="12" y1="17" x2="12" y2="21"></line>
+                                        </svg>
+                                        Share Entire Screen
+                                    </button>
+                                    <div class="screen-share-status" id="screenShareStatus" style="display: none;">
+                                        <span class="status-dot success"></span>
+                                        <span>Screen sharing active</span>
+                                    </div>
+                                </div>
+                                <div class="form-hint">Select "Entire Screen" when prompted for best results.</div>
+                            </div>
+                        </div>
+
+                        <!-- Step 4: I'm Ready -->
+                        <div class="setup-step">
+                            <div class="step-number">4</div>
+                            <div class="step-content">
+                                <h3>You're All Set!</h3>
+                                <p>Click "I'm Ready" to start receiving AI assistance on your Stealth Console.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="setup-actions">
+                        <button class="btn btn-secondary" id="setupBackBtn">Back</button>
+                        <button class="btn btn-primary btn-large" id="setupReadyBtn" disabled>I'm Ready</button>
+                    </div>
                 </div>
             </div>
 

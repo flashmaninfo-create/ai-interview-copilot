@@ -49,7 +49,7 @@ export class AIService {
             const prompt = this.buildPrompt(context);
 
             // Call the appropriate LLM API with mode-specific settings
-            const response = await this.callLLM(config, prompt);
+            const response = await this.callLLM(config, prompt, context);
 
             // Apply stealth formatting
             const formattedResponse = PromptEngine.formatResponse(
@@ -141,7 +141,7 @@ export class AIService {
         return PromptEngine.buildPrompt(requestType, mergedContext, customPrompt);
     }
 
-    async callLLM(config, prompt) {
+    async callLLM(config, prompt, context = {}) {
         const { provider, model } = config;
         const apiKey = provider.api_key;
 
@@ -153,13 +153,30 @@ export class AIService {
         const temperature = prompt.temperature || 0.3;
         const maxTokens = prompt.maxTokens || 200;
 
+        // Check if we have a screenshot for vision analysis
+        const hasScreenshot = context.currentScreenshot && context.currentScreenshot.startsWith('data:image');
+
+        // DeepSeek doesn't support vision - warn user
+        if (hasScreenshot && provider.slug === 'deepseek') {
+            console.warn('[AIService] DeepSeek does not support vision/image analysis');
+            console.warn('[AIService] For screen analysis, please enable OpenAI (GPT-4o), Anthropic (Claude 3), or Google (Gemini 1.5) in Admin Panel');
+            // Clear the screenshot so we don't try to send it
+            context.currentScreenshot = null;
+            // Modify the prompt to explain the limitation
+            prompt.userPrompt = prompt.userPrompt + '\n\n[Note: Screen capture is active but your current LLM provider (DeepSeek) does not support image analysis. For screen-based code assistance, please enable OpenAI GPT-4o, Anthropic Claude 3, or Google Gemini in Admin Panel → Providers.]';
+        }
+
+        if (hasScreenshot && provider.slug !== 'deepseek') {
+            console.log('[AIService] Screenshot detected - using vision API');
+        }
+
         switch (provider.slug) {
             case 'openai':
-                return await this.callOpenAI(apiKey, model.model_id, prompt, maxTokens, temperature);
+                return await this.callOpenAI(apiKey, model.model_id, prompt, maxTokens, temperature, context);
             case 'anthropic':
-                return await this.callAnthropic(apiKey, model.model_id, prompt, maxTokens, temperature);
+                return await this.callAnthropic(apiKey, model.model_id, prompt, maxTokens, temperature, context);
             case 'google':
-                return await this.callGoogle(apiKey, model.model_id, prompt, maxTokens, temperature);
+                return await this.callGoogle(apiKey, model.model_id, prompt, maxTokens, temperature, context);
             case 'deepseek':
                 return await this.callDeepSeek(apiKey, model.model_id, prompt, maxTokens, temperature);
             default:
@@ -202,8 +219,34 @@ export class AIService {
         return data.choices[0]?.message?.content || 'No response generated';
     }
 
-    async callOpenAI(apiKey, modelId, prompt, maxTokens = 200, temperature = 0.3) {
+    async callOpenAI(apiKey, modelId, prompt, maxTokens = 200, temperature = 0.3, context = {}) {
         console.log('[AIService] Calling OpenAI:', modelId, 'temp:', temperature, 'tokens:', maxTokens);
+
+        // Check if we have a screenshot for vision
+        const hasScreenshot = context.currentScreenshot && context.currentScreenshot.startsWith('data:image');
+        
+        // Build messages - include image if present
+        let userContent;
+        if (hasScreenshot) {
+            console.log('[AIService] Using OpenAI Vision mode with screenshot');
+            // For vision models, use array content with image
+            userContent = [
+                { type: 'text', text: prompt.userPrompt + '\n\nAnalyze the screenshot above and provide the answer to the coding question shown.' },
+                { 
+                    type: 'image_url', 
+                    image_url: { 
+                        url: context.currentScreenshot,
+                        detail: 'high' 
+                    } 
+                }
+            ];
+            // Use a vision-capable model
+            if (!modelId.includes('vision') && !modelId.includes('gpt-4o') && !modelId.includes('gpt-4-turbo')) {
+                modelId = 'gpt-4o'; // Fallback to gpt-4o for vision
+            }
+        } else {
+            userContent = prompt.userPrompt;
+        }
 
         const response = await fetch('https://api.openai.com/v1/chat/completions', {
             method: 'POST',
@@ -215,9 +258,9 @@ export class AIService {
                 model: modelId,
                 messages: [
                     { role: 'system', content: prompt.systemMessage },
-                    { role: 'user', content: prompt.userPrompt }
+                    { role: 'user', content: userContent }
                 ],
-                max_tokens: maxTokens,
+                max_tokens: hasScreenshot ? 1000 : maxTokens, // More tokens for code answers
                 temperature: temperature
             })
         });
@@ -237,8 +280,37 @@ export class AIService {
         return data.choices[0]?.message?.content || 'No response generated';
     }
 
-    async callAnthropic(apiKey, modelId, prompt, maxTokens = 200, temperature = 0.3) {
+    async callAnthropic(apiKey, modelId, prompt, maxTokens = 200, temperature = 0.3, context = {}) {
         console.log('[AIService] Calling Anthropic:', modelId, 'temp:', temperature, 'tokens:', maxTokens);
+
+        // Check if we have a screenshot for vision
+        const hasScreenshot = context.currentScreenshot && context.currentScreenshot.startsWith('data:image');
+        
+        // Build content - include image if present
+        let userContent;
+        if (hasScreenshot) {
+            console.log('[AIService] Using Anthropic Vision mode with screenshot');
+            // Extract base64 data from data URL
+            const base64Data = context.currentScreenshot.split(',')[1];
+            const mimeType = context.currentScreenshot.split(';')[0].split(':')[1];
+            
+            userContent = [
+                {
+                    type: 'image',
+                    source: {
+                        type: 'base64',
+                        media_type: mimeType,
+                        data: base64Data
+                    }
+                },
+                {
+                    type: 'text',
+                    text: prompt.userPrompt + '\n\nAnalyze the screenshot above and provide the answer to the coding question shown.'
+                }
+            ];
+        } else {
+            userContent = prompt.userPrompt;
+        }
 
         const response = await fetch('https://api.anthropic.com/v1/messages', {
             method: 'POST',
@@ -249,10 +321,10 @@ export class AIService {
             },
             body: JSON.stringify({
                 model: modelId,
-                max_tokens: maxTokens,
+                max_tokens: hasScreenshot ? 1000 : maxTokens,
                 system: prompt.systemMessage,
                 messages: [
-                    { role: 'user', content: prompt.userPrompt }
+                    { role: 'user', content: userContent }
                 ]
             })
         });
@@ -272,8 +344,36 @@ export class AIService {
         return data.content[0]?.text || 'No response generated';
     }
 
-    async callGoogle(apiKey, modelId, prompt, maxTokens = 200, temperature = 0.3) {
+    async callGoogle(apiKey, modelId, prompt, maxTokens = 200, temperature = 0.3, context = {}) {
         console.log('[AIService] Calling Google AI:', modelId, 'temp:', temperature, 'tokens:', maxTokens);
+
+        // Check if we have a screenshot for vision
+        const hasScreenshot = context.currentScreenshot && context.currentScreenshot.startsWith('data:image');
+        
+        // Build parts - include image if present
+        let parts = [];
+        if (hasScreenshot) {
+            console.log('[AIService] Using Google Vision mode with screenshot');
+            // Extract base64 data from data URL
+            const base64Data = context.currentScreenshot.split(',')[1];
+            const mimeType = context.currentScreenshot.split(';')[0].split(':')[1];
+            
+            parts = [
+                { text: `${prompt.systemMessage}\n\n${prompt.userPrompt}\n\nAnalyze the screenshot and provide the answer to the coding question shown.` },
+                { 
+                    inline_data: {
+                        mime_type: mimeType,
+                        data: base64Data
+                    }
+                }
+            ];
+            // Use a vision-capable model
+            if (!modelId.includes('vision') && !modelId.includes('gemini-1.5') && !modelId.includes('gemini-2.0')) {
+                modelId = 'gemini-1.5-flash'; // Fallback to vision-capable model
+            }
+        } else {
+            parts = [{ text: `${prompt.systemMessage}\n\n${prompt.userPrompt}` }];
+        }
 
         const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/${modelId}:generateContent?key=${apiKey}`, {
             method: 'POST',
@@ -281,13 +381,9 @@ export class AIService {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                contents: [{
-                    parts: [{
-                        text: `${prompt.systemMessage}\n\n${prompt.userPrompt}`
-                    }]
-                }],
+                contents: [{ parts }],
                 generationConfig: {
-                    maxOutputTokens: maxTokens,
+                    maxOutputTokens: hasScreenshot ? 1000 : maxTokens,
                     temperature: temperature
                 }
             })

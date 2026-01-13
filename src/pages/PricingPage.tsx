@@ -21,6 +21,7 @@ interface PricingPlan {
   features: string[];
   cta: string;
   popular: boolean;
+  credits: number;
 }
 
 const faqs = [
@@ -66,7 +67,8 @@ export function PricingPage() {
             desc: plan.summary || '',
             features: features,
             cta: monthly === 0 ? "Get Started Free" : `Start ${plan.name}`,
-            popular: plan.slug === 'professional'
+            popular: plan.slug === 'professional',
+            credits: plan.credits_monthly || 0
           };
         });
         
@@ -85,7 +87,8 @@ export function PricingPage() {
                   "SLA & Uptime guarantees"
                 ],
                 cta: "Contact Sales",
-                popular: false
+                popular: false,
+                credits: 0
               });
         }
 
@@ -103,9 +106,8 @@ export function PricingPage() {
     // Use monthly price
     const price = plan.price.monthly;
 
-    // Simple logic to set credit amount based on plan
-    // In a real app, this should be data-driven
-    let credits = 0;
+    // Set credit amount based on plan
+    const credits = plan.credits;
     let planId = plan.id; // Use DB ID
 
     // Fallback logic for credits if not in DB (fetched plan might need credit info in UI object if needed)
@@ -202,7 +204,7 @@ export function PricingPage() {
                   </div>
 
                   <Button
-                    variant={plan.popular ? 'gradient' : 'outline'}
+                    variant="primary"
                     fullWidth
                     onClick={() => handleSubscribe(plan)}
                   >

@@ -24,8 +24,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             sendResponse({ success: true });
             break;
 
+        case 'START_SCREEN_CAPTURE':
+            startScreenCapture(message.streamId)
+                .then(() => sendResponse({ success: true }))
+                .catch(err => sendResponse({ success: false, error: err.message }));
+            return true; // Keep channel open for async response
+
+        case 'CAPTURE_SCREENSHOT':
+            captureScreenshot()
+                .then((dataUrl) => sendResponse({ success: true, screenshot: dataUrl }))
+                .catch(err => sendResponse({ success: false, error: err.message }));
+            return true; // Keep channel open for async response
+
         case 'GET_CAPTURE_STATUS':
-            sendResponse({ isRecording });
+            sendResponse({ isRecording, isScreenCapturing });
             break;
     }
 });
@@ -169,6 +181,99 @@ function startRecording() {
     // Smaller chunks = faster word appearance, smoother flow
     mediaRecorder.start(100);
     console.log('[Offscreen] MediaRecorder started');
+}
+
+// Start screen capture for Online Assessment (visual capture only)
+let screenStream = null;
+let isScreenCapturing = false;
+
+async function startScreenCapture(streamId) {
+    if (isScreenCapturing) {
+        console.log('[Offscreen] Already capturing screen');
+        return;
+    }
+
+    try {
+        console.log('[Offscreen] Starting screen capture - requesting display media');
+
+        // Use getDisplayMedia to prompt user to share their entire screen
+        // This is the proper way to capture the full screen for Online Assessments
+        screenStream = await navigator.mediaDevices.getDisplayMedia({
+            video: {
+                displaySurface: 'monitor', // Prefer entire screen
+                width: { ideal: 1920 },
+                height: { ideal: 1080 },
+                frameRate: { max: 5 } // Low frame rate for screenshots, saves resources
+            },
+            audio: false
+        });
+
+        console.log('[Offscreen] Got screen capture stream via getDisplayMedia');
+        isScreenCapturing = true;
+
+        // Track when screen sharing stops (user clicks "Stop sharing")
+        screenStream.getVideoTracks()[0].onended = () => {
+            console.log('[Offscreen] Screen sharing stopped by user');
+            isScreenCapturing = false;
+            // Notify background that screen sharing ended
+            chrome.runtime.sendMessage({ type: 'SCREEN_CAPTURE_ENDED' });
+        };
+
+        console.log('[Offscreen] Screen capture started successfully');
+
+    } catch (error) {
+        console.error('[Offscreen] Error starting screen capture:', error);
+        throw error;
+    }
+}
+
+// Capture a screenshot from the screen stream
+async function captureScreenshot() {
+    if (!screenStream || !isScreenCapturing) {
+        throw new Error('Screen capture not active');
+    }
+
+    try {
+        console.log('[Offscreen] Capturing screenshot from screen stream...');
+
+        const videoTrack = screenStream.getVideoTracks()[0];
+        if (!videoTrack) {
+            throw new Error('No video track available');
+        }
+
+        // Create a video element to capture the frame
+        const video = document.createElement('video');
+        video.srcObject = screenStream;
+        video.muted = true;
+        video.playsInline = true;
+        
+        await video.play();
+
+        // Wait a moment for the video to stabilize
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Create canvas and draw the frame
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth || 1920;
+        canvas.height = video.videoHeight || 1080;
+        
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        // Convert to base64 data URL
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+        
+        // Clean up
+        video.pause();
+        video.srcObject = null;
+
+        console.log('[Offscreen] Screenshot captured, size:', Math.round(dataUrl.length / 1024), 'KB');
+        return dataUrl;
+
+    } catch (error) {
+        console.error('[Offscreen] Error capturing screenshot:', error);
+        throw error;
+    }
 }
 
 function stopCapture() {

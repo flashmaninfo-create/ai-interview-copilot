@@ -61,29 +61,11 @@ const Header = () => {
           to="/"
           className="flex items-center space-x-3 transition-opacity duration-250 ease-out hover:opacity-80"
         >
-          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary">
-            <svg
-              width="32"
-              height="32"
-              viewBox="0 0 32 32"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M16 4L8 8V14C8 19.55 11.84 24.74 16 26C20.16 24.74 24 19.55 24 14V8L16 4Z"
-                fill="currentColor"
-                className="text-primary-foreground"
-              />
-              <path
-                d="M14 18L11 15L12.41 13.59L14 15.17L19.59 9.58L21 11L14 18Z"
-                fill="currentColor"
-                className="text-accent"
-              />
-            </svg>
-          </div>
-          <span className="font-headline text-2xl font-semibold text-primary">
-            Xtroone
-          </span>
+          <img
+            src="/assets/images/XTROONE.svg"
+            alt="Xtroone"
+            className="w-32"
+          />
         </Link>
 
         {/* Desktop Navigation */}

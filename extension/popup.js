@@ -159,6 +159,12 @@ function initializeElements() {
     elements.assessmentLanguageInput = document.getElementById('assessmentLanguageInput');
     elements.assessmentTypeInput = document.getElementById('assessmentTypeInput');
 
+    // Live Coding elements
+    elements.isLiveCoding = document.getElementById('isLiveCoding');
+    elements.liveCodingFields = document.getElementById('liveCodingFields');
+    elements.preferredLanguageInput = document.getElementById('preferredLanguageInput');
+    elements.codingPlatformInput = document.getElementById('codingPlatformInput');
+
     // In Meeting elements
     elements.activeMeetingTitle = document.getElementById('activeMeetingTitle');
     elements.activeMeetingSubtitle = document.getElementById('activeMeetingSubtitle');
@@ -222,6 +228,15 @@ function attachEventListeners() {
         elements.scenarioInput.addEventListener('change', updateScenarioFields);
         // Initialize fields based on default
         updateScenarioFields();
+    }
+
+    // Live Coding toggle - show/hide language and platform fields
+    if (elements.isLiveCoding) {
+        elements.isLiveCoding.addEventListener('change', () => {
+            if (elements.liveCodingFields) {
+                elements.liveCodingFields.style.display = elements.isLiveCoding.checked ? 'block' : 'none';
+            }
+        });
     }
 
     // Auto-save draft
@@ -390,7 +405,11 @@ async function handleSave(e) {
             experienceLevel: elements.experienceInput?.value || 'senior',
             interviewType: elements.interviewTypeInput?.value || 'technical',
             techStack: elements.techStackInput?.value || '',
-            jobDescription: elements.jdInput?.value || ''
+            jobDescription: elements.jdInput?.value || '',
+            // Live Coding fields
+            isLiveCoding: elements.isLiveCoding?.checked || false,
+            preferredLanguage: elements.isLiveCoding?.checked ? (elements.preferredLanguageInput?.value || 'python') : null,
+            codingPlatform: elements.isLiveCoding?.checked ? (elements.codingPlatformInput?.value || 'leetcode') : null
         };
     } else if (scenario === 'hr-interview') {
         interviewContext = {
@@ -563,6 +582,9 @@ function handleStart(e) {
                     activeSessionId: response.sessionId,
                     consoleToken: response.consoleToken
                 });
+
+                // Trigger overlay to show on the active tab
+                chrome.runtime.sendMessage({ type: 'SHOW_OVERLAY' });
             }
         } else {
             console.error('Failed to start meeting');

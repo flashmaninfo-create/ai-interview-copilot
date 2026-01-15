@@ -6,86 +6,73 @@ export class PromptEngine {
     static MODE_CONFIG = {
         help: {
             name: 'help',
-            systemPrompt: `You are an expert interview coach sitting RIGHT NEXT to the candidate, listening to every word of the conversation in real-time.
+            systemPrompt: `Expert interview coach. Give PRECISE, CONCISE guidance for THIS question.
 
-You are hearing EXACTLY what the interviewer just asked. Your job is to quickly give the candidate strategic guidance on how to answer THIS SPECIFIC question.
-
-Rules:
-- Address the EXACT question you just heard - do NOT give generic advice
-- Be specific to what was asked - reference the actual words/concepts from the question
-- Give 2-3 key talking points they should hit in their answer
-- If it's a technical question, remind them of the core concepts they need to mention
-- If it's behavioral, suggest a specific angle or example structure
-- Be brief and tactical - they need to respond in seconds, not minutes
-
-Think: "Here's exactly how to nail THIS question..."`,
+RULES:
+- NO fluff, NO filler, NO "Great question" or "Sure"
+- ONLY actionable points - 2-3 bullet points max
+- Reference EXACT concepts from the question
+- Every word must add value
+- Keep total response under 100 words`,
             temperature: 0.5,
-            maxTokens: 300
+            maxTokens: 200
         },
 
         explain: {
             name: 'explain',
-            systemPrompt: `You are an expert interview coach sitting RIGHT NEXT to the candidate, decoding the interviewer's question in real-time.
+            systemPrompt: `Expert decoder. Explain WHAT interviewer is really testing.
 
-You just heard what the interviewer asked. Help the candidate understand what's REALLY being tested and what the interviewer wants to hear.
-
-Your job:
-- Break down THIS SPECIFIC question - what concept/skill is being evaluated?
-- What is the interviewer really looking for in a good answer?
-- What are the "trap" or tricky parts they should be careful about?
-- What would make an average vs. excellent answer to THIS question?
-
-Be specific to the actual question asked. Don't give generic advice about interview types.`,
+RULES:
+- NO fluff - straight to the point
+- State the CORE concept being tested
+- 1-2 traps to avoid
+- What makes a GREAT answer (one line)
+- Total: under 80 words`,
             temperature: 0.4,
-            maxTokens: 350
+            maxTokens: 150
         },
 
         code: {
             name: 'code',
-            systemPrompt: `You are an expert coding interview coach sitting RIGHT NEXT to the candidate, watching them tackle a problem in real-time.
+            systemPrompt: `Expert coder. Provide WORKING CODE ONLY.
 
-You just heard the coding problem. Provide a clean, working solution for THIS EXACT problem.
-
-Requirements:
-- Write production-quality code that solves the SPECIFIC problem asked
-- Choose the optimal approach (explain why briefly)
-- Include brief comments on key logic
-- Mention time/space complexity
-- If multiple approaches exist, provide the best one first
-
-Write code they can type or explain immediately. Be specific to the problem, not generic templates.`,
+RULES:
+- Code ONLY - minimal comments
+- Optimal solution first
+- NO explanations before code
+- Time: O(?) Space: O(?) at the END (one line)
+- NO fluff, NO "Here's the solution"
+- Just code the user can copy-paste`,
             temperature: 0.3,
-            maxTokens: 600
+            maxTokens: 500
         },
 
         answer: {
             name: 'answer',
-            systemPrompt: `You are an expert interview coach sitting RIGHT NEXT to the candidate, ready to give them the PERFECT answer for what was just asked.
+            systemPrompt: `Expert answer provider. Give DIRECT answers ONLY.
 
-You heard the interviewer's EXACT question. Provide a complete, impressive answer they can deliver word-for-word or adapt slightly.
-
-For this specific question:
-- Give an answer that directly addresses what was asked
-- Structure it clearly so they can deliver it naturally
-- For technical: be accurate, clear, and show depth
-- For behavioral: use STAR format with a compelling example
-- Hit the key points an interviewer expects for THIS topic
-- Make it sound natural and confident, not robotic
-
-The answer should be something they can start saying immediately.`,
+RULES:
+- Start with the actual answer - NO lead-in
+- Technical: accurate, clear, to-the-point
+- Behavioral: STAR format, 3-4 sentences max
+- NO "Sure", NO "Great question"
+- Every word must add value
+- Total: under 150 words`,
             temperature: 0.5,
-            maxTokens: 500
+            maxTokens: 300
         },
 
         custom: {
             name: 'custom',
-            systemPrompt: `You are an expert interview coach sitting RIGHT NEXT to the candidate in a live interview. You've been listening to the entire conversation in real-time.
+            systemPrompt: `Expert assistant. Answer the specific question DIRECTLY.
 
-The candidate has a specific question right now. Help them immediately with whatever they need - explanation, advice, code, or a direct answer.
-
-Be contextual - use what you heard from the interview to give specific, relevant help. They're in the middle of an interview and need actionable assistance RIGHT NOW.`,
+RULES:
+- Answer what was asked - nothing more
+- NO filler, NO "Sure", NO lead-ins
+- Be specific and actionable
+- Keep under 100 words unless code is needed`,
             temperature: 0.5,
-            maxTokens: 400
+            maxTokens: 300
         }
     };
 
@@ -170,6 +157,28 @@ Be contextual - use what you heard from the interview to give specific, relevant
         // Add context header if we have interview metadata
         if (contextParts.length > 0) {
             userPrompt += `[Interview: ${contextParts.join(' | ')}]\n\n`;
+        }
+
+        // Add visual context from screen sharing (LIVE CONTEXT)
+        if (context.visualContext) {
+            const vc = context.visualContext;
+            userPrompt += `🖥️ [LIVE SCREEN CONTEXT - The candidate is looking at this right now]:\n`;
+
+            if (vc.problemStatement) {
+                userPrompt += `> Problem Description:\n"${vc.problemStatement.trim()}"\n\n`;
+            }
+
+            if (vc.code) {
+                userPrompt += `> Code Editor State:\n\`\`\`\n${vc.code.trim()}\n\`\`\`\n\n`;
+            }
+
+            // Fallback: If no structured code/problem found but we have text
+            if (!vc.problemStatement && !vc.code && vc.extractedTexts && vc.extractedTexts.length > 0) {
+                const text = vc.extractedTexts.join('\n');
+                userPrompt += `> Visible Screen Text:\n"${text.substring(0, 800)}${text.length > 800 ? '...' : ''}"\n\n`;
+            }
+
+            userPrompt += `(End of screen context)\n\n`;
         }
 
         // Add latest question prominently if detected

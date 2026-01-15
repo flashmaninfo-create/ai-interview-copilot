@@ -2,21 +2,34 @@ import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useConsoleSync } from '../../hooks/useConsoleSync';
 import { creditService } from '../../lib/services/creditService';
+import { supabase } from '../../lib/supabase';
 import {
   Mic,
   Lightbulb,
   Sparkles,
   Code2,
   BookOpen,
-  FileText,
   ArrowDown,
   ArrowLeft,
   Camera,
   MessageSquare,
   RefreshCw,
   Send,
-  Loader2
+  Loader2,
+  CheckCircle,
+  X
 } from 'lucide-react';
+
+// Screenshot type from backend
+interface Screenshot {
+  id: string;
+  image_url: string;
+  display_order: number;
+  is_marked_important: boolean;
+  is_selected_for_ai: boolean;
+  capture_method: string;
+  created_at: string;
+}
 
 export function LiveConsolePage() {
   const {
@@ -25,28 +38,23 @@ export function LiveConsolePage() {
     finalizedText,
     hints,
     sessionStatus,
+    sessionId,
+    lastScreenshotEvent,
     sendCommand
   } = useConsoleSync();
+
 
   /* ---------------- State ---------------- */
   const transcriptRef = useRef<HTMLDivElement>(null);
   const [userScrolledUp, setUserScrolledUp] = useState(false);
   const [loading, setLoading] = useState(false);
   const [quickPrompt, setQuickPrompt] = useState('');
-  const [credits, setCredits] = useState<number>(0);
+  const [_credits, setCredits] = useState<number>(0);
 
-  /* ---------------- Fetch Credits ---------------- */
-  useEffect(() => {
-    const fetchCredits = async () => {
-      const result = await creditService.getBalance();
-      if (result.success && result.data) {
-        setCredits(result.data.balance);
-      }
-    };
-    fetchCredits();
-    const interval = setInterval(fetchCredits, 30000);
-    return () => clearInterval(interval);
-  }, []);
+  // Screenshot gallery state
+  const [screenshots, setScreenshots] = useState<Screenshot[]>([]);
+  const [snapPopoverOpen, setSnapPopoverOpen] = useState(false);
+  const popoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /* ---------------- Auto scroll ---------------- */
   useEffect(() => {
@@ -61,13 +69,165 @@ export function LiveConsolePage() {
     setUserScrolledUp(!isAtBottom);
   };
 
-  /* ---------------- Actions ---------------- */
+
+  /* ---------------- Fetch Credits ---------------- */
+  useEffect(() => {
+    const fetchCredits = async () => {
+      const result = await creditService.getBalance();
+      if (result.success && result.data) {
+        setCredits(result.data.balance);
+      }
+    };
+    fetchCredits();
+    const interval = setInterval(fetchCredits, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  /* ---------------- Fetch Screenshots ---------------- */
+  const fetchScreenshots = async () => {
+    if (!sessionId) return;
+
+    try {
+      console.log('[LiveConsolePage] Fetching screenshots for session:', sessionId);
+      const { data, error } = await supabase.rpc('get_session_screenshots', {
+        p_session_id: sessionId
+      });
+      if (!error && data?.screenshots) {
+        console.log('[LiveConsolePage] Fetched', data.screenshots.length, 'screenshots');
+        setScreenshots(data.screenshots || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch screenshots:', err);
+    }
+  };
+
+  // Helper to get active session ID (for actions that need it)
+  const getActiveSessionId = async (): Promise<string | null> => {
+    // Prefer sessionId from hook, fallback to DB query
+    if (sessionId) return sessionId;
+
+    try {
+      const { data } = await supabase
+        .from('interview_sessions')
+        .select('id')
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+      return data?.id || null;
+    } catch {
+      return null;
+    }
+  };
+
+  // Fetch screenshots when session becomes active or sessionId changes
+  useEffect(() => {
+    if (sessionStatus === 'active' && sessionId) {
+      fetchScreenshots();
+    }
+  }, [sessionStatus, sessionId]);
+
+  // Handle realtime screenshot events
+  useEffect(() => {
+    if (!lastScreenshotEvent) return;
+    console.log('[LiveConsolePage] 📸 Received screenshot event:', lastScreenshotEvent);
+
+    if (lastScreenshotEvent.type === 'ADDED') {
+      const rawScreenshot = lastScreenshotEvent.data;
+      // Normalize screenshot data to match expected interface
+      const newScreenshot: Screenshot = {
+        id: rawScreenshot.id,
+        image_url: rawScreenshot.image_url || rawScreenshot.url,
+        display_order: rawScreenshot.display_order || 0,
+        is_marked_important: rawScreenshot.is_marked_important ?? false,
+        is_selected_for_ai: rawScreenshot.is_selected_for_ai ?? true, // Default: auto-select for AI
+        capture_method: rawScreenshot.capture_method || 'dom',
+        created_at: rawScreenshot.created_at || new Date().toISOString()
+      };
+      setScreenshots(prev => {
+        if (prev.some(s => s.id === newScreenshot.id)) return prev;
+        return [newScreenshot, ...prev];
+      });
+    } else if (lastScreenshotEvent.type === 'DELETED') {
+      const { screenshotId } = lastScreenshotEvent.data;
+      setScreenshots(prev => prev.filter(s => s.id !== screenshotId));
+    } else if (lastScreenshotEvent.type === 'CLEARED') {
+      setScreenshots([]);
+    }
+  }, [lastScreenshotEvent]);
+
+  // Debug: Log all sync messages to console
+  useEffect(() => {
+    if (lastScreenshotEvent) {
+      console.log('[LiveConsole] Debug - Screenshot Event:', lastScreenshotEvent);
+    }
+  }, [lastScreenshotEvent]);
+
+  /* ---------------- Screenshot Actions ---------------- */
+  const toggleScreenshotSelection = async (id: string, currentValue: boolean) => {
+    // Optimistic update
+    setScreenshots(prev => prev.map(s =>
+      s.id === id ? { ...s, is_selected_for_ai: !currentValue } : s
+    ));
+
+    try {
+      await supabase.rpc('update_screenshot_metadata', {
+        p_screenshot_id: id,
+        p_is_selected_for_ai: !currentValue
+      });
+    } catch (err) {
+      // Revert on error
+      setScreenshots(prev => prev.map(s =>
+        s.id === id ? { ...s, is_selected_for_ai: currentValue } : s
+      ));
+    }
+  };
+
+  const deleteScreenshot = async (id: string) => {
+    // Optimistic update
+    setScreenshots(prev => prev.filter(s => s.id !== id));
+
+    try {
+      await supabase.rpc('delete_session_screenshot', {
+        p_screenshot_id: id
+      });
+    } catch (err) {
+      // Refetch on error
+      fetchScreenshots();
+    }
+  };
+
+  const clearAllScreenshots = async () => {
+    const sessionId = await getActiveSessionId();
+    if (!sessionId) return;
+
+    setScreenshots([]);
+    try {
+      await supabase.rpc('clear_session_screenshots', {
+        p_session_id: sessionId
+      });
+      // Notify extension to sync the clear action
+      sendCommand('CLEAR_SCREENSHOTS', { sessionId });
+    } catch (err) {
+      fetchScreenshots();
+    }
+  };
+
   const requestHint = async (type: string) => {
     setLoading(true);
 
+    // Get selected screenshots
+    const selectedScreenshots = screenshots.filter(s => s.is_selected_for_ai);
+
     await sendCommand('REQUEST_HINT', {
       requestType: type,
-      trigger: 'manual'
+      trigger: 'manual',
+      // Attach screenshots if any are selected
+      screenshots: selectedScreenshots.length > 0 ? selectedScreenshots.map(s => ({
+        id: s.id,
+        imageUrl: s.image_url,
+        order: s.display_order
+      })) : undefined
     });
 
     setTimeout(() => setLoading(false), 3000);
@@ -78,10 +238,19 @@ export function LiveConsolePage() {
 
     setLoading(true);
 
+    // Get selected screenshots
+    const selectedScreenshots = screenshots.filter(s => s.is_selected_for_ai);
+
     await sendCommand('REQUEST_HINT', {
       requestType: 'custom',
       trigger: 'manual',
-      customPrompt: quickPrompt
+      customPrompt: quickPrompt,
+      // Attach screenshots if any are selected
+      screenshots: selectedScreenshots.length > 0 ? selectedScreenshots.map(s => ({
+        id: s.id,
+        imageUrl: s.image_url,
+        order: s.display_order
+      })) : undefined
     });
 
     setQuickPrompt('');
@@ -91,6 +260,8 @@ export function LiveConsolePage() {
   const handleRefresh = () => {
     window.location.reload();
   };
+
+  const selectedCount = screenshots.filter(s => s.is_selected_for_ai).length;
 
   return (
     <div className="h-screen overflow-hidden bg-[#242424] text-white flex">
@@ -136,17 +307,120 @@ export function LiveConsolePage() {
           <span className="text-[10px] text-white/80">Explain</span>
         </button>
 
-        {/* Screen/Snap Button - Orange */}
-        <button
-          onClick={() => {
-            sendCommand('TAKE_SCREENSHOT', { trigger: 'console' });
+        {/* Screen/Snap Button - Orange with Horizontal Popover */}
+        <div
+          className="relative"
+          onMouseEnter={() => {
+            if (popoverTimeoutRef.current) clearTimeout(popoverTimeoutRef.current);
+            setSnapPopoverOpen(true);
           }}
-          disabled={!connected || loading}
-          className="w-14 h-14 rounded-xl bg-[#ff6b35] hover:bg-[#ff8c42] flex flex-col items-center justify-center gap-1 transition-colors disabled:opacity-50"
+          onMouseLeave={() => {
+            popoverTimeoutRef.current = setTimeout(() => setSnapPopoverOpen(false), 300);
+          }}
         >
-          <Camera className="w-5 h-5 text-white" />
-          <span className="text-[10px] text-white/80">Snap</span>
-        </button>
+          <button
+            onClick={() => {
+              // Optimistic UI feedback
+              const btn = document.activeElement as HTMLButtonElement;
+              if (btn) {
+                btn.style.transform = 'scale(0.95)';
+                setTimeout(() => btn.style.transform = '', 150);
+              }
+              sendCommand('TAKE_SCREENSHOT', { trigger: 'console' });
+            }}
+            disabled={!connected || loading}
+            className="w-14 h-14 rounded-xl bg-[#ff6b35] hover:bg-[#ff8c42] flex flex-col items-center justify-center gap-1 transition-all active:scale-95 disabled:opacity-50 relative shadow-lg shadow-[#ff6b35]/20"
+          >
+            <Camera className="w-5 h-5 text-white" />
+            <span className="text-[10px] text-white/80">Snap</span>
+            {screenshots.length > 0 && (
+              <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center border-2 border-[#242424]">
+                {screenshots.length}
+              </span>
+            )}
+          </button>
+
+          {/* Horizontal Screenshot Popover - Right of Snap button */}
+          {snapPopoverOpen && (
+            <div
+              className="absolute left-full top-1/2 -translate-y-1/2 flex items-center z-50"
+              onMouseEnter={() => {
+                if (popoverTimeoutRef.current) clearTimeout(popoverTimeoutRef.current);
+              }}
+              onMouseLeave={() => {
+                popoverTimeoutRef.current = setTimeout(() => setSnapPopoverOpen(false), 300);
+              }}
+            >
+              {/* Invisible bridge to maintain hover between button and popover */}
+              <div className="w-2 h-14 bg-transparent" />
+
+              {/* Actual popover content */}
+              <div className="bg-slate-900/95 border border-[#ff6b35]/30 rounded-xl p-3 min-w-[180px] max-w-[450px] shadow-xl backdrop-blur-md">
+                <div className="flex items-center justify-between mb-2 pb-2 border-b border-white/10">
+                  <span className="text-white text-[11px] font-semibold whitespace-nowrap">
+                    {screenshots.length} Screenshots
+                  </span>
+                  {screenshots.length > 0 && (
+                    <button
+                      onClick={clearAllScreenshots}
+                      className="text-red-400 hover:text-red-300 text-[10px] px-2"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+
+                {/* Thumbnails - Horizontal scroll */}
+                {screenshots.length > 0 ? (
+                  <div className="flex flex-row flex-nowrap gap-2 overflow-x-auto pb-1 max-w-[380px]">
+                    {screenshots.map((s) => {
+                      if (!s) return null;
+                      return (
+                        <div
+                          key={s.id}
+                          onClick={() => toggleScreenshotSelection(s.id, s.is_selected_for_ai)}
+                          className={`relative w-12 h-12 shrink-0 rounded-lg overflow-hidden group cursor-pointer border-2 transition-all ${s.is_selected_for_ai
+                            ? 'border-green-500 ring-1 ring-green-500/50'
+                            : 'border-white/10 hover:border-white/30'
+                            }`}
+                        >
+                          <img src={s.image_url || ''} alt="Snap" className="w-full h-full object-cover" />
+                          {s.is_selected_for_ai && (
+                            <div className="absolute inset-0 bg-green-500/20 flex items-center justify-center">
+                              <CheckCircle className="w-4 h-4 text-white drop-shadow-md" />
+                            </div>
+                          )}
+                          <button
+                            onClick={(e) => { e.stopPropagation(); deleteScreenshot(s.id); }}
+                            className="absolute top-0 right-0 bg-black/60 hover:bg-red-500 text-white p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <X className="w-2.5 h-2.5" />
+                          </button>
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-gray-400 text-[10px] text-center py-3 whitespace-nowrap">
+                    No screenshots yet. Click <strong>Snap</strong> to capture.
+                  </div>
+                )}
+
+                {/* Hint */}
+                {screenshots.length > 0 && (
+                  <div className="mt-2 pt-2 border-t border-white/10 text-gray-400 text-[9px] whitespace-nowrap">
+                    💡 Select screenshots for AI context
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Gallery Toggle Button */}
+
+
+        {/* Code for Me Button REMOVED */}
       </div>
 
       <div className="flex-1 flex flex-col">
@@ -193,9 +467,9 @@ export function LiveConsolePage() {
         </div>
 
         {/* Main Content */}
-        <div className={`flex-1 ${(!finalizedText && transcripts.length === 0) ? 'overflow-auto p-6' : 'overflow-hidden flex flex-col'}`}>
-          {/* Show guide until transcription data arrives */}
-          {!finalizedText && transcripts.length === 0 ? (
+        <div className={`flex-1 ${(!finalizedText && transcripts.length === 0 && sessionStatus !== 'active' && sessionStatus !== 'session_found') ? 'overflow-auto p-6' : 'overflow-hidden flex flex-col'}`}>
+          {/* Show guide only if NO session is connected/found and no data */}
+          {!finalizedText && transcripts.length === 0 && sessionStatus !== 'active' && sessionStatus !== 'session_found' ? (
             <div className="space-y-6">
               {/* How to connect */}
               <div>
@@ -279,18 +553,62 @@ export function LiveConsolePage() {
                     </div>
                   )}
 
-                  {!loading && hints.map((h, i) => (
-                    <div key={i} className="bg-white/5 border border-white/10 rounded-lg p-5 mb-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">Insight</span>
-                        <span className="text-xs text-gray-500">{h.timestamp}</span>
+                  {!loading && Array.isArray(hints) && hints.map((h, i) => {
+                    if (!h) return null;
+                    return (
+                      <div key={i} className="bg-white/5 border border-white/10 rounded-lg p-5 mb-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">Insight</span>
+                          <span className="text-xs text-gray-500">{h.timestamp}</span>
+                        </div>
+                        <div className="text-white whitespace-pre-wrap leading-relaxed">
+                          {h.hint || h.text || ''}
+                        </div>
                       </div>
-                      <div className="text-white whitespace-pre-wrap leading-relaxed">
-                        {h.hint || h.text}
-                      </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
+
+                {/* Thumbnail Strip */}
+                {screenshots.length > 0 && (
+                  <div className="px-4 py-2 border-t border-white/10 shrink-0 bg-[#1f1f1f]">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[10px] text-gray-400 uppercase tracking-wider font-medium">Screenshots ({screenshots.length})</span>
+                      {selectedCount > 0 && (
+                        <button onClick={clearAllScreenshots} className="text-[10px] text-red-400 hover:text-red-300">Clear All</button>
+                      )}
+                    </div>
+                    <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+                      {screenshots.map((s) => (
+                        <div
+                          key={s.id}
+                          onClick={() => toggleScreenshotSelection(s.id, s.is_selected_for_ai)}
+                          className={`relative w-14 h-14 shrink-0 rounded-lg overflow-hidden group cursor-pointer border-2 transition-all ${s.is_selected_for_ai
+                            ? 'border-green-500 opacity-100 ring-1 ring-green-500/50'
+                            : 'border-white/10 hover:border-white/30 opacity-80 hover:opacity-100'
+                            }`}
+                        >
+                          <img src={s.image_url} alt="Snap" className="w-full h-full object-cover" />
+
+                          {/* Selection Indicator */}
+                          {s.is_selected_for_ai && (
+                            <div className="absolute inset-0 bg-green-500/20 flex items-center justify-center">
+                              <CheckCircle className="w-6 h-6 text-white drop-shadow-md" />
+                            </div>
+                          )}
+
+                          {/* Remove Button (Hover) */}
+                          <button
+                            onClick={(e) => { e.stopPropagation(); deleteScreenshot(s.id); }}
+                            className="absolute top-0 right-0 bg-black/60 hover:bg-red-500 text-white p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Quick Prompt Box - Persistent at Bottom */}
                 <div className="p-4 border-t border-white/10 shrink-0 flex justify-center bg-[#1f1f1f]">
@@ -328,10 +646,12 @@ export function LiveConsolePage() {
                     </div>
                   ) : (
                     <p className="text-white leading-7 whitespace-pre-wrap text-base font-mono">
-                      {finalizedText ||
-                        transcripts.map((t, i) => (
-                          <span key={i} className="mr-1">{t.text}</span>
-                        ))}
+                      {typeof finalizedText === 'string' ? finalizedText : JSON.stringify(finalizedText)}
+                      {!finalizedText && Array.isArray(transcripts) &&
+                        transcripts.map((t, i) => {
+                          if (!t) return null;
+                          return <span key={i} className="mr-1">{t.text || ''}</span>;
+                        })}
                     </p>
                   )}
                 </div>
@@ -353,6 +673,9 @@ export function LiveConsolePage() {
           )}
         </div>
       </div>
+
+      {/* Screenshot Gallery Panel - Slides in from right */}
+
 
     </div>
 

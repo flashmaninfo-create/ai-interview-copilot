@@ -3,6 +3,7 @@
 
 import { supabaseREST } from './supabase-config.js';
 import { PromptEngine } from './prompt-engine.js';
+import { getVisionPreprocessor } from './vision-preprocessor.js';
 
 export class AIService {
     constructor() {
@@ -10,6 +11,7 @@ export class AIService {
         this.configCacheTime = 0;
         this.CONFIG_CACHE_TTL = 60 * 1000; // 1 minute - shorter TTL for faster admin updates
         this.contextManager = null; // Set externally by BackgroundService
+        this.visionPreprocessor = getVisionPreprocessor();
     }
 
     /**
@@ -45,9 +47,33 @@ export class AIService {
 
             const config = configResult.config;
 
+            // Handle code_from_screenshots request (from "Code for Me" button)
+            if (context.requestType === 'code_from_screenshots' && context.screenshots?.length > 0) {
+                console.log('[AIService] Processing screenshots for code generation:', context.screenshots.length);
+                return await this.generateCodeFromScreenshots(config, context);
+            }
+
+            // Handle live screen frame from background (Screen Sharing Context)
+            if (context.screenFrame) {
+                console.log('[AIService] Processing live screen frame context...');
+                try {
+                    // Treat as a high-priority "screenshot" for context extraction
+                    const processed = await this.visionPreprocessor.processScreenshots([
+                        { id: 'live_frame', imageUrl: context.screenFrame, order: 0 }
+                    ]);
+
+                    // Attach the processed visual context (code, text, problem statement)
+                    // This will be used by PromptEngine to enrich the prompt
+                    context.visualContext = processed;
+
+                    console.log('[AIService] Visual context extracted. Code found:', !!processed.code, 'Problem found:', !!processed.problemStatement);
+                } catch (err) {
+                    console.error('[AIService] Failed to process live screen frame:', err);
+                }
+            }
+
             // Build the prompt using PromptEngine
             const prompt = this.buildPrompt(context);
-
             // Call the appropriate LLM API with mode-specific settings
             const response = await this.callLLM(config, prompt);
 
@@ -69,6 +95,49 @@ export class AIService {
             // Fall back to simulated hints on error
             return this.generateFallbackHint(context, error.message);
         }
+    }
+
+    /**
+     * Generate code from captured screenshots
+     */
+    async generateCodeFromScreenshots(config, context) {
+        const { screenshots } = context;
+        const interviewContext = this.contextManager?.getContext() || {};
+
+        // Process screenshots to extract text
+        const processedData = await this.visionPreprocessor.processScreenshots(screenshots);
+
+        // Build optimized prompt
+        const promptData = this.visionPreprocessor.buildCodePrompt(processedData, {
+            preferredLanguage: interviewContext.preferredLanguage || context.preferredLanguage || 'python',
+            codingPlatform: interviewContext.codingPlatform || context.codingPlatform || 'unknown'
+        });
+
+        // Create prompt structure for LLM
+        const prompt = {
+            systemMessage: `You are an expert competitive programmer and coding interview assistant. Generate clean, efficient, working code. Be concise but complete.`,
+            userPrompt: promptData.textPrompt,
+            maxTokens: 1500,  // More tokens for code generation
+            temperature: 0.2  // Lower temp for more consistent code
+        };
+
+        // If vision is required, add image context note
+        if (promptData.requiresImages) {
+            prompt.userPrompt += `\n\n[Note: Screenshots are attached. Please analyze them visually to understand the complete problem.]`;
+            // TODO: For vision models, pass images directly
+        }
+
+        // Call the LLM
+        const response = await this.callLLM(config, prompt);
+
+        return {
+            hint: response,
+            type: 'code_from_screenshots',
+            timestamp: new Date().toISOString(),
+            model: config.model.model_id,
+            provider: config.provider.slug,
+            screenshotCount: screenshots.length
+        };
     }
 
     async getLLMConfigWithError() {

@@ -104,7 +104,7 @@
 .ic-body {
     display: flex;
     flex: 1;
-    overflow: hidden;
+    overflow: visible;
     background: transparent;
     /* Transparent to let overlay bg show */
 }
@@ -121,6 +121,8 @@
     gap: 16px;
     padding: 20px 0;
     flex-shrink: 0;
+    overflow: visible;
+    /* Allow popover to extend beyond sidebar */
 }
 
 /* ... */
@@ -152,6 +154,10 @@
     cursor: pointer;
     transition: all 0.2s;
     color: #94a3b8;
+    overflow: visible;
+    /* Allow popover to extend beyond button */
+    position: relative;
+    /* For popover positioning */
 }
 
 .ic-sidebar-btn:hover {
@@ -533,9 +539,271 @@
     }
 }
 
+/* ===== NTRO.IO INSPIRED SCREENSHOT STRIP ===== */
+
+/* Color Variables */
+:root {
+    --ic-blue: #2D5BFF;
+    --ic-blue-hover: #4A73FF;
+    --ic-orange: #FF5B22;
+    --ic-orange-hover: #FF7340;
+    --ic-dark-bg: rgba(15, 23, 42, 0.95);
+    --ic-dark-border: rgba(255, 255, 255, 0.1);
+}
+
+/* Horizontal Screenshot Strip - Positioned Below Overlay */
+.ic-screenshot-strip {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--ic-dark-bg);
+    border: 1px solid var(--ic-dark-border);
+    border-radius: 12px;
+    padding: 10px 14px;
+    max-width: 420px;
+    overflow-x: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #475569 transparent;
+    z-index: 2147483646;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    transition: all 0.3s ease;
+}
+
+.ic-screenshot-strip::-webkit-scrollbar {
+    height: 4px;
+}
+
+.ic-screenshot-strip::-webkit-scrollbar-thumb {
+    background: #475569;
+    border-radius: 2px;
+}
+
+.ic-screenshot-strip.ic-strip-empty {
+    padding: 10px 16px;
+}
+
+.ic-screenshot-strip .ic-strip-label {
+    font-size: 11px;
+    color: #64748b;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.ic-screenshot-strip .ic-strip-label svg {
+    width: 14px;
+    height: 14px;
+    opacity: 0.7;
+}
+
+/* Thumbnail in Strip */
+.ic-strip-thumb {
+    position: relative;
+    width: 64px;
+    height: 48px;
+    border-radius: 6px;
+    overflow: hidden;
+    flex-shrink: 0;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.2s ease;
+}
+
+.ic-strip-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.ic-strip-thumb:hover {
+    border-color: var(--ic-blue);
+    transform: scale(1.05);
+}
+
+.ic-strip-thumb.selected {
+    border-color: var(--ic-orange);
+    box-shadow: 0 0 12px rgba(255, 91, 34, 0.4);
+}
+
+/* Selection Checkmark */
+.ic-strip-thumb .ic-thumb-check {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    background: var(--ic-orange);
+    border-radius: 50%;
+    display: none;
+    align-items: center;
+    justify-content: center;
+}
+
+.ic-strip-thumb.selected .ic-thumb-check {
+    display: flex;
+}
+
+.ic-strip-thumb .ic-thumb-check svg {
+    width: 10px;
+    height: 10px;
+    stroke: white;
+    stroke-width: 3;
+}
+
+/* Delete Button on Hover */
+.ic-strip-thumb .ic-thumb-delete {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 18px;
+    height: 18px;
+    background: rgba(239, 68, 68, 0.9);
+    border-radius: 50%;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.ic-strip-thumb:hover .ic-thumb-delete {
+    display: flex;
+}
+
+.ic-strip-thumb .ic-thumb-delete:hover {
+    background: #dc2626;
+    transform: scale(1.1);
+}
+
+.ic-strip-thumb .ic-thumb-delete svg {
+    width: 10px;
+    height: 10px;
+    stroke: white;
+    stroke-width: 3;
+}
+
+/* Strip Action Buttons */
+.ic-strip-actions {
+    display: flex;
+    gap: 6px;
+    margin-left: 8px;
+    padding-left: 8px;
+    border-left: 1px solid var(--ic-dark-border);
+}
+
+.ic-strip-btn {
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.2s ease;
+    border: none;
+    white-space: nowrap;
+}
+
+.ic-strip-btn svg {
+    width: 12px;
+    height: 12px;
+}
+
+.ic-strip-btn.ic-btn-code {
+    background: var(--ic-orange);
+    color: white;
+}
+
+.ic-strip-btn.ic-btn-code:hover:not(:disabled) {
+    background: var(--ic-orange-hover);
+}
+
+.ic-strip-btn.ic-btn-code:disabled {
+    background: #475569;
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.ic-strip-btn.ic-btn-clear {
+    background: transparent;
+    color: #94a3b8;
+    border: 1px solid var(--ic-dark-border);
+}
+
+.ic-strip-btn.ic-btn-clear:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #e2e8f0;
+}
+
+/* Updated Snap Button - ntro.io blue */
+#ic-screenshot-btn {
+    background: var(--ic-blue) !important;
+    border-color: var(--ic-blue) !important;
+}
+
+#ic-screenshot-btn:hover {
+    background: var(--ic-blue-hover) !important;
+    border-color: var(--ic-blue-hover) !important;
+}
+
+/* Screenshot Count Badge */
+.ic-screenshot-count {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    min-width: 16px;
+    height: 16px;
+    background: var(--ic-orange);
+    color: white;
+    font-size: 10px;
+    font-weight: 600;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+}
+
+/* Capture Flash Animation */
+@keyframes ic-capture-flash {
+    0% {
+        opacity: 0;
+    }
+
+    50% {
+        opacity: 0.3;
+    }
+
+    100% {
+        opacity: 0;
+    }
+}
+
+.ic-capture-flash {
+    position: fixed;
+    inset: 0;
+    background: white;
+    pointer-events: none;
+    animation: ic-capture-flash 0.3s ease-out;
+    z-index: 2147483647;
+}
+
 @media (max-width: 600px) {
     .ic-overlay {
         width: calc(100vw - 30px);
         right: 15px;
+    }
+
+    .ic-screenshot-strip {
+        max-width: calc(100vw - 40px);
+        bottom: 10px;
+        right: 10px;
     }
 }

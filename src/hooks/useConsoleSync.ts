@@ -46,6 +46,7 @@ export function useConsoleSync() {
     const [sessionId, setSessionId] = useState<string | null>(null);
     const [lastActivity, setLastActivity] = useState<number | null>(null);
     const [hasReceivedData, setHasReceivedData] = useState(false);
+    const [lastScreenshotEvent, setLastScreenshotEvent] = useState<{ type: string, data: any } | null>(null);
 
     // Smooth transcription state (append-only)
     const [finalizedText, setFinalizedText] = useState('');
@@ -368,7 +369,17 @@ export function useConsoleSync() {
                         });
                     }
                     if (type === 'SCREENSHOT_ADDED' || type === 'EXTENSION_SCREENSHOT') {
+                        console.log('[useConsoleSync] 📸 Screenshot event received:', type, data);
                         setScreenshots(prev => [data, ...prev]);
+                        setLastScreenshotEvent({ type: 'ADDED', data });
+                    }
+                    if (type === 'SCREENSHOT_DELETED') {
+                        setScreenshots(prev => prev.filter(s => s.id !== data.screenshotId));
+                        setLastScreenshotEvent({ type: 'DELETED', data });
+                    }
+                    if (type === 'SCREENSHOTS_CLEARED') {
+                        setScreenshots([]);
+                        setLastScreenshotEvent({ type: 'CLEARED', data });
                     }
                 }
             )
@@ -413,6 +424,7 @@ export function useConsoleSync() {
         sessionId,
         lastActivity,
         hasReceivedData,
+        lastScreenshotEvent,
         sendCommand
     };
 }

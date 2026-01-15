@@ -237,6 +237,47 @@
                                 <textarea id="jdInput" class="form-control" rows="3"
                                     placeholder="Paste JD key points..."></textarea>
                             </div>
+                            <!-- Live Coding Options -->
+                            <div class="form-group">
+                                <label class="toggle-label">
+                                    <span>Is Live Coding Interview</span>
+                                    <div class="toggle-wrapper">
+                                        <input type="checkbox" id="isLiveCoding" class="toggle-input">
+                                        <div class="toggle-slider"></div>
+                                    </div>
+                                </label>
+                                <div class="form-hint">Enable for coding interviews with screen sharing</div>
+                            </div>
+                            <div id="liveCodingFields" style="display: none;">
+                                <div class="form-group">
+                                    <label for="preferredLanguageInput">Preferred Code Language</label>
+                                    <select id="preferredLanguageInput" class="form-control">
+                                        <option value="python">Python</option>
+                                        <option value="javascript">JavaScript</option>
+                                        <option value="typescript">TypeScript</option>
+                                        <option value="java">Java</option>
+                                        <option value="cpp">C++</option>
+                                        <option value="csharp">C#</option>
+                                        <option value="go">Go</option>
+                                        <option value="rust">Rust</option>
+                                        <option value="ruby">Ruby</option>
+                                        <option value="swift">Swift</option>
+                                        <option value="kotlin">Kotlin</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="codingPlatformInput">Coding Platform</label>
+                                    <select id="codingPlatformInput" class="form-control">
+                                        <option value="leetcode">LeetCode</option>
+                                        <option value="hackerrank">HackerRank</option>
+                                        <option value="codesignal">CodeSignal</option>
+                                        <option value="codility">Codility</option>
+                                        <option value="coderpad">CoderPad</option>
+                                        <option value="hackerearth">HackerEarth</option>
+                                        <option value="other">Other</option>
+                                    </select>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- 2. HR Interview -->

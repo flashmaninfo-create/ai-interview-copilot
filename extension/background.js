@@ -4,7 +4,7 @@ import { AudioCaptureManager } from './lib/audio-capture.js';
 import { ScreenCaptureManager } from './lib/screen-capture.js';
 import { AIService } from './lib/ai-service.js';
 import { ConsoleSync } from './lib/console-sync.js';
-import { supabaseREST } from './lib/supabase-config.js';
+import { supabaseREST, setTokens } from './lib/supabase-config.js';
 import { TranscriptionManager } from './lib/transcription-manager.js';
 import { InterviewContextManager } from './lib/interview-context-manager.js';
 
@@ -64,8 +64,17 @@ class BackgroundService {
 
     // Restore active session if any
     if (this.state.data.activeSession) {
-      this.resumeSession();
+      console.log('[Background] Auto-resuming session from state');
+      this.resumeSession({ sessionId: this.state.data.activeSession.id });
     }
+
+    // Ensure Deepgram key is available
+    chrome.storage.local.get(['deepgram_api_key'], (result) => {
+      if (!result.deepgram_api_key) {
+        // Set default if missing (TEMPORARY: In prod should force user to set it)
+        chrome.storage.local.set({ deepgram_api_key: '5e2e3945f5f5e171dbdc62bb3d06cd3f6a088266' });
+      }
+    });
 
     // Listen for remote console commands (Supabase)
     this.consoleSync.onMessage((msg) => {
@@ -78,14 +87,37 @@ class BackgroundService {
         case 'TAKE_SCREENSHOT':
           this.takeScreenshot({ trigger: 'manual' });
           break;
+        case 'CLEAR_SCREENSHOTS':
+          // Clear screenshots and notify overlay (triggered from console)
+          this.clearScreenshots(() => { });
+          break;
       }
     });
   }
 
   async handleMessage(msg, sender, sendResponse) {
-    console.log('[Background] Message received:', msg.type);
+    // Filter out frequent messages if needed, but logging everything strictly for now
+    if (msg.type !== 'GET_SESSION_STATUS' && msg.type !== 'KEEP_ALIVE') {
+      console.log('[Background] Message received:', msg.type);
+    }
 
     switch (msg.type) {
+      case 'DEBUG_LOG':
+        // Forward offscreen logs to the active tab so user can see them in overlay console
+        if (msg.data) {
+          const logPrefix = msg.data.source ? `[${msg.data.source}]` : '[Debug]';
+          console.log(`${logPrefix} ${msg.data.message}`);
+
+          if (this.tabId) { // If we have a target tab
+            chrome.tabs.sendMessage(this.tabId, {
+              type: 'DEBUG_LOG',
+              data: msg.data
+            }).catch(() => { }); // Ignore if tab closed or no listener
+          }
+        }
+        sendResponse({ success: true });
+        break;
+
       case 'LOGIN':
         await this.handleLogin(msg.data, sendResponse);
         break;
@@ -110,6 +142,7 @@ class BackgroundService {
           tabId: activeTab?.id,
           meetingUrl: meetingData.meetingUrl || activeTab?.url,
           interviewContext: {
+            ...meetingData.interviewContext, // Spread original context to keep isLiveCoding, etc.
             role: meetingData.title || meetingData.scenario || 'Interview',
             type: meetingData.scenario === 'job-interview' ? 'technical' : 'mixed',
             scenario: meetingData.scenario,
@@ -158,6 +191,19 @@ class BackgroundService {
         await this.takeScreenshot(msg.data, sendResponse);
         break;
 
+      case 'SCREENSHOT_CAPTURED':
+        // Handle DOM capture from content script (new flow)
+        await this.handleScreenshotCaptured(msg.data, sendResponse);
+        break;
+
+      case 'DELETE_SCREENSHOT':
+        await this.deleteScreenshot(msg.data, sendResponse);
+        break;
+
+      case 'CLEAR_SCREENSHOTS':
+        await this.clearScreenshots(sendResponse);
+        break;
+
       case 'TOGGLE_MODE':
         await this.toggleMode(msg.data, sendResponse);
         break;
@@ -179,11 +225,17 @@ class BackgroundService {
         break;
 
       case 'SHOW_OVERLAY_ON_TAB':
-        // Show overlay on the specified tab (called when popup opens during active session)
+      case 'SHOW_OVERLAY':
+        // Show overlay on the specified tab or active session tab
         const overlayTabId = msg.tabId || this.tabId;
         if (overlayTabId && this.sessionActive) {
           chrome.tabs.sendMessage(overlayTabId, { type: 'SHOW_OVERLAY' }).catch(() => { });
         }
+        sendResponse({ success: true });
+        break;
+
+      case 'KEEP_ALIVE':
+        // Just return success to keep the service worker alive
         sendResponse({ success: true });
         break;
 
@@ -223,6 +275,67 @@ class BackgroundService {
           });
         }
         sendResponse({ success: true });
+        break;
+
+      // Screen capture control (for live coding fallback)
+      case 'START_SCREEN_SHARE':
+        await this.startScreenShare(sendResponse);
+        break;
+
+      case 'STOP_SCREEN_SHARE':
+        await this.stopScreenShare(sendResponse);
+        break;
+
+      case 'GET_SESSION_SCREENSHOTS':
+        if (this.sessionActive && this.state.data.activeSession?.id) {
+          const { data: screenshots, error } = await supabaseREST.rpc('get_session_screenshots', {
+            p_session_id: this.state.data.activeSession.id
+          });
+          sendResponse({ success: !error, screenshots: screenshots || [], error: error?.message });
+        } else {
+          sendResponse({ success: false, screenshots: [] });
+        }
+        break;
+
+      case 'DELETE_SCREENSHOT':
+        await this.deleteScreenshot(msg.data, sendResponse);
+        break;
+
+      case 'CLEAR_SCREENSHOTS':
+        await this.clearScreenshots(sendResponse);
+        break;
+
+      case 'SCREEN_SHARE_ENDED':
+        // User stopped screen sharing via browser UI
+        console.log('[Background] Screen share ended by user');
+        this.isScreenSharing = false;
+        // Notify console
+        await this.consoleSync.send({
+          type: 'SCREEN_SHARE_STATUS',
+          data: { active: false, reason: msg.data?.reason || 'user_stopped' }
+        });
+        sendResponse({ success: true });
+        break;
+
+      // Screenshot backend sync
+      case 'UPLOAD_SCREENSHOT':
+        await this.uploadScreenshot(msg.data, sendResponse);
+        break;
+
+      case 'GET_SCREENSHOTS':
+        await this.getSessionScreenshots(sendResponse);
+        break;
+
+      case 'CLEAR_SCREENSHOTS':
+        await this.clearScreenshots(sendResponse);
+        break;
+
+      case 'UPDATE_SCREENSHOT':
+        await this.updateScreenshotMetadata(msg.data, sendResponse);
+        break;
+
+      case 'DELETE_SCREENSHOT':
+        await this.deleteScreenshot(msg.data, sendResponse);
         break;
 
       default:
@@ -430,7 +543,7 @@ class BackgroundService {
 
       // Start real audio capture with Deepgram (NO mock fallback - expose real errors)
       try {
-        await this.startRealAudioCapture(tabId);
+        await this.audioManager.startCapture(tabId);
         console.log('[Background] Real audio capture started');
       } catch (error) {
         console.error('[Background] Real audio capture failed:', error.message);
@@ -455,28 +568,37 @@ class BackgroundService {
 
       // DATABASE SYNC: Create session in Supabase if user is logged in
       const sessionId = crypto.randomUUID(); // Use UUID for DB compatibility
+      let dbSessionCreated = false;
 
       try {
+        // DATABASE SYNC: Create session in Supabase if user is logged in
         if (this.state.data.user && this.state.data.user.id) {
           console.log('[Background] Creating DB session for user:', this.state.data.user.id);
-          // We need to use supabaseREST here as we are in background script
-          await supabaseREST.insert('interview_sessions', {
+
+          const { data: inserted, error } = await supabaseREST.insert('interview_sessions', {
             id: sessionId,
             user_id: this.state.data.user.id,
-            role: data?.interviewContext?.role || 'Software Engineer', // Default or from context
-            type: (data?.interviewContext?.type || 'technical').toLowerCase(), // Must be lowercase: technical, behavioral, mixed
+            role: data?.interviewContext?.role || 'Software Engineer',
+            type: (data?.interviewContext?.type || 'technical').toLowerCase(),
             difficulty: 'medium',
             status: 'active',
             console_token: consoleToken,
-            started_at: new Date().toISOString()
+            started_at: new Date().toISOString(),
+            context: data?.interviewContext // Store full context
+            // initial_credits: 0 // removed if not in schema
           });
-          console.log('[Background] DB Session created:', sessionId);
+
+          if (error) throw new Error(error.message || 'DB Insert Failed');
+          console.log('[Background] DB Session created 200 OK');
+          dbSessionCreated = true;
+        } else {
+          console.warn('[Background] Skipping DB creation - No user ID');
         }
       } catch (dbError) {
         console.error('[Background] Failed to create DB session:', dbError);
-        // Continue anyway, local sync might still work if we pass token manually
       }
 
+      // ALWAYS update local state (overlay still works even if DB fails)
       this.state.data.activeSession = {
         id: sessionId,
         tabId: tabId,
@@ -485,35 +607,33 @@ class BackgroundService {
         platform: this.detectPlatform(meetingUrl || ''),
         interviewContext: data?.interviewContext || {}
       };
-
       await this.state.save();
 
-      await this.consoleSync.connect(consoleToken, sessionId);
+      // ONLY send sync messages if DB session was created successfully
+      if (dbSessionCreated) {
+        try {
+          await this.consoleSync.connect(consoleToken, sessionId);
+          // Send heartbeat
+          await this.consoleSync.send({
+            type: 'SESSION_ACTIVE',
+            data: { sessionId, timestamp: Date.now(), interviewContext: data?.interviewContext || {} }
+          });
+        } catch (syncErr) { console.error('[Background] Console Sync Connect Error:', syncErr); }
+      } else {
+        console.log('[Background] Skipping sync - DB session not created');
+      }
 
-      // Send immediate SESSION_ACTIVE heartbeat to help console page detect session faster
-      await this.consoleSync.send({
-        type: 'SESSION_ACTIVE',
-        data: {
-          sessionId: sessionId,
-          timestamp: Date.now(),
-          interviewContext: data?.interviewContext || {}
-        }
-      });
-      console.log('[Background] Sent SESSION_ACTIVE heartbeat to console');
-
-      // Notify content script to show overlay (content-script.js is the single overlay authority)
+      // Notify content script (Overlay)
       await this.notifyContentScript(tabId);
 
-      // Send console token to overlay for console sync
+      // Send token to overlay
       setTimeout(() => {
         this.sendToOverlay({
           type: 'CONSOLE_TOKEN',
-          data: {
-            token: consoleToken,
-            sessionId: this.state.data.activeSession.id
-          }
+          data: { token: consoleToken, sessionId }
         });
-      }, 1000);
+        // NOTE: Auto screen share prompt removed - screenshare dialog will be triggered by Snap button click
+      }, 500);
 
       sendResponse({
         success: true,
@@ -558,7 +678,7 @@ class BackgroundService {
         // Then inject the script
         await chrome.scripting.executeScript({
           target: { tabId },
-          files: ['content-script.js']
+          files: ['lib/html2canvas.js', 'content-script.js']
         });
         console.log('[Background] Content script injected manually');
 
@@ -1011,7 +1131,7 @@ class BackgroundService {
       const sessionId = data?.sessionId;
 
       if (!sessionId) {
-        sendResponse({ success: false, error: 'No session ID provided' });
+        if (sendResponse) sendResponse({ success: false, error: 'No session ID provided' });
         return;
       }
 
@@ -1020,11 +1140,35 @@ class BackgroundService {
       // Get active tab
       const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
       if (!activeTab) {
-        sendResponse({ success: false, error: 'No active tab found' });
+        if (sendResponse) sendResponse({ success: false, error: 'No active tab found' });
         return;
       }
 
       this.tabId = activeTab.id;
+
+      // CRITICAL: Check if we are on a restricted page (like chrome://extensions)
+      if (activeTab.url.startsWith('chrome:') || activeTab.url.startsWith('edge:') || activeTab.url.startsWith('about:') || activeTab.url.startsWith('file:') || activeTab.url.startsWith('chrome-extension:')) {
+        console.warn('[Background] Resume attempted on restricted URL:', activeTab.url);
+
+        // Try to find the original meeting tab if we know the URL
+        const savedUrl = this.state.data.activeSession?.url || data?.meetingUrl;
+        if (savedUrl && savedUrl !== 'unknown') {
+          console.log('[Background] Searching for original meeting tab:', savedUrl);
+          const matchedTabs = await chrome.tabs.query({});
+          // Simple fuzzy match or exact match
+          const found = matchedTabs.find(t => t.url.includes(savedUrl) || (savedUrl.includes(t.url) && t.url.length > 20));
+
+          if (found) {
+            console.log('[Background] Found original tab:', found.id);
+            this.tabId = found.id;
+            // Ideally we shouldn't switch focus, just attach to it
+          } else {
+            console.warn('[Background] Original tab not found. Aborting capture resume (Session stays active in background)');
+            // We resume state but NOT capture/overlay
+            // But valid resume means setting this.sessionActive = true
+          }
+        }
+      }
 
       // Fetch session from database
       let sessionData = null;
@@ -1113,34 +1257,48 @@ class BackgroundService {
       }
 
       // Start audio capture
-      try {
-        await this.startRealAudioCapture(this.tabId);
-        console.log('[Background] Real audio capture resumed');
-      } catch (error) {
-        console.error('[Background] Audio capture failed on resume:', error.message);
-      }
+      // Start audio capture ONLY if we have a valid, non-restricted tabId
+      const isRestricted = (url) => url && (url.startsWith('chrome:') || url.startsWith('edge:') || url.startsWith('about:') || url.startsWith('file:') || url.startsWith('chrome-extension:'));
 
-      // Notify content script to show overlay with resumed state
-      await this.notifyContentScriptResume(this.tabId, {
-        sessionId: sessionId,
-        elapsedTime: elapsedTime,
-        transcriptionText: pausedState?.transcription_text || ''
-      });
+      let targetTab = null;
+      try {
+        targetTab = await chrome.tabs.get(this.tabId);
+      } catch (e) { /* ignore */ }
+
+      if (targetTab && !isRestricted(targetTab.url)) {
+        try {
+          await this.startRealAudioCapture(this.tabId);
+          console.log('[Background] Real audio capture resumed');
+        } catch (error) {
+          console.error('[Background] Audio capture failed on resume:', error.message);
+        }
+
+        // Notify content script to show overlay with resumed state
+        await this.notifyContentScriptResume(this.tabId, {
+          sessionId: sessionId,
+          elapsedTime: elapsedTime,
+          transcriptionText: pausedState?.transcription_text || ''
+        });
+      } else {
+        console.log('[Background] Skipping capture/overlay resume - Target tab is restricted or missing');
+      }
 
       // Clear paused session from storage
       await chrome.storage.local.remove(['pausedSession', 'pausedSessionId']);
 
-      sendResponse({
-        success: true,
-        resumed: true,
-        sessionId: sessionId,
-        consoleToken: consoleToken,
-        elapsedTime: elapsedTime
-      });
+      if (sendResponse) {
+        sendResponse({
+          success: true,
+          resumed: true,
+          sessionId: sessionId,
+          consoleToken: consoleToken,
+          elapsedTime: elapsedTime
+        });
+      }
 
     } catch (error) {
       console.error('[Background] Resume session error:', error);
-      sendResponse({ success: false, error: error.message });
+      if (sendResponse) sendResponse({ success: false, error: error.message });
     }
   }
 
@@ -1209,6 +1367,30 @@ class BackgroundService {
     this.hintRequestPending = true;
 
     try {
+      // CAPTURE SCREEN CONTEXT IF AVAILABLE
+      // If screen sharing is active (e.g. during live coding), capture the current frame
+      // to provide visual context to the AI (Code/Explain/Answer)
+      let screenContext = null;
+
+      if (this.isScreenSharing) {
+        console.log('[Background] Screen share active, capturing frame for AI context...');
+        try {
+          // Ask offscreen document to capture a frame from the stream
+          const frameResult = await chrome.runtime.sendMessage({ type: 'CAPTURE_SCREEN_FRAME' });
+
+          if (frameResult && frameResult.success && frameResult.data) {
+            console.log('[Background] Captured screen frame for context');
+            screenContext = {
+              data: frameResult.data,
+              width: frameResult.width,
+              height: frameResult.height,
+              timestamp: Date.now()
+            };
+          }
+        } catch (err) {
+          console.error('[Background] Failed to capture screen frame:', err);
+        }
+      }
       // Fetch fresh credits from Supabase before checking
       try {
         const creditsResult = await supabaseREST.getCredits();
@@ -1236,7 +1418,9 @@ class BackgroundService {
         userProfile: this.state.data.userProfile,
         requestType: data.requestType || 'hint',
         customPrompt: data.customPrompt || null,
-        interviewContext: this.state.data.activeSession?.interviewContext || {}
+        interviewContext: this.state.data.activeSession?.interviewContext || {},
+        selectedScreenshotIds: data.selectedScreenshotIds || [],
+        screenFrame: screenContext ? screenContext.data : null // Add captured frame to context
       };
 
       // Show loading state
@@ -1277,41 +1461,280 @@ class BackgroundService {
     }
   }
 
-  async takeScreenshot(data, sendResponse) {
+  async notifyContentScript(tabId) {
+    // Content script is auto-injected via manifest.json for meeting platforms
+    // But we need to manually inject for other URLs (like YouTube, testing pages, etc.)
+    console.log('[Background] Notifying content script on tab:', tabId);
+
+    // Try to send message first
     try {
-      const screenshot = await this.screenManager.captureScreen();
+      await chrome.tabs.sendMessage(tabId, { type: 'PING' });
+      console.log('[Background] Content script already active');
+    } catch (err) {
+      console.log('[Background] Content script not responding, injecting...');
+      try {
+        await chrome.scripting.insertCSS({
+          target: { tabId },
+          files: ['content-styles.css']
+        });
+        await chrome.scripting.executeScript({
+          target: { tabId },
+          files: ['lib/html2canvas.js', 'content-script.js']
+        });
+        // Give it a moment to initialize
+        await new Promise(resolve => setTimeout(resolve, 500));
+      } catch (e) {
+        console.error('[Background] Injection failed:', e);
+      }
+    }
 
-      // Process screenshot (OCR, compression)
-      const processed = await this.screenManager.processScreenshot(screenshot);
+    // Now send the start message
+    try {
+      chrome.tabs.sendMessage(tabId, {
+        type: 'SESSION_STARTED',
+        data: {
+          sessionId: this.state.data.activeSession.id
+        }
+      });
+    } catch (e) {
+      console.error('[Background] Failed to send START message:', e);
+    }
+  }
 
-      // Add to queue
-      this.screenshotQueue.push({
-        id: Date.now(),
-        data: processed.data,
-        text: processed.text,
-        timestamp: Date.now()
+  // Handle screenshot captured by content script
+  async handleScreenshotCaptured(data, sendResponse) {
+    console.log('[Background] Received screenshot from content script');
+
+    try {
+      if (!data.imageData) throw new Error('No image data received');
+
+      const sessionId = this.state.data.activeSession?.id;
+      if (!sessionId) throw new Error('No active session');
+
+      // Save to Supabase with correct parameter signature
+      const result = await supabaseREST.rpc('add_session_screenshot', {
+        p_session_id: sessionId,
+        p_image_url: data.imageData,
+        p_capture_method: data.captureMethod || 'dom',
+        p_platform_detected: data.platform || null,
+        p_element_selector: data.elementSelector || null,
+        p_width: data.width || null,
+        p_height: data.height || null,
+        p_size_bytes: data.sizeBytes || null,
+        p_extracted_text: data.extractedText || '',
+        p_code_text: data.codeText || '',
+        p_metadata: {
+          url: data.url,
+          title: data.title
+        }
       });
 
-      // Keep only last 5 screenshots
-      if (this.screenshotQueue.length > 5) {
-        this.screenshotQueue.shift();
-      }
+      if (result?.error) throw new Error(result.error);
 
-      // Send to console
+      console.log('[Background] Screenshot saved to DB:', result?.screenshot_id);
+
+      const screenshotData = {
+        id: result?.screenshot_id,
+        image_url: data.imageData,
+        display_order: result?.display_order,
+        capture_method: data.captureMethod || 'dom'
+      };
+
+      // Notify console (LiveConsolePage) via Supabase sync
       await this.consoleSync.send({
         type: 'SCREENSHOT_ADDED',
-        data: processed
+        data: screenshotData
       });
 
-      if (sendResponse) {
-        sendResponse({ success: true, screenshot: processed });
+      // Notify content script (overlay) directly
+      if (this.tabId) {
+        try {
+          await chrome.tabs.sendMessage(this.tabId, {
+            type: 'SCREENSHOT_ADDED',
+            data: screenshotData
+          });
+        } catch (e) {
+          console.log('[Background] Content script not available for screenshot notification');
+        }
       }
 
-    } catch (error) {
-      console.error('[Background] Screenshot error:', error);
-      if (sendResponse) {
-        sendResponse({ success: false, error: error.message });
+      if (sendResponse) sendResponse({ success: true, screenshot_id: result?.screenshot_id });
+    } catch (err) {
+      console.error('[Background] Failed to save screenshot:', err);
+      if (sendResponse) sendResponse({ success: false, error: err.message });
+    }
+  }
+
+  async takeScreenshot(data, sendResponse) {
+    if (!this.sessionActive || !this.tabId) {
+      if (sendResponse) sendResponse({ success: false, error: 'No active session' });
+      return;
+    }
+
+    console.log('[Background] Taking screenshot via native captureVisibleTab...');
+
+    try {
+      // Get the window ID for the tab
+      const tab = await chrome.tabs.get(this.tabId);
+      const windowId = tab.windowId;
+
+      // HIDE OVERLAY before capture (so it doesn't appear in screenshot)
+      try {
+        await chrome.tabs.sendMessage(this.tabId, { type: 'HIDE_OVERLAY_FOR_CAPTURE' });
+        // Wait for overlay to fully hide (CSS transitions may need time)
+        await new Promise(resolve => setTimeout(resolve, 200));
+      } catch (e) {
+        console.log('[Background] Could not hide overlay (may not be present)');
       }
+
+      // Use native Chrome API for instant capture
+      const dataUrl = await chrome.tabs.captureVisibleTab(windowId, { format: 'png' });
+
+      // SHOW OVERLAY after capture
+      try {
+        await chrome.tabs.sendMessage(this.tabId, { type: 'SHOW_OVERLAY_AFTER_CAPTURE' });
+      } catch (e) {
+        console.log('[Background] Could not show overlay (may not be present)');
+      }
+
+      if (!dataUrl) {
+        throw new Error('captureVisibleTab returned empty result');
+      }
+
+      console.log('[Background] Native screenshot captured, size:', dataUrl.length);
+
+      // Save to Supabase
+      const sessionId = this.state.data.activeSession?.id;
+      if (sessionId) {
+        const result = await supabaseREST.rpc('add_session_screenshot', {
+          p_session_id: sessionId,
+          p_image_url: dataUrl,
+          p_capture_method: 'native',
+          p_platform_detected: this.state.data.activeSession?.platform || null,
+          p_element_selector: null,
+          p_width: null,
+          p_height: null,
+          p_size_bytes: Math.round((dataUrl.length * 3) / 4),
+          p_extracted_text: data?.extractedText || '',
+          p_code_text: '',
+          p_metadata: {
+            url: data?.url || tab.url,
+            title: data?.title || tab.title
+          }
+        });
+
+        if (result?.error) {
+          console.error('[Background] Failed to save screenshot:', result.error);
+        } else {
+          console.log('[Background] Screenshot saved to DB:', result?.screenshot_id);
+
+          const screenshotData = {
+            id: result?.screenshot_id,
+            image_url: dataUrl,
+            display_order: result?.display_order,
+            capture_method: 'native'
+          };
+
+          // Notify console
+          await this.consoleSync.send({ type: 'SCREENSHOT_ADDED', data: screenshotData });
+
+          // Notify overlay
+          if (this.tabId) {
+            try {
+              await chrome.tabs.sendMessage(this.tabId, { type: 'SCREENSHOT_ADDED', data: screenshotData });
+            } catch (e) {
+              console.log('[Background] Content script not available for screenshot notification');
+            }
+          }
+        }
+      }
+
+      if (sendResponse) sendResponse({ success: true, dataUrl });
+    } catch (err) {
+      console.error('[Background] Native screenshot failed:', err.message);
+      if (sendResponse) sendResponse({ success: false, error: err.message });
+    }
+  }
+
+  async deleteScreenshot(data, sendResponse) {
+    const screenshotId = data?.screenshotId;
+    if (!screenshotId) {
+      if (sendResponse) sendResponse({ success: false, error: 'No screenshot ID provided' });
+      return;
+    }
+
+    console.log('[Background] Deleting screenshot:', screenshotId);
+
+    try {
+      // Delete from Supabase
+      const { error } = await supabaseREST.rpc('delete_session_screenshot', {
+        p_screenshot_id: screenshotId
+      });
+
+      if (error) {
+        console.error('[Background] Failed to delete screenshot from DB:', error);
+      }
+
+      // Notify overlay
+      if (this.tabId) {
+        try {
+          await chrome.tabs.sendMessage(this.tabId, {
+            type: 'SCREENSHOT_DELETED',
+            data: { screenshotId }
+          });
+        } catch (e) {
+          console.log('[Background] Could not notify overlay about deletion');
+        }
+      }
+
+      // Notify console
+      await this.consoleSync.send({
+        type: 'SCREENSHOT_DELETED',
+        data: { screenshotId }
+      });
+
+      if (sendResponse) sendResponse({ success: true });
+    } catch (err) {
+      console.error('[Background] Delete screenshot error:', err);
+      if (sendResponse) sendResponse({ success: false, error: err.message });
+    }
+  }
+
+  async clearScreenshots(sendResponse) {
+    const sessionId = this.state.data.activeSession?.id;
+    if (!sessionId) {
+      if (sendResponse) sendResponse({ success: false, error: 'No active session' });
+      return;
+    }
+
+    console.log('[Background] Clearing all screenshots for session:', sessionId);
+
+    try {
+      // Clear from Supabase
+      const { error } = await supabaseREST.rpc('clear_session_screenshots', {
+        p_session_id: sessionId
+      });
+
+      if (error) {
+        console.error('[Background] Failed to clear screenshots from DB:', error);
+      }
+
+      // Notify overlay
+      if (this.tabId) {
+        try {
+          await chrome.tabs.sendMessage(this.tabId, { type: 'SCREENSHOTS_CLEARED' });
+        } catch (e) {
+          console.log('[Background] Could not notify overlay about clear');
+        }
+      }
+
+      // Notify console
+      await this.consoleSync.send({ type: 'SCREENSHOTS_CLEARED' });
+
+      if (sendResponse) sendResponse({ success: true });
+    } catch (err) {
+      console.error('[Background] Clear screenshots error:', err);
+      if (sendResponse) sendResponse({ success: false, error: err.message });
     }
   }
 
@@ -1596,6 +2019,9 @@ class BackgroundService {
 
         await chrome.storage.local.set(updates);
 
+        // Immediately update in-memory tokens in supabase-config.js
+        setTokens(msg.token, msg.session?.refresh_token, msg.session?.expires_at);
+
         // Update local state if needed
         this.state.data.user = msg.user;
 
@@ -1624,6 +2050,227 @@ class BackgroundService {
   }
 
   // NOTE: Full pauseSession() and resumeSession() 
+
+  // ==========================================
+  // Screen Share Control (for live coding fallback)
+  // ==========================================
+
+  async startScreenShare(streamId = null, sendResponse) {
+    try {
+      // Ensure offscreen document exists
+      await this.createOffscreenDocument();
+
+      // Request screen capture from offscreen (pass streamId if available)
+      const result = await chrome.runtime.sendMessage({
+        type: 'START_SCREEN_CAPTURE',
+        streamId: streamId
+      });
+
+      if (result.success) {
+        this.isScreenSharing = true;
+        console.log('[Background] Screen share started:', result.width, 'x', result.height);
+
+        // Notify console
+        await this.consoleSync.send({
+          type: 'SCREEN_SHARE_STATUS',
+          data: { active: true, width: result.width, height: result.height }
+        });
+      }
+
+      if (sendResponse) sendResponse(result);
+    } catch (error) {
+      console.error('[Background] Start screen share error:', error);
+      if (sendResponse) sendResponse({ success: false, error: error.message });
+    }
+  }
+
+  async stopScreenShare(sendResponse) {
+    try {
+      await chrome.runtime.sendMessage({ type: 'STOP_SCREEN_CAPTURE' });
+      this.isScreenSharing = false;
+      console.log('[Background] Screen share stopped');
+
+      if (sendResponse) sendResponse({ success: true });
+    } catch (error) {
+      console.error('[Background] Stop screen share error:', error);
+      if (sendResponse) sendResponse({ success: false, error: error.message });
+    }
+  }
+
+  // ==========================================
+  // Screenshot Backend Sync (Supabase)
+  // ==========================================
+
+  async uploadScreenshot(data, sendResponse) {
+    if (!this.sessionActive || !this.state.data.activeSession?.id) {
+      if (sendResponse) sendResponse({ success: false, error: 'No active session' });
+      return;
+    }
+
+    try {
+      const sessionId = this.state.data.activeSession.id;
+      const { imageData, captureMethod, platform, elementSelector, width, height, sizeBytes } = data;
+
+      // Call Supabase RPC to add screenshot
+      const result = await supabaseREST.rpc('add_session_screenshot', {
+        p_session_id: sessionId,
+        p_image_url: imageData,
+        p_capture_method: captureMethod || 'dom',
+        p_platform_detected: platform || null,
+        p_element_selector: elementSelector || null,
+        p_width: width || null,
+        p_height: height || null,
+        p_size_bytes: sizeBytes || null
+      });
+
+      if (result?.success) {
+        console.log('[Background] Screenshot uploaded:', result.screenshot_id);
+
+        const screenshotData = {
+          id: result.screenshot_id,
+          image_url: imageData, // The base64 data URL or uploaded URL
+          display_order: result.display_order,
+          capture_method: captureMethod
+        };
+
+        // Notify console of new screenshot
+        await this.consoleSync.send({
+          type: 'SCREENSHOT_ADDED',
+          data: screenshotData
+        });
+
+        // Notify content script (overlay) of new screenshot
+        if (this.tabId) {
+          try {
+            await chrome.tabs.sendMessage(this.tabId, {
+              type: 'SCREENSHOT_ADDED',
+              data: screenshotData
+            });
+          } catch (e) {
+            console.log('[Background] Content script not available for screenshot notification');
+          }
+        }
+      }
+
+      if (sendResponse) sendResponse(result);
+    } catch (error) {
+      console.error('[Background] Upload screenshot error:', error);
+      if (sendResponse) sendResponse({ success: false, error: error.message });
+    }
+  }
+
+  async getSessionScreenshots(sendResponse) {
+    if (!this.sessionActive || !this.state.data.activeSession?.id) {
+      if (sendResponse) sendResponse({ success: false, error: 'No active session', screenshots: [] });
+      return;
+    }
+
+    try {
+      const sessionId = this.state.data.activeSession.id;
+      const result = await supabaseREST.rpc('get_session_screenshots', {
+        p_session_id: sessionId
+      });
+
+      if (sendResponse) sendResponse(result);
+    } catch (error) {
+      console.error('[Background] Get screenshots error:', error);
+      if (sendResponse) sendResponse({ success: false, error: error.message, screenshots: [] });
+    }
+  }
+
+  async clearScreenshots(sendResponse) {
+    if (!this.sessionActive || !this.state.data.activeSession?.id) {
+      if (sendResponse) sendResponse({ success: false, error: 'No active session' });
+      return;
+    }
+
+    try {
+      const sessionId = this.state.data.activeSession.id;
+      const result = await supabaseREST.rpc('clear_session_screenshots', {
+        p_session_id: sessionId
+      });
+
+      if (result?.success) {
+        console.log('[Background] Screenshots cleared:', result.deleted_count);
+
+        // Notify console
+        await this.consoleSync.send({
+          type: 'SCREENSHOTS_CLEARED',
+          data: { deletedCount: result.deleted_count }
+        });
+
+        // Notify content script (overlay)
+        if (this.tabId) {
+          try {
+            await chrome.tabs.sendMessage(this.tabId, {
+              type: 'SCREENSHOTS_CLEARED',
+              data: { deletedCount: result.deleted_count }
+            });
+          } catch (e) {
+            console.log('[Background] Content script not available for clear notification');
+          }
+        }
+      }
+
+      if (sendResponse) sendResponse(result);
+    } catch (error) {
+      console.error('[Background] Clear screenshots error:', error);
+      if (sendResponse) sendResponse({ success: false, error: error.message });
+    }
+  }
+
+  async updateScreenshotMetadata(data, sendResponse) {
+    try {
+      const { screenshotId, displayOrder, isMarkedImportant, isSelectedForAi } = data;
+
+      const result = await supabaseREST.rpc('update_screenshot_metadata', {
+        p_screenshot_id: screenshotId,
+        p_display_order: displayOrder ?? null,
+        p_is_marked_important: isMarkedImportant ?? null,
+        p_is_selected_for_ai: isSelectedForAi ?? null
+      });
+
+      if (sendResponse) sendResponse(result);
+    } catch (error) {
+      console.error('[Background] Update screenshot error:', error);
+      if (sendResponse) sendResponse({ success: false, error: error.message });
+    }
+  }
+
+  async deleteScreenshot(data, sendResponse) {
+    try {
+      const { screenshotId } = data;
+
+      const result = await supabaseREST.rpc('delete_session_screenshot', {
+        p_screenshot_id: screenshotId
+      });
+
+      if (result?.success) {
+        // Notify console
+        await this.consoleSync.send({
+          type: 'SCREENSHOT_DELETED',
+          data: { screenshotId }
+        });
+
+        // Notify content script (overlay)
+        if (this.tabId) {
+          try {
+            await chrome.tabs.sendMessage(this.tabId, {
+              type: 'SCREENSHOT_DELETED',
+              data: { screenshotId }
+            });
+          } catch (e) {
+            console.log('[Background] Content script not available for delete notification');
+          }
+        }
+      }
+
+      if (sendResponse) sendResponse(result);
+    } catch (error) {
+      console.error('[Background] Delete screenshot error:', error);
+      if (sendResponse) sendResponse({ success: false, error: error.message });
+    }
+  }
 }
 
 // Initialize background service

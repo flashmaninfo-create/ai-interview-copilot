@@ -6,22 +6,14 @@
   "permissions": [
     "tabs",
     "tabCapture",
+    "desktopCapture",
     "storage",
     "activeTab",
     "scripting",
     "offscreen"
   ],
   "host_permissions": [
-    "https://meet.google.com/*",
-    "https://zoom.us/*",
-    "https://*.zoom.us/*",
-    "https://teams.microsoft.com/*",
-    "https://*.webex.com/*",
-    "https://web.whatsapp.com/*",
-    "https://*.slack.com/*",
-    "https://discord.com/*",
-    "https://web.telegram.org/*",
-    "https://*/*"
+    "<all_urls>"
   ],
   "background": {
     "service_worker": "background.js",
@@ -39,6 +31,8 @@
         "https://*.slack.com/*",
         "https://discord.com/*",
         "https://web.telegram.org/*",
+        "https://www.youtube.com/*",
+        "https://*/*",
         "http://localhost:5173/*",
         "https://localhost:5173/*",
         "http://127.0.0.1:5173/*"
@@ -72,6 +66,8 @@
         "overlay.js",
         "offscreen.html",
         "offscreen.js",
+        "offscreen.js",
+        "lib/html2canvas.js",
         "icons/*"
       ],
       "matches": [

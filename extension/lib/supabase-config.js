@@ -49,6 +49,14 @@ async function getAccessToken() {
     }
 }
 
+// Allow external callers (e.g., background.js handleAuthSync) to update tokens immediately
+export function setTokens(newAccessToken, newRefreshToken = null, expiresAt = null) {
+    accessToken = newAccessToken;
+    if (newRefreshToken) refreshToken = newRefreshToken;
+    if (expiresAt) tokenExpiresAt = expiresAt;
+    console.log('[SupabaseREST] Tokens updated externally, expires at:', tokenExpiresAt ? new Date(tokenExpiresAt * 1000).toLocaleTimeString() : 'N/A');
+}
+
 export const supabaseREST = {
     // Authentication
     async signIn(email, password) {
@@ -268,14 +276,32 @@ export const supabaseREST = {
     // Get current user's credit balance with robust fallbacks
     async getCredits() {
         const token = await getAccessToken();
+        if (!token) {
+            console.error('[SupabaseREST] getCredits failed: No access token available');
+            return { success: false, balance: 0, error: 'Not authenticated' };
+        }
+
         const userResponse = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
             headers: {
                 'apikey': SUPABASE_KEY,
                 'Authorization': `Bearer ${token}`
             }
         });
-        const userData = await userResponse.json();
-        const userId = userData.id;
+
+        let userData;
+        try {
+            userData = await userResponse.json();
+        } catch (e) {
+            console.error('[SupabaseREST] Failed to parse user data:', e);
+            return { success: false, balance: 0, error: 'Failed to retrieve user data' };
+        }
+
+        const userId = userData?.id;
+
+        if (!userId) {
+            console.error('[SupabaseREST] getCredits failed: User ID not found in response', userData);
+            return { success: false, balance: 0, error: 'User not authenticated' };
+        }
 
         // Strategy 1: RPC (Best, consistent)
         const rpcResult = await this.rpcCall('get_my_credit_balance');

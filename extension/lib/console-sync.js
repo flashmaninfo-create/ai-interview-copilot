@@ -70,8 +70,10 @@ export class ConsoleSync {
     }
 
     startPolling() {
-        // Poll for console commands every 2 seconds
+        // Poll for console commands every 1 second (faster responsiveness)
         let lastChecked = Date.now();
+
+        console.log('[ConsoleSync] Starting polling for session:', this.sessionId);
 
         this.pollInterval = setInterval(async () => {
             if (!this.connected || !this.sessionId) return;
@@ -108,9 +110,11 @@ export class ConsoleSync {
                         }
                     }
                 }
+
+                lastChecked = queryTime;
             } catch (error) {
                 console.error('[ConsoleSync] Polling error:', error);
             }
-        }, 2000);
+        }, 1000); // Poll every 1 second for faster response
     }
 }

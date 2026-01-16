@@ -40,6 +40,7 @@ export function LiveConsolePage() {
     transcripts,
     finalizedText,
     hints,
+    screenshots,
     sessionStatus,
     sessionId,
     lastScreenshotEvent,
@@ -73,7 +74,6 @@ export function LiveConsolePage() {
   };
 
 
-  /* ---------------- Fetch Credits ---------------- */
   useEffect(() => {
     const fetchCredits = async () => {
       const result = await creditService.getBalance();
@@ -85,6 +85,7 @@ export function LiveConsolePage() {
     const interval = setInterval(fetchCredits, 30000);
     return () => clearInterval(interval);
   }, []);
+  */
 
   /* ---------------- Fetch Screenshots ---------------- */
   const fetchScreenshots = async () => {
@@ -217,6 +218,8 @@ export function LiveConsolePage() {
   };
 
   const requestHint = async (type: string) => {
+    console.log('[LiveConsolePage] requestHint called with type:', type);
+    console.log('[LiveConsolePage] sessionStatus:', sessionStatus, 'connected:', connected);
     setLoading(true);
 
     // Get selected screenshots
@@ -273,7 +276,7 @@ export function LiveConsolePage() {
         {/* Help Button */}
         <button
           onClick={() => requestHint('help')}
-          disabled={!connected || loading}
+          disabled={!(connected || sessionStatus === 'session_found' || sessionStatus === 'active') || loading}
           className="w-14 h-14 rounded-xl bg-[#2a2f48] hover:bg-[#3a3f58] flex flex-col items-center justify-center gap-1 transition-colors disabled:opacity-50"
         >
           <Sparkles className="w-5 h-5 text-gray-400" />
@@ -283,7 +286,7 @@ export function LiveConsolePage() {
         {/* Answer Button - Orange accent like overlay */}
         <button
           onClick={() => requestHint('answer')}
-          disabled={!connected || loading}
+          disabled={!(connected || sessionStatus === 'session_found' || sessionStatus === 'active') || loading}
           className="w-14 h-14 rounded-xl bg-[#ff6b35]/20 border border-[#ff6b35]/30 hover:bg-[#ff6b35]/30 flex flex-col items-center justify-center gap-1 transition-colors disabled:opacity-50"
         >
           <MessageSquare className="w-5 h-5 text-[#ff6b35]" />
@@ -293,7 +296,7 @@ export function LiveConsolePage() {
         {/* Code Button - Blue */}
         <button
           onClick={() => requestHint('code')}
-          disabled={!connected || loading}
+          disabled={!(connected || sessionStatus === 'session_found' || sessionStatus === 'active') || loading}
           className="w-14 h-14 rounded-xl bg-blue-500 hover:bg-blue-600 flex flex-col items-center justify-center gap-1 transition-colors disabled:opacity-50"
         >
           <Code2 className="w-5 h-5 text-white" />
@@ -303,7 +306,7 @@ export function LiveConsolePage() {
         {/* Explain Button - Purple */}
         <button
           onClick={() => requestHint('explain')}
-          disabled={!connected || loading}
+          disabled={!(connected || sessionStatus === 'session_found' || sessionStatus === 'active') || loading}
           className="w-14 h-14 rounded-xl bg-purple-500 hover:bg-purple-600 flex flex-col items-center justify-center gap-1 transition-colors disabled:opacity-50"
         >
           <BookOpen className="w-5 h-5 text-white" />
@@ -489,7 +492,7 @@ export function LiveConsolePage() {
                   <div className="my-4 ml-4">
                     <div className="inline-flex items-center gap-2 bg-white/10 border border-[#ff6b35] rounded-lg px-3 py-2 text-sm">
                       <span className="w-2 h-2 bg-[#ff6b35] rounded-sm"></span>
-                      <span className="text-white">www.ntro.io is sharing your screen.</span>
+                      <span className="text-white">www.xtroon.io is sharing your screen.</span>
                       <button className="bg-white/20 text-white px-3 py-1 rounded text-xs">Stop sharing</button>
                       <button className="bg-[#ff6b35] text-white px-3 py-1 rounded text-xs">Hide</button>
                     </div>
@@ -548,12 +551,29 @@ export function LiveConsolePage() {
                     </div>
                   )}
 
-                  {!loading && hints.length === 0 && (
-                    <div className="flex flex-col items-center justify-center h-full text-gray-400">
-                      <Lightbulb className="w-12 h-12 mb-4 opacity-50" />
-                      <p className="font-medium">No hints yet</p>
-                      <p className="text-sm opacity-70">Ask for help or wait for AI insights</p>
-                    </div>
+                  {/* HINTS TAB */}
+                  {activeTab === 'hints' && (
+                    <>
+                      {!loading && hints.length === 0 && (
+                        <div className="flex flex-col items-center justify-center h-full text-gray-400">
+                          <Lightbulb className="w-12 h-12 mb-4 opacity-50" />
+                          <p className="font-medium">No hints yet</p>
+                          <p className="text-sm opacity-70">Ask for help or wait for AI insights</p>
+                        </div>
+                      )}
+
+                      {!loading && hints.map((h, i) => (
+                        <div key={i} className="bg-white/5 border border-white/10 rounded-lg p-5 mb-4">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">Insight</span>
+                            <span className="text-xs text-gray-500">{h.timestamp}</span>
+                          </div>
+                          <div className="text-white whitespace-pre-wrap leading-relaxed">
+                            {h.hint || h.text}
+                          </div>
+                        </div>
+                      ))}
+                    </>
                   )}
 
                   {!loading && Array.isArray(hints) && hints.map((h, i) => {
@@ -724,5 +744,6 @@ export function LiveConsolePage() {
     </div>
 
 
+    </div>
   );
 }

@@ -45,6 +45,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             sendResponse({ success: true });
             break;
 
+        case 'START_SCREEN_CAPTURE':
+            startScreenCapture(message.streamId)
+                .then(() => sendResponse({ success: true }))
+                .catch(err => sendResponse({ success: false, error: err.message }));
+            return true; // Keep channel open for async response
+
+        case 'CAPTURE_SCREENSHOT':
+            captureScreenshot()
+                .then((dataUrl) => sendResponse({ success: true, screenshot: dataUrl }))
+                .catch(err => sendResponse({ success: false, error: err.message }));
+            return true; // Keep channel open for async response
+
         case 'GET_CAPTURE_STATUS':
             sendResponse({ isRecording, isScreenSharing });
             break;

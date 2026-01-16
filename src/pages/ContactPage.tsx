@@ -140,7 +140,7 @@ const ContactPage = () => {
               Get in Touch
             </h1>
             <p className="font-body text-xl text-muted-foreground max-w-2xl mx-auto">
-              Have questions about Interview Copilot? We're here to help you succeed.
+              Have questions about Xtroone? We're here to help you succeed.
             </p>
           </div>
         </div>

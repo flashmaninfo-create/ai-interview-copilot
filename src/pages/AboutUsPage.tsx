@@ -75,7 +75,7 @@ const AboutUsPage = () => {
       name: 'Michael Rodriguez',
       role: 'Co-Founder & CTO',
       background: 'AI Research Scientist, PhD in Natural Language Processing from MIT',
-      story: 'Michael led AI teams at Amazon before founding Interview Copilot to make advanced NLP accessible',
+      story: 'Michael led AI teams at Amazon before founding Xtroone to make advanced NLP accessible',
       linkedin: 'https://linkedin.com',
       image: 'https://img.rocket.new/generatedImages/rocket_gen_img_18c66c46c-1763301780768.png',
       alt: 'Michael Rodriguez, CTO and Co-Founder'
@@ -172,13 +172,13 @@ const AboutUsPage = () => {
             </h2>
             <div className="prose prose-lg max-w-none">
               <p className="text-foreground/80 text-lg leading-relaxed mb-4">
-                Interview Copilot was born from a simple observation: talented professionals were missing opportunities not because they lacked skills, but because they struggled with interview performance.
+                Xtroone was born from a simple observation: talented professionals were missing opportunities not because they lacked skills, but because they struggled with interview performance.
               </p>
               <p className="text-foreground/80 text-lg leading-relaxed mb-4">
                 After conducting thousands of interviews at Fortune 500 companies, our founders recognized that traditional career coaching was expensive, inaccessible, and didn't address real-time interview challenges.
               </p>
               <p className="text-foreground/80 text-lg leading-relaxed">
-                We built Interview Copilot to level the playing field—combining cutting-edge AI with proven coaching methodologies to help every candidate present their best self during interviews.
+                We built Xtroone to level the playing field—combining cutting-edge AI with proven coaching methodologies to help every candidate present their best self during interviews.
               </p>
             </div>
           </div>

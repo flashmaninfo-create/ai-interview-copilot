@@ -4,7 +4,9 @@ const STATE = {
     EMPTY: 'empty',
     FORM: 'form',
     CARDS_LIST: 'cards-list',
-    IN_MEETING: 'in-meeting'
+    IN_MEETING: 'in-meeting',
+    FEEDBACK: 'feedback',
+    STEALTH_CONSOLE_SETUP: 'stealth-console-setup'
 };
 
 let currentState = STATE.EMPTY;
@@ -15,6 +17,21 @@ let sessionStartTime = null;
 let timerInterval = null;
 let currentKeywords = []; // Keywords for current meeting form
 
+// ===== DASHBOARD URL CONFIGURATION =====
+const DASHBOARD_URLS = {
+    PRODUCTION: 'https://xtroone.com',
+    DEV: 'https://ai-interview-copilot-kappa.vercel.app',
+    LOCAL: 'http://localhost:5173'
+};
+
+// Default to local for development, can be changed via settings
+let DASHBOARD_URL = DASHBOARD_URLS.LOCAL;
+
+// Helper function to get dashboard URL (can be extended to read from storage)
+function getDashboardUrl() {
+    return DASHBOARD_URL;
+}
+
 // ===== DOM ELEMENTS =====
 const elements = {
     // Views
@@ -22,7 +39,11 @@ const elements = {
     emptyStateView: null,
     formView: null,
     cardsListView: null,
+    cardsListView: null,
+    cardsListView: null,
     inMeetingView: null,
+    feedbackView: null,
+    stealthConsoleSetupView: null,
 
     // Buttons
     createNewBtn: null,
@@ -61,7 +82,15 @@ const elements = {
     activeMeetingSubtitle: null,
     activeMeetingPlatform: null,
     activeMeetingLanguage: null,
+    activeMeetingLanguage: null,
     sessionTimer: null,
+
+    // Feedback elements
+    downloadFeedbackBtn: null,
+    meetingRatingGroup: null,
+    appRatingGroup: null,
+    feedbackText: null,
+    submitFeedbackBtn: null,
 
     // Phase navigation
     phaseItems: null,
@@ -104,6 +133,7 @@ function initializeElements() {
     elements.formView = document.getElementById('formView');
     elements.cardsListView = document.getElementById('cardsListView');
     elements.inMeetingView = document.getElementById('inMeetingView');
+    elements.stealthConsoleSetupView = document.getElementById('stealthConsoleSetupView');
 
     // Buttons
     elements.createNewBtn = document.getElementById('createNewBtn');
@@ -113,6 +143,7 @@ function initializeElements() {
     elements.finishMeetingBtn = document.getElementById('finishMeetingBtn');
     elements.disconnectMeetingBtn = document.getElementById('disconnectMeetingBtn');
     elements.logoutBtn = document.getElementById('logoutBtn');
+    console.log('Logout button found:', elements.logoutBtn);
     elements.dashboardBtn = document.getElementById('dashboardBtn');
     elements.refreshBtn = document.getElementById('refreshBtn');
     elements.useThisPageLink = document.getElementById('useThisPageLink');
@@ -135,6 +166,7 @@ function initializeElements() {
     elements.interviewTypeInput = document.getElementById('interviewTypeInput');
     elements.techStackInput = document.getElementById('techStackInput');
     elements.jdInput = document.getElementById('jdInput');
+    elements.jobLiveCodingInput = document.getElementById('jobLiveCodingInput');
 
     elements.hrRoleInput = document.getElementById('hrRoleInput');
     elements.hrCompanyInput = document.getElementById('hrCompanyInput');
@@ -158,6 +190,25 @@ function initializeElements() {
     elements.assessmentPlatformInput = document.getElementById('assessmentPlatformInput');
     elements.assessmentLanguageInput = document.getElementById('assessmentLanguageInput');
     elements.assessmentTypeInput = document.getElementById('assessmentTypeInput');
+    elements.assessmentLiveCodingInput = document.getElementById('assessmentLiveCodingInput');
+    elements.assessmentResumeInput = document.getElementById('assessmentResumeInput');
+    elements.assessmentJdInput = document.getElementById('assessmentJdInput');
+
+    // Stealth Console Setup Elements
+    elements.stealthConsoleLink = document.getElementById('stealthConsoleLink');
+    elements.copyConsoleLinkBtn = document.getElementById('copyConsoleLinkBtn');
+    elements.consoleQrCode = document.getElementById('consoleQrCode');
+    elements.setupCurrentUrl = document.getElementById('setupCurrentUrl');
+    elements.setupUseThisPageBtn = document.getElementById('setupUseThisPageBtn');
+    elements.setupBackBtn = document.getElementById('setupBackBtn');
+    elements.setupConnectBtn = document.getElementById('setupConnectBtn');
+    elements.setupShareScreenBtn = document.getElementById('setupShareScreenBtn');
+    elements.screenShareStatus = document.getElementById('screenShareStatus');
+    elements.setupReadyBtn = document.getElementById('setupReadyBtn');
+
+    // Keywords
+    elements.keywordsInput = document.getElementById('keywordsInput');
+    elements.keywordsTags = document.getElementById('keywordsTags');
 
     // Live Coding elements
     elements.isLiveCoding = document.getElementById('isLiveCoding');
@@ -171,6 +222,14 @@ function initializeElements() {
     elements.activeMeetingPlatform = document.getElementById('activeMeetingPlatform');
     elements.activeMeetingLanguage = document.getElementById('activeMeetingLanguage');
     elements.sessionTimer = document.getElementById('sessionTimer');
+
+    // Feedback elements
+    elements.feedbackView = document.getElementById('feedbackView');
+    elements.downloadFeedbackBtn = document.getElementById('downloadFeedbackBtn');
+    elements.meetingRatingGroup = document.getElementById('meetingRatingGroup');
+    elements.appRatingGroup = document.getElementById('appRatingGroup');
+    elements.feedbackText = document.getElementById('feedbackText');
+    elements.submitFeedbackBtn = document.getElementById('submitFeedbackBtn');
 
     // Phase navigation
     elements.phaseItems = document.querySelectorAll('.phase-item');
@@ -200,9 +259,22 @@ function attachEventListeners() {
     elements.finishMeetingBtn?.addEventListener('click', handleFinishMeeting);
     elements.disconnectMeetingBtn?.addEventListener('click', handleDisconnectMeeting);
     elements.openConsoleLinkInMeeting?.addEventListener('click', handleDashboard);
+    
+    // Stealth Console Setup Buttons
+    elements.setupBackBtn?.addEventListener('click', handleSetupBack);
+    elements.setupConnectBtn?.addEventListener('click', handleStealthConnect);
+    elements.setupUseThisPageBtn?.addEventListener('click', handleUsePageInSetup);
+    elements.copyConsoleLinkBtn?.addEventListener('click', handleCopyConsoleLink);
+    elements.setupShareScreenBtn?.addEventListener('click', handleShareScreen);
+    elements.setupReadyBtn?.addEventListener('click', handleImReady);
 
     // Footer buttons
-    elements.logoutBtn?.addEventListener('click', handleLogout);
+    if (elements.logoutBtn) {
+        elements.logoutBtn.addEventListener('click', handleLogout);
+        console.log('Logout event listener attached successfully');
+    } else {
+        console.error('Logout button not found during event listener attachment');
+    }
     elements.dashboardBtn?.addEventListener('click', handleDashboard);
 
     // Upgrade link
@@ -210,17 +282,17 @@ function attachEventListeners() {
     if (upgradeLink) {
         upgradeLink.addEventListener('click', (e) => {
             e.preventDefault();
-            chrome.tabs.create({ url: 'http://localhost:5173/pricing' });
+            chrome.tabs.create({ url: `${getDashboardUrl()}/pricing` });
         });
     }
 
     // Auth buttons (External Links)
     elements.loginBtn?.addEventListener('click', () => {
-        chrome.tabs.create({ url: 'http://localhost:5173/login' });
+        chrome.tabs.create({ url: `${getDashboardUrl()}/login` });
     });
 
     elements.signupBtn?.addEventListener('click', () => {
-        chrome.tabs.create({ url: 'http://localhost:5173/signup' });
+        chrome.tabs.create({ url: `${getDashboardUrl()}/signup` });
     });
 
     // Scenario change
@@ -247,6 +319,16 @@ function attachEventListeners() {
         }
     });
 
+    // Keywords input
+    if (elements.keywordsInput) {
+        elements.keywordsInput.addEventListener('keydown', handleKeywordInput);
+    }
+
+    // Keywords tags (delegation for delete)
+    if (elements.keywordsTags) {
+        elements.keywordsTags.addEventListener('click', handleKeywordDelete);
+    }
+
     // Event delegation for dynamically created card buttons
     if (elements.cardsContainer) {
         elements.cardsContainer.addEventListener('click', (e) => {
@@ -257,7 +339,7 @@ function attachEventListeners() {
             if (!meetingId) return;
 
             if (target.classList.contains('card-start-btn')) {
-                startMeetingById(meetingId);
+                handleStartAttempt(meetingId);
             } else if (target.classList.contains('card-resume-btn')) {
                 resumeMeetingById(meetingId);
             } else if (target.classList.contains('card-edit-btn')) {
@@ -267,6 +349,47 @@ function attachEventListeners() {
             }
         });
     }
+
+    // Feedback Listeners
+    if (elements.downloadFeedbackBtn) {
+        elements.downloadFeedbackBtn.addEventListener('click', handleDownloadFeedback);
+    }
+    if (elements.submitFeedbackBtn) {
+        elements.submitFeedbackBtn.addEventListener('click', handleSubmitFeedback);
+    }
+    
+    // Rating selection logic
+    if (elements.meetingRatingGroup) {
+        elements.meetingRatingGroup.addEventListener('click', (e) => {
+            if (e.target.classList.contains('rating-pill')) {
+                // Remove active from siblings
+                Array.from(elements.meetingRatingGroup.children).forEach(c => c.classList.remove('active'));
+                e.target.classList.add('active');
+            }
+        });
+    }
+    if (elements.appRatingGroup) {
+        elements.appRatingGroup.addEventListener('click', (e) => {
+            if (e.target.classList.contains('star')) {
+                const value = parseInt(e.target.dataset.value);
+                Array.from(elements.appRatingGroup.children).forEach(c => {
+                    const starVal = parseInt(c.dataset.value);
+                    if (starVal <= value) c.classList.add('active');
+                    else c.classList.remove('active');
+                });
+                elements.appRatingGroup.dataset.selectedValue = value;
+            }
+        });
+    }
+
+    // Fallback: Ensure logout button has event listener (direct DOM query)
+    setTimeout(() => {
+        const logoutBtnDirect = document.getElementById('logoutBtn');
+        if (logoutBtnDirect && !logoutBtnDirect.onclick) {
+            console.log('Attaching fallback logout listener via direct DOM query');
+            logoutBtnDirect.addEventListener('click', handleLogout);
+        }
+    }, 100);
 }
 
 // ===== STATE TRANSITIONS =====
@@ -299,6 +422,23 @@ function setState(newState) {
             break;
         case STATE.IN_MEETING:
             if (elements.inMeetingView) elements.inMeetingView.style.display = 'block';
+            setActivePhase('during');
+            break;
+        case STATE.FEEDBACK:
+            if (elements.feedbackView) {
+                elements.feedbackView.style.display = 'block';
+                // Reset form state
+                if (elements.feedbackText) elements.feedbackText.value = '';
+                if (elements.meetingRatingGroup) Array.from(elements.meetingRatingGroup.children).forEach(c => c.classList.remove('active'));
+                if (elements.appRatingGroup) {
+                    Array.from(elements.appRatingGroup.children).forEach(c => c.classList.remove('active'));
+                    delete elements.appRatingGroup.dataset.selectedValue;
+                }
+            }
+            setActivePhase('after');
+            break;
+        case STATE.STEALTH_CONSOLE_SETUP:
+            if (elements.stealthConsoleSetupView) elements.stealthConsoleSetupView.style.display = 'block';
             setActivePhase('during');
             break;
     }
@@ -469,7 +609,9 @@ async function handleSave(e) {
 
         // Backward compatibility
         additionalInfo: JSON.stringify(interviewContext),
-        keywords: [],
+        // Backward compatibility
+        additionalInfo: JSON.stringify(interviewContext),
+        keywords: currentKeywords,
 
         createdAt: editingId ? savedMeetings.find(m => m.id === editingId)?.createdAt : new Date().toISOString(),
         updatedAt: new Date().toISOString()
@@ -517,6 +659,162 @@ async function handleSave(e) {
     // Render all cards
     renderMeetingCards();
     setState(STATE.CARDS_LIST);
+    renderMeetingCards();
+    setState(STATE.CARDS_LIST);
+}
+
+// Function to handle opening the Start flow
+function handleStartAttempt(meetingId) {
+    const meeting = savedMeetings.find(m => m.id === meetingId);
+    if (!meeting) return;
+    
+    // Set as current meeting for session
+    window.currentMeeting = meeting;
+    
+    // Check if live coding mode is enabled (for job-interview or online-assessment)
+    const isLiveCodingEnabled = meeting.interviewContext?.liveCoding === true;
+    
+    if (meeting.scenario === 'online-assessment' || (meeting.scenario === 'job-interview' && isLiveCodingEnabled)) {
+        // Go to Stealth Console Setup flow for screen capture assistance
+        setupStealthConsoleView(meeting);
+        setState(STATE.STEALTH_CONSOLE_SETUP);
+    } else {
+        // Direct start for other types (audio only)
+        startSession(meeting);
+    }
+}
+
+function setupStealthConsoleView(meeting) {
+    // Generate the console URL
+    const consoleUrl = `${getDashboardUrl()}/dashboard/console`;
+    
+    if (elements.stealthConsoleLink) {
+        elements.stealthConsoleLink.textContent = consoleUrl;
+        elements.stealthConsoleLink.href = consoleUrl;
+    }
+    
+    // Show current tab URL
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        if (tabs[0] && elements.setupCurrentUrl) {
+            elements.setupCurrentUrl.textContent = tabs[0].url;
+        }
+    });
+
+    // TODO: Generate QR Code
+    if (elements.consoleQrCode) {
+        elements.consoleQrCode.textContent = "QR Code coming soon";
+    }
+}
+
+function handleSetupBack() {
+    setState(STATE.CARDS_LIST);
+}
+
+function handleCopyConsoleLink() {
+    const url = elements.stealthConsoleLink?.href;
+    if (url) {
+        navigator.clipboard.writeText(url).then(() => {
+            const originalIcon = elements.copyConsoleLinkBtn.innerHTML;
+            elements.copyConsoleLinkBtn.innerHTML = '<span style="color: #4CAF50;">✓</span>';
+            setTimeout(() => {
+                elements.copyConsoleLinkBtn.innerHTML = originalIcon;
+            }, 2000);
+        });
+    }
+}
+
+function handleUsePageInSetup() {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        const tab = tabs[0];
+        if (tab && window.currentMeeting) {
+            // Update current meeting URL in memory
+            window.currentMeeting.meetingUrl = tab.url;
+            window.currentMeeting.title = tab.title || window.currentMeeting.title; // Optional: update title? Maybe not.
+            
+            // Save to storage
+            const index = savedMeetings.findIndex(m => m.id === window.currentMeeting.id);
+            if (index !== -1) {
+                savedMeetings[index] = window.currentMeeting;
+                saveMeetingsData();
+            }
+            
+            if (elements.setupCurrentUrl) {
+                elements.setupCurrentUrl.textContent = tab.url;
+                elements.setupCurrentUrl.style.color = '#4CAF50'; // Green to indicate success
+            }
+        }
+    });
+}
+
+function handleStealthConnect() {
+    if (window.currentMeeting) {
+        startSession(window.currentMeeting);
+    }
+}
+
+// Handle Share Screen button click
+async function handleShareScreen() {
+    try {
+        // Disable button while processing
+        if (elements.setupShareScreenBtn) {
+            elements.setupShareScreenBtn.disabled = true;
+            elements.setupShareScreenBtn.textContent = 'Starting...';
+        }
+
+        // Request screen capture permission and start
+        // This sends a message to background.js to initiate screen capture
+        const response = await new Promise((resolve) => {
+            chrome.runtime.sendMessage({
+                type: 'START_SCREEN_CAPTURE',
+                data: { meetingId: window.currentMeeting?.id }
+            }, resolve);
+        });
+
+        if (response && response.success) {
+            console.log('[Popup] Screen capture started successfully');
+            
+            // Show success status
+            if (elements.screenShareStatus) {
+                elements.screenShareStatus.style.display = 'flex';
+            }
+            
+            // Hide the share button
+            if (elements.setupShareScreenBtn) {
+                elements.setupShareScreenBtn.style.display = 'none';
+            }
+            
+            // Enable "I'm Ready" button
+            if (elements.setupReadyBtn) {
+                elements.setupReadyBtn.disabled = false;
+            }
+        } else {
+            throw new Error(response?.error || 'Failed to start screen capture');
+        }
+    } catch (error) {
+        console.error('[Popup] Screen capture error:', error);
+        alert('Failed to start screen sharing: ' + error.message);
+        
+        // Re-enable button on failure
+        if (elements.setupShareScreenBtn) {
+            elements.setupShareScreenBtn.disabled = false;
+            elements.setupShareScreenBtn.innerHTML = `
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                    <line x1="8" y1="21" x2="16" y2="21"></line>
+                    <line x1="12" y1="17" x2="12" y2="21"></line>
+                </svg>
+                Share Entire Screen
+            `;
+        }
+    }
+}
+
+// Handle "I'm Ready" button click - finalize and start session
+function handleImReady() {
+    if (window.currentMeeting) {
+        // Start the actual meeting session
+        startSession(window.currentMeeting);
+    }
 }
 
 function handleBack(e) {
@@ -538,26 +836,26 @@ function handleBack(e) {
     }
 }
 
-function handleStart(e) {
-    e.preventDefault();
 
-    if (!currentMeeting) {
-        showAlert('No meeting data available', 'warning');
-        return;
-    }
+// Logic moved to handleStartAttempt and startSession
+function startSession(meeting) {
+    if (!meeting) return;
 
+    // Update global currentMeeting if not set
+    window.currentMeeting = meeting;
+    
     // Update In Meeting view with meeting data
     if (elements.activeMeetingTitle) {
-        elements.activeMeetingTitle.textContent = currentMeeting.title || 'Meeting';
+        elements.activeMeetingTitle.textContent = meeting.title || 'Meeting';
     }
     if (elements.activeMeetingSubtitle) {
-        elements.activeMeetingSubtitle.textContent = currentMeeting.subtitle || 'No description';
+        elements.activeMeetingSubtitle.textContent = meeting.subtitle || 'No description';
     }
     if (elements.activeMeetingPlatform) {
-        elements.activeMeetingPlatform.textContent = currentMeeting.platform || 'Web Browser';
+        elements.activeMeetingPlatform.textContent = meeting.platform || 'Web Browser';
     }
     if (elements.activeMeetingLanguage) {
-        elements.activeMeetingLanguage.textContent = capitalizeFirst(currentMeeting.meetingLanguage || 'English');
+        elements.activeMeetingLanguage.textContent = capitalizeFirst(meeting.meetingLanguage || 'English');
     }
 
     // Start session timer
@@ -571,7 +869,7 @@ function handleStart(e) {
     // Send message to background script to start the meeting
     chrome.runtime.sendMessage({
         type: 'START_MEETING',
-        meeting: currentMeeting
+        meeting: meeting
     }, (response) => {
         if (response && response.success) {
             console.log('Meeting started successfully');
@@ -594,9 +892,15 @@ function handleStart(e) {
             // Revert state
             sessionActive = false;
             stopTimer();
-            setState(STATE.CARD);
+            setState(STATE.CARDS_LIST);
         }
     });
+}
+
+// Deprecated old handleStart
+function handleStart(e) {
+    e.preventDefault();
+    if (window.currentMeeting) startSession(window.currentMeeting);
 }
 
 // Start session timer
@@ -629,22 +933,107 @@ function stopTimer() {
 // Duplicate handlers removed - see below
 
 // End meeting session
+// End meeting session
 function endMeetingSession() {
     sessionActive = false;
     stopTimer();
 
-    // Clear active meeting
-    activeMeetingId = null;
+    // Show Feedback View instead of CARDS_LIST directly
+    setState(STATE.FEEDBACK);
+    
+    // We don't clear activeMeetingId yet because we need it for feedback  
+    // Clear session storage but keep activeSessionId for a bit? 
+    // Actually, background handles the session logic. We just need the ID for the API call.
+    // chrome.storage.local.remove(['activeSessionId', 'consoleToken']);
 
-    // Clear session storage
-    chrome.storage.local.remove(['activeSessionId', 'consoleToken']);
+    // Reset phase to "After the Meeting" happens in setState(STATE.FEEDBACK)
+}
 
-    // Reset phase to "Before the Meeting"
-    setActivePhase('before');
+// Feedback Handlers
+async function handleDownloadFeedback() {
+    if (!activeMeetingId) return;
 
-    // Return to cards list
-    renderMeetingCards();
-    setState(STATE.CARDS_LIST);
+    const originalText = elements.downloadFeedbackBtn.innerHTML;
+    elements.downloadFeedbackBtn.innerHTML = 'Generating...';
+    elements.downloadFeedbackBtn.disabled = true;
+
+    try {
+        console.log('Requesting report for:', activeMeetingId);
+        const response = await chrome.runtime.sendMessage({
+            type: 'DOWNLOAD_REPORT',
+            data: { sessionId: activeMeetingId }
+        });
+
+        if (response && response.success && response.content) {
+            // Trigger download
+            const blob = new Blob([response.content], { type: 'text/markdown' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `interview-report-${new Date().toISOString().split('T')[0]}.md`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        } else {
+            alert('Failed to generate report. Please try again.');
+        }
+    } catch (error) {
+        console.error('Download error:', error);
+        alert('Error: ' + error.message);
+    } finally {
+        elements.downloadFeedbackBtn.innerHTML = originalText;
+        elements.downloadFeedbackBtn.disabled = false;
+    }
+}
+
+async function handleSubmitFeedback() {
+    if (!activeMeetingId) {
+        setState(STATE.CARDS_LIST);
+        renderSavedMeetings();
+        return;
+    }
+
+    // Collect data
+    const feedbackText = elements.feedbackText ? elements.feedbackText.value : '';
+    
+    // Get ratings
+    let meetingRating = 0;
+    if (elements.meetingRatingGroup) {
+        const activeOption = elements.meetingRatingGroup.querySelector('.active');
+        if (activeOption) meetingRating = parseInt(activeOption.dataset.value);
+    }
+
+    let appRating = 0;
+    if (elements.appRatingGroup && elements.appRatingGroup.dataset.selectedValue) {
+        appRating = parseInt(elements.appRatingGroup.dataset.selectedValue);
+    }
+
+    elements.submitFeedbackBtn.innerHTML = 'Saving...';
+    elements.submitFeedbackBtn.disabled = true;
+
+    try {
+        await chrome.runtime.sendMessage({
+            type: 'SAVE_FEEDBACK',
+            data: {
+                sessionId: activeMeetingId,
+                ratingMeeting: meetingRating,
+                ratingApp: appRating,
+                feedback: feedbackText
+            }
+        });
+        
+    } catch (error) {
+        console.error('Feedback save error:', error);
+    } finally {
+        elements.submitFeedbackBtn.innerHTML = 'Done';
+        elements.submitFeedbackBtn.disabled = false;
+        
+        activeMeetingId = null;
+        chrome.storage.local.remove(['activeSessionId', 'consoleToken']);
+        renderSavedMeetings();
+        setState(STATE.CARDS_LIST);
+    }
 }
 
 // ===== MULTIPLE MEETINGS MANAGEMENT =====
@@ -927,7 +1316,12 @@ function editMeetingById(meetingId) {
     elements.meetingUrlInput.value = meeting.meetingUrl || '';
     elements.isDesktopCall.checked = meeting.isDesktopCall || false;
     elements.meetingLanguageInput.value = meeting.meetingLanguage || 'english';
+
     elements.translationLanguageInput.value = meeting.translationLanguage || 'none';
+
+    // Keywords
+    currentKeywords = meeting.keywords || [];
+    renderKeywords();
 
     // Store the ID so we can update instead of create
     elements.saveBtn.dataset.editingId = meetingId;
@@ -998,6 +1392,7 @@ function handleUseThisPage(e) {
 }
 
 async function handleLogout(e) {
+    console.log('Logout button clicked');
     e.preventDefault();
 
     // Check if session is active
@@ -1014,16 +1409,16 @@ async function handleLogout(e) {
     // Clear all user data
     chrome.storage.local.clear(() => {
         // Send message to background to clear session
-        chrome.runtime.sendMessage({ type: 'LOGOUT' });
+        chrome.runtime.sendMessage({ type: 'LOGOUT' }, () => {
+            // Clear local state
+            savedMeetings = [];
+            activeMeetingId = null;
 
-        // Clear local state
-        savedMeetings = [];
-        activeMeetingId = null;
-
-        // Return to empty state (login view would go here if implemented)
-        setState(STATE.EMPTY);
-
-        console.log('Logged out successfully');
+            console.log('Logged out successfully');
+            
+            // Reload the popup to show logged-out state
+            window.location.reload();
+        });
     });
 }
 
@@ -1031,7 +1426,7 @@ function handleDashboard(e) {
     e.preventDefault();
 
     // Open dashboard in new tab
-    chrome.tabs.create({ url: 'http://localhost:5173/dashboard' });
+    chrome.tabs.create({ url: `${getDashboardUrl()}/dashboard` });
 }
 
 async function handleFinishMeeting(e) {
@@ -1217,7 +1612,7 @@ function handleAuthToggle(e) {
     } else {
         // Switch to signup mode
         elements.authTitle.textContent = 'Create Account';
-        elements.authSubtitle.textContent = 'Join to get your AI Interview Copilot';
+        elements.authSubtitle.textContent = 'Join to get your AI Xtroone';
         elements.authSubmitBtn.textContent = 'Sign Up';
         elements.authToggleText.textContent = 'Already have an account?';
         elements.authToggleLink.textContent = 'Sign In';
@@ -1516,6 +1911,9 @@ function saveDraft() {
     if (elements.assessmentLanguageInput) draft.assessmentLanguage = elements.assessmentLanguageInput.value;
     if (elements.assessmentTypeInput) draft.assessmentType = elements.assessmentTypeInput.value;
 
+    // Keywords
+    draft.keywords = currentKeywords;
+
     chrome.storage.local.set({ meetingDraft: draft });
 }
 
@@ -1561,6 +1959,12 @@ function restoreDraft(draft) {
     if (draft.assessmentPlatform && elements.assessmentPlatformInput) elements.assessmentPlatformInput.value = draft.assessmentPlatform;
     if (draft.assessmentLanguage && elements.assessmentLanguageInput) elements.assessmentLanguageInput.value = draft.assessmentLanguage;
     if (draft.assessmentType && elements.assessmentTypeInput) elements.assessmentTypeInput.value = draft.assessmentType;
+
+    // Keywords
+    if (draft.keywords) {
+        currentKeywords = draft.keywords;
+        renderKeywords();
+    }
 }
 
 function clearForm() {
@@ -1610,6 +2014,62 @@ function clearForm() {
     if (elements.assessmentPlatformInput) elements.assessmentPlatformInput.value = '';
     if (elements.assessmentLanguageInput) elements.assessmentLanguageInput.value = '';
     if (elements.assessmentTypeInput) elements.assessmentTypeInput.value = 'algo';
+
+    // Keywords
+    currentKeywords = [];
+    renderKeywords();
+    if (elements.keywordsInput) elements.keywordsInput.value = '';
+}
+
+// ===== KEYWORD FUNCTIONS =====
+function handleKeywordInput(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault(); // Prevent form submission
+
+        const value = e.target.value.trim();
+        if (value && !currentKeywords.includes(value)) {
+            currentKeywords.push(value);
+            renderKeywords();
+            e.target.value = '';
+            
+            // Save draft
+            saveDraft();
+        } else if (currentKeywords.includes(value)) {
+            // Optional: highlight existing tag or show feedback
+            e.target.value = '';
+        }
+    }
+}
+
+function handleKeywordDelete(e) {
+    if (e.target.closest('.remove-tag-btn')) {
+        const tag = e.target.closest('.keyword-tag');
+        if (tag) {
+            const keyword = tag.dataset.keyword;
+            currentKeywords = currentKeywords.filter(k => k !== keyword);
+            renderKeywords();
+            
+            // Save draft
+            saveDraft();
+        }
+    }
+}
+
+function renderKeywords() {
+    if (!elements.keywordsTags) return;
+
+    elements.keywordsTags.innerHTML = '';
+    
+    currentKeywords.forEach(keyword => {
+        const tag = document.createElement('div');
+        tag.className = 'keyword-tag';
+        tag.dataset.keyword = keyword;
+        tag.innerHTML = `
+            <span>${keyword}</span>
+            <button class="remove-tag-btn">×</button>
+        `;
+        elements.keywordsTags.appendChild(tag);
+    });
 }
 
 function updateCard(meeting) {

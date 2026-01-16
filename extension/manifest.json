@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Interview Copilot",
+  "name": "Xtroone",
   "version": "1.0.0",
   "description": "AI-powered interview assistant for conversational interviews, live coding, and online assessments",
   "permissions": [
@@ -35,7 +35,9 @@
         "https://*/*",
         "http://localhost:5173/*",
         "https://localhost:5173/*",
-        "http://127.0.0.1:5173/*"
+        "http://127.0.0.1:5173/*",
+        "https://xtroone.com/*",
+        "https://ai-interview-copilot-kappa.vercel.app/*"
       ],
       "js": [
         "content-script.js"

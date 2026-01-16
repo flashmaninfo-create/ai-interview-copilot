@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Sparkles, Github, Twitter, Linkedin } from 'lucide-react';
+import { Github, Twitter, Linkedin } from 'lucide-react';
 
 import { cn } from '../../lib/utils';
 
@@ -18,10 +18,11 @@ export function Footer({ variant = 'dark' }: FooterProps) {
           {/* Brand Column */}
           <div className="col-span-1 md:col-span-1">
             <Link to="/" className="flex items-center gap-2 mb-4 group">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white shadow-lg">
-                <Sparkles className="w-5 h-5 fill-white/20" />
-              </div>
-              <span className={cn("font-bold text-lg", isLight ? "text-slate-900" : "text-white")}>Interview Copilot</span>
+              <img
+                src="/assets/images/XTROONE.svg"
+                alt="Xtroone"
+                className="w-32"
+              />
             </Link>
             <p className={cn("text-sm leading-relaxed mb-6", isLight ? "text-slate-600" : "text-slate-400")}>
               Ace your next interview with real-time AI assistance.
@@ -73,7 +74,7 @@ export function Footer({ variant = 'dark' }: FooterProps) {
 
         <div className={cn("pt-8 flex flex-col md:flex-row justify-between items-center gap-4 border-t", isLight ? "border-slate-200" : "border-white/5")}>
           <p className="text-slate-500 text-sm">
-            © {currentYear} Interview Copilot. All rights reserved.
+            © {currentYear} Xtroone. All rights reserved.
           </p>
           <div className="flex items-center gap-2 text-sm text-slate-500">
             <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>

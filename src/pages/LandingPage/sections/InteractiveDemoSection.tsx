@@ -36,7 +36,7 @@ const InteractiveDemoSection = () => {
             Built for Every Interview Type
           </h2>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            Whether you're interviewing for a technical role or a leadership position, Interview Copilot adapts to your needs
+            Whether you're interviewing for a technical role or a leadership position, Xtroone adapts to your needs
           </p>
         </div>
 
@@ -99,7 +99,7 @@ const InteractiveDemoSection = () => {
             <div>
               <h4 className="font-semibold text-foreground mb-2">Designed for Professional Preparation</h4>
               <p className="text-muted-foreground">
-                Interview Copilot is a preparation tool that helps you perform at your best. Users maintain full control over when and how assistance is used. We believe in empowering candidates with the right tools while respecting professional ethics.
+                Xtroone is a preparation tool that helps you perform at your best. Users maintain full control over when and how assistance is used. We believe in empowering candidates with the right tools while respecting professional ethics.
               </p>
             </div>
           </div>

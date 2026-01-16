@@ -38,9 +38,9 @@ const TermsOfServicePage = () => {
       title: '1. Acceptance of Terms',
       icon: 'DocumentCheckIcon',
       content: [
-        'By accessing or using Interview Copilot ("the Service"), you agree to be bound by these Terms of Service and all applicable laws and regulations.',
+        'By accessing or using Xtroone ("the Service"), you agree to be bound by these Terms of Service and all applicable laws and regulations.',
         'If you do not agree with any part of these terms, you may not access or use the Service.',
-        'These terms constitute a legally binding agreement between you ("User" or "you") and Interview Copilot Inc. ("Company", "we", "us", or "our").',
+        'These terms constitute a legally binding agreement between you ("User" or "you") and Xtroone Inc. ("Company", "we", "us", or "our").',
         "We reserve the right to modify these terms at any time. Material changes will be communicated via email with 30 days' notice."
       ]
     },
@@ -49,7 +49,7 @@ const TermsOfServicePage = () => {
       title: '2. Service Description',
       icon: 'SparklesIcon',
       content: [
-        'Interview Copilot provides real-time AI-powered interview assistance through audio transcription and contextual response generation.',
+        'Xtroone provides real-time AI-powered interview assistance through audio transcription and contextual response generation.',
         'The Service includes: (a) Chrome Extension for overlay interface, (b) Stealth Console for multi-device access, (c) Resume and job description analysis, (d) Real-time transcription, (e) AI response suggestions.',
         'The Service is designed as a supplementary preparation tool. It does NOT guarantee interview success, job offers, or specific outcomes.',
         'AI-generated responses are suggestions only. Users are responsible for evaluating and adapting all suggestions.'
@@ -82,7 +82,7 @@ const TermsOfServicePage = () => {
       title: '5. Intellectual Property Rights',
       icon: 'LockClosedIcon',
       content: [
-        'The Service is owned by Interview Copilot Inc. and protected by copyright, trademark, and other IP laws.',
+        'The Service is owned by Xtroone Inc. and protected by copyright, trademark, and other IP laws.',
         'We grant you a limited, non-exclusive, non-transferable, revocable license to access and use the Service.',
         'You retain ownership of all content you upload (resumes, job descriptions, personal information).',
         'AI-generated responses are created using your input and our proprietary algorithms. You may use these responses.'
@@ -242,7 +242,7 @@ const TermsOfServicePage = () => {
               <div>
                 <h3 className="font-headline text-xl font-semibold text-primary mb-3">What You're Agreeing To:</h3>
                 <p className="font-body text-foreground leading-relaxed">
-                  You're agreeing to use Interview Copilot responsibly as a preparation tool. We provide AI assistance, but you're responsible for how you use it and for your interview outcomes.
+                  You're agreeing to use Xtroone responsibly as a preparation tool. We provide AI assistance, but you're responsible for how you use it and for your interview outcomes.
                 </p>
               </div>
               <div>
@@ -268,7 +268,7 @@ const TermsOfServicePage = () => {
           <div className="bg-accent/10 border-2 border-accent rounded-lg p-8">
             <Icon name="DocumentCheckIcon" size={48} className="text-accent mx-auto mb-4" variant="solid" />
             <h3 className="font-headline text-2xl font-bold text-primary mb-4">
-              By Using Interview Copilot, You Agree to These Terms
+              By Using Xtroone, You Agree to These Terms
             </h3>
             <p className="font-body text-foreground mb-6">
               If you have questions or concerns about any section, please contact us before using the Service.

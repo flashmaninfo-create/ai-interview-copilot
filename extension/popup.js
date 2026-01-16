@@ -446,7 +446,9 @@ async function handleSave(e) {
         interviewContext = {
             platform: elements.assessmentPlatformInput?.value || '',
             language: elements.assessmentLanguageInput?.value || '',
-            type: elements.assessmentTypeInput?.value || 'algo'
+            type: elements.assessmentTypeInput?.value || 'algo',
+            // Live Coding for Online Assessment
+            isLiveCoding: document.getElementById('assessmentLiveCoding')?.checked ?? true
         };
     }
 

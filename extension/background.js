@@ -632,7 +632,30 @@ class BackgroundService {
           type: 'CONSOLE_TOKEN',
           data: { token: consoleToken, sessionId }
         });
-        // NOTE: Auto screen share prompt removed - screenshare dialog will be triggered by Snap button click
+
+        // Auto-start screen share if Live Coding is enabled
+        // Check from stored session context (more reliable than closure)
+        const sessionContext = this.state.data.activeSession?.interviewContext || {};
+        const isLiveCoding = sessionContext.isLiveCoding === true;
+
+        console.log('[Background] Session context for screen share check:', {
+          scenario: sessionContext.scenario,
+          isLiveCoding: sessionContext.isLiveCoding,
+          willPrompt: isLiveCoding
+        });
+
+        if (isLiveCoding) {
+          console.log('[Background] Live Coding mode detected - prompting for screen share...');
+          // Delay slightly to let overlay load first
+          setTimeout(async () => {
+            try {
+              await this.startScreenShare();
+              console.log('[Background] Screen share started for Live Coding mode');
+            } catch (err) {
+              console.log('[Background] Screen share prompt may have been dismissed:', err.message);
+            }
+          }, 1000);
+        }
       }, 500);
 
       sendResponse({
@@ -1566,42 +1589,105 @@ class BackgroundService {
   }
 
   async takeScreenshot(data, sendResponse) {
-    if (!this.sessionActive || !this.tabId) {
+    if (!this.sessionActive) {
       if (sendResponse) sendResponse({ success: false, error: 'No active session' });
       return;
     }
 
-    console.log('[Background] Taking screenshot via native captureVisibleTab...');
-
     try {
-      // Get the window ID for the tab
-      const tab = await chrome.tabs.get(this.tabId);
-      const windowId = tab.windowId;
+      let dataUrl;
+      let captureMethod = 'native';
 
-      // HIDE OVERLAY before capture (so it doesn't appear in screenshot)
-      try {
-        await chrome.tabs.sendMessage(this.tabId, { type: 'HIDE_OVERLAY_FOR_CAPTURE' });
-        // Wait for overlay to fully hide (CSS transitions may need time)
-        await new Promise(resolve => setTimeout(resolve, 200));
-      } catch (e) {
-        console.log('[Background] Could not hide overlay (may not be present)');
+      // Check if Live Coding mode is enabled or if existing screen share
+      const sessionContext = this.state.data.activeSession?.interviewContext || {};
+      const isLiveCodingMode = sessionContext.isLiveCoding === true;
+
+      // UNIFIED LOGIC: Always try to capture the meeting tab first (most reliable)
+      // Screen share is only used as fallback if meeting tab capture fails
+      if (this.tabId) {
+        console.log('[Background] Taking screenshot via captureVisibleTab on meeting tab:', this.tabId);
+
+        try {
+          // Get meeting tab info
+          const meetingTab = await chrome.tabs.get(this.tabId);
+          const meetingWindowId = meetingTab.windowId;
+
+          // HIDE OVERLAY on meeting tab before capture
+          try {
+            await chrome.tabs.sendMessage(this.tabId, { type: 'HIDE_OVERLAY_FOR_CAPTURE' });
+            await new Promise(resolve => setTimeout(resolve, 150));
+          } catch (e) {
+            console.log('[Background] Could not hide overlay on meeting tab');
+          }
+
+          // Capture the meeting tab's window
+          dataUrl = await chrome.tabs.captureVisibleTab(meetingWindowId, { format: 'png' });
+          captureMethod = 'native';
+
+          // SHOW OVERLAY after capture
+          try {
+            await chrome.tabs.sendMessage(this.tabId, { type: 'SHOW_OVERLAY_AFTER_CAPTURE' });
+          } catch (e) {
+            console.log('[Background] Could not show overlay on meeting tab');
+          }
+
+          console.log('[Background] Meeting tab captured successfully');
+        } catch (tabErr) {
+          console.error('[Background] Failed to capture meeting tab:', tabErr.message);
+
+          // Fallback to screen share if available
+          if (this.isScreenSharing) {
+            console.log('[Background] Falling back to screen frame capture...');
+            try {
+              const frameResult = await chrome.runtime.sendMessage({ type: 'CAPTURE_SCREEN_FRAME' });
+              if (frameResult?.success && frameResult.data) {
+                dataUrl = frameResult.data;
+                captureMethod = 'screen';
+                console.log('[Background] Screen frame captured as fallback:', frameResult.width, 'x', frameResult.height);
+              }
+            } catch (screenErr) {
+              console.error('[Background] Screen frame fallback also failed:', screenErr.message);
+            }
+          }
+        }
       }
+      // No meeting tab available - try screen share only
+      else if (this.isScreenSharing) {
+        console.log('[Background] No meeting tab, using screen frame capture...');
 
-      // Use native Chrome API for instant capture
-      const dataUrl = await chrome.tabs.captureVisibleTab(windowId, { format: 'png' });
+        const frameResult = await chrome.runtime.sendMessage({ type: 'CAPTURE_SCREEN_FRAME' });
 
-      // SHOW OVERLAY after capture
-      try {
-        await chrome.tabs.sendMessage(this.tabId, { type: 'SHOW_OVERLAY_AFTER_CAPTURE' });
-      } catch (e) {
-        console.log('[Background] Could not show overlay (may not be present)');
+        if (frameResult && frameResult.success && frameResult.data) {
+          dataUrl = frameResult.data;
+          captureMethod = 'screen';
+          console.log('[Background] Screen frame captured:', frameResult.width, 'x', frameResult.height);
+        } else {
+          throw new Error('Screen frame capture failed: ' + (frameResult?.error || 'Unknown error'));
+        }
+      } else {
+        // No tab and no screen share
+        if (sendResponse) sendResponse({ success: false, error: 'No tab or screen share available for capture.' });
+        return;
       }
 
       if (!dataUrl) {
-        throw new Error('captureVisibleTab returned empty result');
+        throw new Error('Screenshot capture returned empty result');
       }
 
-      console.log('[Background] Native screenshot captured, size:', dataUrl.length);
+      console.log('[Background] Screenshot captured (' + captureMethod + '), size:', dataUrl.length);
+
+      // Get tab info for metadata (may not exist if using screen capture without tab)
+      let tabUrl = '';
+      let tabTitle = '';
+      try {
+        if (this.tabId) {
+          const tab = await chrome.tabs.get(this.tabId);
+          tabUrl = tab.url;
+          tabTitle = tab.title;
+        }
+      } catch (e) {
+        // Tab may not exist
+      }
 
       // Save to Supabase
       const sessionId = this.state.data.activeSession?.id;
@@ -1609,7 +1695,7 @@ class BackgroundService {
         const result = await supabaseREST.rpc('add_session_screenshot', {
           p_session_id: sessionId,
           p_image_url: dataUrl,
-          p_capture_method: 'native',
+          p_capture_method: captureMethod,
           p_platform_detected: this.state.data.activeSession?.platform || null,
           p_element_selector: null,
           p_width: null,
@@ -1618,8 +1704,8 @@ class BackgroundService {
           p_extracted_text: data?.extractedText || '',
           p_code_text: '',
           p_metadata: {
-            url: data?.url || tab.url,
-            title: data?.title || tab.title
+            url: data?.url || tabUrl,
+            title: data?.title || tabTitle
           }
         });
 
@@ -1632,7 +1718,7 @@ class BackgroundService {
             id: result?.screenshot_id,
             image_url: dataUrl,
             display_order: result?.display_order,
-            capture_method: 'native'
+            capture_method: captureMethod
           };
 
           // Notify console
@@ -2057,6 +2143,22 @@ class BackgroundService {
 
   async startScreenShare(streamId = null, sendResponse) {
     try {
+      // Focus the meeting tab first so the dialog appears on the correct window
+      if (this.tabId) {
+        try {
+          const tab = await chrome.tabs.get(this.tabId);
+          // Focus the window containing the meeting tab
+          await chrome.windows.update(tab.windowId, { focused: true });
+          // Activate the meeting tab
+          await chrome.tabs.update(this.tabId, { active: true });
+          console.log('[Background] Focused meeting tab before screen share dialog');
+          // Small delay to ensure tab is active
+          await new Promise(resolve => setTimeout(resolve, 100));
+        } catch (e) {
+          console.log('[Background] Could not focus meeting tab:', e.message);
+        }
+      }
+
       // Ensure offscreen document exists
       await this.createOffscreenDocument();
 

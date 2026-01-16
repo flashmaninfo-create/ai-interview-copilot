@@ -1,6 +1,8 @@
 // Interview Context Manager - Real-time context caching for instant AI responses
 // Maintains rolling transcript window and cached interview metadata
 
+import { IntentClassifier } from './intent-classifier.js';
+
 export class InterviewContextManager {
     constructor() {
         // Rolling transcript window (60-120 seconds)
@@ -31,6 +33,16 @@ export class InterviewContextManager {
             /^(have you ever|did you|do you)/i,
             /\?$/  // Ends with question mark
         ];
+
+        // SESSION MEMORY - tracks conversation history
+        this.sessionMemory = {
+            history: [],           // Last 5 Q&A pairs
+            maxHistory: 5,
+            last_mode: null,       // Last mode used (code/explain/help)
+            detected_lang: null,   // Detected programming language
+            code_written: '',      // Partial code already in editor
+            style_preference: 'iterative'
+        };
     }
 
     /**
@@ -137,10 +149,69 @@ export class InterviewContextManager {
             // Latest question (if detected)
             latestQuestion: this.getLatestQuestion(),
 
+            // Session memory
+            history: this.sessionMemory.history,
+            detectedLanguage: this.sessionMemory.detected_lang,
+            codeWritten: this.sessionMemory.code_written,
+            lastMode: this.sessionMemory.last_mode,
+
             // Timestamps for debugging
             oldestTranscript: this.rollingTranscripts[0]?.timestamp || null,
             newestTranscript: this.rollingTranscripts[this.rollingTranscripts.length - 1]?.timestamp || null
         };
+    }
+
+    /**
+     * Add Q&A pair to history (rolling window)
+     */
+    addToHistory(question, response, mode) {
+        this.sessionMemory.history.push({
+            question,
+            response: response.substring(0, 500), // Truncate for memory efficiency
+            mode,
+            timestamp: Date.now()
+        });
+
+        // Keep only last N entries
+        if (this.sessionMemory.history.length > this.sessionMemory.maxHistory) {
+            this.sessionMemory.history.shift();
+        }
+
+        // Track last mode
+        this.sessionMemory.last_mode = mode;
+
+        console.log('[InterviewContext] Added to history:', mode);
+    }
+
+    /**
+     * Set detected programming language
+     */
+    setDetectedLanguage(lang) {
+        if (lang) {
+            this.sessionMemory.detected_lang = lang;
+            console.log('[InterviewContext] Language detected:', lang);
+        }
+    }
+
+    /**
+     * Set partial code already written
+     */
+    setCodeWritten(code) {
+        this.sessionMemory.code_written = code || '';
+    }
+
+    /**
+     * Get conversation history for follow-up context
+     */
+    getHistory() {
+        return this.sessionMemory.history;
+    }
+
+    /**
+     * Classify follow-up intent
+     */
+    classifyIntent(input) {
+        return IntentClassifier.classify(input, this.sessionMemory.history);
     }
 
     /**
@@ -150,6 +221,14 @@ export class InterviewContextManager {
         this.rollingTranscripts = [];
         this.latestQuestion = null;
         this.questionTimestamp = 0;
+        this.sessionMemory = {
+            history: [],
+            maxHistory: 5,
+            last_mode: null,
+            detected_lang: null,
+            code_written: '',
+            style_preference: 'iterative'
+        };
         console.log('[InterviewContext] Context cleared');
     }
 }

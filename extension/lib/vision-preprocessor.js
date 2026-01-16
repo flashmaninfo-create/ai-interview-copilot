@@ -40,6 +40,96 @@ export class VisionPreprocessor {
     }
 
     /**
+     * Clean OCR output - removes noise and artifacts
+     */
+    cleanOCRText(text) {
+        if (!text) return '';
+
+        let cleaned = text;
+
+        // 1. Remove line numbers (e.g., "1 |", "23:", "  5  ")
+        cleaned = cleaned.replace(/^\s*\d+[\s|:]+/gm, '');
+
+        // 2. Remove UI artifacts (buttons, timestamps, usernames)
+        cleaned = cleaned.replace(/\b(Submit|Run|Test|Copy|Share)\b/gi, '');
+        cleaned = cleaned.replace(/\d{1,2}:\d{2}\s*(AM|PM)?/gi, ''); // Timestamps
+        cleaned = cleaned.replace(/@\w+/g, ''); // Usernames
+
+        // 3. Remove common LeetCode/HackerRank UI text
+        cleaned = cleaned.replace(/\b(Accepted|Wrong Answer|Runtime Error|Time Limit|Memory Limit)\b/gi, '');
+        cleaned = cleaned.replace(/\b(Easy|Medium|Hard)\b/gi, '');
+
+        // 4. Clean up extra whitespace
+        cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
+        cleaned = cleaned.replace(/[ \t]+/g, ' ');
+
+        return cleaned.trim();
+    }
+
+    /**
+     * Remove duplicate text blocks from merged screenshots
+     */
+    removeDuplicates(texts) {
+        const seen = new Set();
+        const unique = [];
+
+        for (const text of texts) {
+            // Normalize for comparison
+            const normalized = text.toLowerCase().replace(/\s+/g, ' ').trim();
+            if (normalized.length > 20 && !seen.has(normalized)) {
+                seen.add(normalized);
+                unique.push(text);
+            }
+        }
+
+        return unique;
+    }
+
+    /**
+     * Detect constraints from text (e.g., "1 <= n <= 10^5")
+     */
+    detectConstraints(text) {
+        const constraints = [];
+        const patterns = [
+            /\d+\s*[<≤]\s*\w+\s*[<≤]\s*\d+(\^\d+)?/g,  // Range constraints
+            /\w+\.length\s*[<≤]\s*\d+/g,               // Array length
+            /\-?\d+\s*[<≤]\s*\w+\[i\]/g,               // Element bounds
+            /O\([^)]+\)/g                               // Complexity hints
+        ];
+
+        for (const pattern of patterns) {
+            const matches = text.match(pattern);
+            if (matches) {
+                constraints.push(...matches);
+            }
+        }
+
+        return [...new Set(constraints)];
+    }
+
+    /**
+     * Detect function signature from code
+     */
+    detectFunctionSignature(text) {
+        const patterns = [
+            /def\s+(\w+)\s*\([^)]*\)\s*(->.*)?:/,           // Python
+            /function\s+(\w+)\s*\([^)]*\)/,                  // JavaScript
+            /const\s+(\w+)\s*=\s*\([^)]*\)\s*=>/,           // Arrow function
+            /public\s+\w+\s+(\w+)\s*\([^)]*\)/,             // Java
+            /\w+\s+(\w+)\s*\([^)]*\)\s*{/                    // C/C++
+        ];
+
+        for (const pattern of patterns) {
+            const match = text.match(pattern);
+            if (match) {
+                return match[0];
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Extract text using browser-based OCR (simulated)
      * In production, integrate with Tesseract.js or similar
      */

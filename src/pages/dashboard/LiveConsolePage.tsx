@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useConsoleSync } from '../../hooks/useConsoleSync';
 import { creditService } from '../../lib/services/creditService';
 import { supabase } from '../../lib/supabase';
+import ReactMarkdown from 'react-markdown';
 import {
   Mic,
   Lightbulb,
@@ -17,7 +18,9 @@ import {
   Send,
   Loader2,
   CheckCircle,
-  X
+  X,
+  Copy,
+  RotateCcw
 } from 'lucide-react';
 
 // Screenshot type from backend
@@ -384,9 +387,9 @@ export function LiveConsolePage() {
                             : 'border-white/10 hover:border-white/30'
                             }`}
                         >
-                          <img src={s.image_url || ''} alt="Snap" className="w-full h-full object-cover" />
+                          <img src={s.image_url || ''} alt="Snap" className="w-full h-full object-cover pointer-events-none" />
                           {s.is_selected_for_ai && (
-                            <div className="absolute inset-0 bg-green-500/20 flex items-center justify-center">
+                            <div className="absolute inset-0 bg-green-500/20 flex items-center justify-center pointer-events-none">
                               <CheckCircle className="w-4 h-4 text-white drop-shadow-md" />
                             </div>
                           )}
@@ -531,7 +534,7 @@ export function LiveConsolePage() {
               {/* AI Assistance Column - Flexible Rest Width (Left) */}
               <div className="flex-1 bg-[#1f1f1f] border-r border-white/5 flex flex-col relative">
 
-                <div className="flex-1 overflow-y-auto p-4">
+                <div className="flex-1 overflow-y-auto p-4 scrollbar-dark">
                   {loading && (
                     <div className="bg-white/5 border border-white/10 rounded-lg p-5 mb-4 backdrop-blur-sm animate-in fade-in slide-in-from-bottom-2">
                       <div className="flex items-center gap-4">
@@ -555,14 +558,55 @@ export function LiveConsolePage() {
 
                   {!loading && Array.isArray(hints) && hints.map((h, i) => {
                     if (!h) return null;
+                    const hintText = h.hint || h.text || '';
+                    const modelName = h.model || h.provider || 'AI';
+                    const modeColors: Record<string, string> = {
+                      code: 'bg-blue-500/20 text-blue-400',
+                      explain: 'bg-purple-500/20 text-purple-400',
+                      help: 'bg-amber-500/20 text-amber-400',
+                      answer: 'bg-emerald-500/20 text-emerald-400',
+                      custom: 'bg-gray-500/20 text-gray-400'
+                    };
+                    const modeColor = modeColors[h.type] || modeColors.help;
+
                     return (
-                      <div key={i} className="bg-white/5 border border-white/10 rounded-lg p-5 mb-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">Insight</span>
-                          <span className="text-xs text-gray-500">{h.timestamp}</span>
+                      <div key={i} className="bg-white/5 border border-white/10 rounded-lg overflow-hidden mb-4">
+                        {/* Header */}
+                        <div className="flex items-center justify-between px-4 py-2.5 bg-white/5 border-b border-white/10">
+                          <div className="flex items-center gap-2">
+                            <span className={`text-[10px] px-2 py-0.5 rounded font-medium uppercase ${modeColor}`}>
+                              {h.type || 'help'}
+                            </span>
+                            <span className="text-xs text-gray-500">{modelName}</span>
+                          </div>
+                          <span className="text-[10px] text-gray-500">{h.timestamp}</span>
                         </div>
-                        <div className="text-white whitespace-pre-wrap leading-relaxed">
-                          {h.hint || h.text || ''}
+
+                        {/* Content with Markdown */}
+                        <div className="p-4 prose prose-invert prose-sm max-w-none 
+                          prose-headings:text-white prose-headings:font-semibold
+                          prose-p:text-gray-300 prose-p:leading-relaxed
+                          prose-code:bg-white/10 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-amber-400 prose-code:font-mono prose-code:text-sm
+                          prose-pre:bg-black/40 prose-pre:border prose-pre:border-white/10 prose-pre:rounded-lg
+                          prose-ul:text-gray-300 prose-li:text-gray-300
+                          prose-strong:text-white">
+                          <ReactMarkdown>{hintText}</ReactMarkdown>
+                        </div>
+
+                        {/* Action Footer */}
+                        <div className="flex items-center gap-2 px-4 py-2.5 border-t border-white/10 bg-white/[0.02]">
+                          <button
+                            onClick={() => navigator.clipboard.writeText(hintText)}
+                            className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white transition-colors px-2 py-1 rounded hover:bg-white/10"
+                          >
+                            <Copy className="w-3 h-3" /> Copy
+                          </button>
+                          <button
+                            onClick={() => requestHint(h.type || 'help')}
+                            className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white transition-colors px-2 py-1 rounded hover:bg-white/10"
+                          >
+                            <RotateCcw className="w-3 h-3" /> Retry
+                          </button>
                         </div>
                       </div>
                     )
@@ -588,11 +632,11 @@ export function LiveConsolePage() {
                             : 'border-white/10 hover:border-white/30 opacity-80 hover:opacity-100'
                             }`}
                         >
-                          <img src={s.image_url} alt="Snap" className="w-full h-full object-cover" />
+                          <img src={s.image_url} alt="Snap" className="w-full h-full object-cover pointer-events-none" />
 
                           {/* Selection Indicator */}
                           {s.is_selected_for_ai && (
-                            <div className="absolute inset-0 bg-green-500/20 flex items-center justify-center">
+                            <div className="absolute inset-0 bg-green-500/20 flex items-center justify-center pointer-events-none">
                               <CheckCircle className="w-6 h-6 text-white drop-shadow-md" />
                             </div>
                           )}
@@ -637,7 +681,7 @@ export function LiveConsolePage() {
                 <div
                   ref={transcriptRef}
                   onScroll={handleScroll}
-                  className="flex-1 overflow-y-auto p-4"
+                  className="flex-1 overflow-y-auto p-4 scrollbar-dark"
                 >
                   {!finalizedText && transcripts.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full text-gray-400">

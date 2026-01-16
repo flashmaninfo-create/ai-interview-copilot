@@ -135,6 +135,31 @@
         overlay.addEventListener('pointerdown', (e) => e.stopPropagation());
         overlay.addEventListener('pointerup', (e) => e.stopPropagation());
 
+        // Prevent scroll from propagating to the meeting page
+        overlay.addEventListener('wheel', (e) => {
+            e.stopPropagation();
+            // Find the scrollable container that the mouse is over
+            let target = e.target;
+            while (target && target !== overlay) {
+                if (target.scrollHeight > target.clientHeight) {
+                    // This element is scrollable
+                    const atTop = target.scrollTop === 0;
+                    const atBottom = target.scrollTop + target.clientHeight >= target.scrollHeight - 1;
+
+                    // Allow scroll if not at boundaries, or if scrolling in valid direction
+                    if ((e.deltaY < 0 && !atTop) || (e.deltaY > 0 && !atBottom)) {
+                        return; // Let the scroll happen naturally
+                    }
+                }
+                target = target.parentElement;
+            }
+            // Prevent default if at boundaries or no scrollable element found
+            e.preventDefault();
+        }, { passive: false });
+
+        // Also prevent touch scroll propagation for mobile
+        overlay.addEventListener('touchmove', (e) => e.stopPropagation(), { passive: true });
+
         // Get containers
         transcriptContainer = document.getElementById('ic-transcript');
         hintContainer = document.getElementById('ic-hints');
@@ -368,13 +393,49 @@
         // Popover interaction - use hover with proper delay and hover detection
         const snapButton = document.getElementById('ic-screenshot-btn');
         let popoverOpen = false;
+        let mouseIsOverPopover = false; // Track popover hover state explicitly
 
         if (snapButton) {
+            // Track mouse over popover explicitly (more reliable than :hover pseudo-selector)
+            if (screenshotPopover) {
+                screenshotPopover.addEventListener('mouseenter', () => {
+                    mouseIsOverPopover = true;
+                    clearTimeout(popoverTimeout);
+                });
+                screenshotPopover.addEventListener('mouseleave', () => {
+                    mouseIsOverPopover = false;
+                    popoverTimeout = setTimeout(() => {
+                        if (!mouseIsOverPopover) {
+                            hideScreenshotPopover();
+                            popoverOpen = false;
+                        }
+                    }, 300);
+                });
+            }
+
             // Show popover on hover (with delay for smoother UX)
             snapButton.addEventListener('mouseenter', () => {
                 clearTimeout(popoverTimeout);
                 // Only show if there are screenshots
                 if (screenshots.length > 0) {
+                    // Create popover if needed first, so we can add listeners
+                    if (!screenshotPopover) {
+                        createScreenshotPopover();
+                        // Add listeners after creation
+                        screenshotPopover.addEventListener('mouseenter', () => {
+                            mouseIsOverPopover = true;
+                            clearTimeout(popoverTimeout);
+                        });
+                        screenshotPopover.addEventListener('mouseleave', () => {
+                            mouseIsOverPopover = false;
+                            popoverTimeout = setTimeout(() => {
+                                if (!mouseIsOverPopover) {
+                                    hideScreenshotPopover();
+                                    popoverOpen = false;
+                                }
+                            }, 300);
+                        });
+                    }
                     showScreenshotPopover();
                     popoverOpen = true;
                 }
@@ -383,12 +444,12 @@
             snapButton.addEventListener('mouseleave', () => {
                 clearTimeout(popoverTimeout);
                 popoverTimeout = setTimeout(() => {
-                    // Check if mouse is now over the popover
-                    if (screenshotPopover && !screenshotPopover.matches(':hover')) {
+                    // Check explicit mouse state instead of :hover
+                    if (!mouseIsOverPopover) {
                         hideScreenshotPopover();
                         popoverOpen = false;
                     }
-                }, 500); // Longer delay to allow moving to popover
+                }, 400); // Give time to move mouse to popover
             });
         }
 
@@ -911,19 +972,109 @@
     // Track last hint to prevent duplicates
     let lastHintTimestamp = 0;
     let lastHintText = '';
+    let currentStreamCancel = null; // Track current streaming animation
 
-    // Add hint
+    // Markdown rendering utilities (inline for content script)
+    function renderMarkdown(text) {
+        if (!text) return '';
+        let html = escapeHtml(text);
+
+        // Code blocks: ```lang\ncode\n``` or ```\ncode\n```
+        html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (match, lang, code) => {
+            const langClass = lang ? ` data-lang="${lang}"` : '';
+            return `<pre class="ic-code-block"${langClass}><code>${code.trim()}</code></pre>`;
+        });
+
+        // Inline code: `code`
+        html = html.replace(/`([^`]+)`/g, '<code class="ic-inline-code">$1</code>');
+
+        // Bold: **text**
+        html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+
+        // Bullet lists: - item (at line start)
+        html = html.replace(/^[\-\*]\s+(.+)$/gm, '<li>$1</li>');
+        html = html.replace(/(<li>.*<\/li>\n?)+/g, '<ul class="ic-list">$&</ul>');
+
+        // Line breaks
+        html = html.replace(/\n(?![^<]*<\/pre>)/g, '<br>');
+
+        return html;
+    }
+
+    function formatTime(timestamp) {
+        const date = timestamp ? new Date(timestamp) : new Date();
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function getModelDisplayName(model, provider) {
+        const names = {
+            'deepseek-chat': 'DeepSeek',
+            'deepseek-coder': 'DeepSeek Coder',
+            'gpt-4o': 'GPT-4o',
+            'gpt-4o-mini': 'GPT-4o Mini',
+            'gpt-3.5-turbo': 'GPT-3.5',
+            'claude-3-5-sonnet': 'Claude 3.5'
+        };
+        return names[model] || model || provider || 'AI';
+    }
+
+    function getModeClass(type) {
+        const modeMap = {
+            'code': 'mode-code',
+            'explain': 'mode-explain',
+            'help': 'mode-help',
+            'answer': 'mode-answer',
+            'custom': 'mode-help'
+        };
+        return modeMap[type] || 'mode-help';
+    }
+
+    function getModeLabel(type) {
+        const labels = {
+            'code': 'Code',
+            'explain': 'Explain',
+            'help': 'Help',
+            'answer': 'Answer',
+            'custom': 'Custom'
+        };
+        return labels[type] || 'Help';
+    }
+
+    // Copy to clipboard with visual feedback
+    async function copyToClipboard(text, button) {
+        try {
+            await navigator.clipboard.writeText(text);
+            const originalText = button.innerHTML;
+            button.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg> Copied!`;
+            button.classList.add('copied');
+            setTimeout(() => {
+                button.innerHTML = originalText;
+                button.classList.remove('copied');
+            }, 2000);
+            return true;
+        } catch (e) {
+            console.error('[Content] Copy failed:', e);
+            return false;
+        }
+    }
+
+    // Add hint with Ntro-style structure
     function addHint(hint) {
         if (!hintContainer) {
             hintContainer = document.getElementById('ic-hints');
         }
         if (!hintContainer) return;
 
+        // Cancel any ongoing streaming
+        if (currentStreamCancel) {
+            currentStreamCancel();
+            currentStreamCancel = null;
+        }
+
         // Deduplicate: prevent same hint from being added multiple times
         const hintText = hint.hint || hint.text || '';
         const now = Date.now();
 
-        // Skip if same hint text within 3 seconds
         if (hintText === lastHintText && (now - lastHintTimestamp) < 3000) {
             console.log('[Content] Skipping duplicate hint');
             return;
@@ -932,52 +1083,106 @@
         lastHintTimestamp = now;
         lastHintText = hintText;
 
-        lastHintTimestamp = now;
-        lastHintText = hintText;
-
         // Clear previous content (single response mode)
         hintContainer.innerHTML = '';
 
-        // Choose icon and class based on type
-        let iconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>';
-        let iconClass = '';
+        // Get display values
+        const modelName = getModelDisplayName(hint.model, hint.provider);
+        const timeStr = formatTime(hint.timestamp);
+        const modeClass = getModeClass(hint.type);
+        const modeLabel = getModeLabel(hint.type);
 
-        if (hint.type === 'code') {
-            iconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>';
-            iconClass = 'ic-hint-code';
-        } else if (hint.type === 'explain') {
-            iconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>';
-            iconClass = 'ic-hint-explain';
-        } else if (hint.type === 'answer') {
-            iconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6V2H8"/><path d="m8 18-4 4V8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2Z"/></svg>';
-            iconClass = 'ic-hint-answer';
-        } else if (hint.type === 'error') {
-            iconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>';
-            iconClass = 'ic-hint-error';
-        }
-
+        // Create the hint element with new structure
         const hintEl = document.createElement('div');
         hintEl.className = 'ic-hint';
         hintEl.innerHTML = `
-      <span class="ic-hint-icon ${iconClass}">${iconSvg}</span>
-      <div class="ic-hint-content">${formatHintContent(hint.hint || hint.text)}</div>
-    `;
+            <div class="ic-hint-header">
+                <div>
+                    <span class="ic-hint-model">${modelName}</span>
+                    <span class="ic-hint-mode ${modeClass}">${modeLabel}</span>
+                </div>
+                <span class="ic-hint-time">${timeStr}</span>
+            </div>
+            <div class="ic-hint-content"></div>
+            <div class="ic-hint-footer">
+                <button class="ic-action-btn ic-action-copy" data-action="copy">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                    Copy
+                </button>
+                <button class="ic-action-btn ic-action-regenerate" data-action="regenerate">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+                    Retry
+                </button>
+            </div>
+        `;
 
+        // Get content element for streaming
+        const contentEl = hintEl.querySelector('.ic-hint-content');
+
+        // Add to container
         hintContainer.appendChild(hintEl);
+
+        // Stream the text with animation
+        if (hintText.length > 50) {
+            streamTextToElement(contentEl, hintText);
+        } else {
+            // Short text - render immediately
+            contentEl.innerHTML = renderMarkdown(hintText);
+        }
+
+        // Set up action button handlers
+        const copyBtn = hintEl.querySelector('.ic-action-copy');
+        const regenerateBtn = hintEl.querySelector('.ic-action-regenerate');
+
+        copyBtn.addEventListener('click', () => {
+            copyToClipboard(hintText, copyBtn);
+        });
+
+        regenerateBtn.addEventListener('click', () => {
+            // Re-request the same type
+            requestAI(hint.type || 'help');
+        });
+    }
+
+    // Stream text with typing effect
+    function streamTextToElement(element, text, speed = 12) {
+        element.classList.add('ic-streaming');
+        element.innerHTML = '';
+
+        const words = text.split(' ');
+        let wordIndex = 0;
+
+        const interval = setInterval(() => {
+            if (wordIndex >= words.length) {
+                clearInterval(interval);
+                element.classList.remove('ic-streaming');
+                element.innerHTML = renderMarkdown(text);
+                currentStreamCancel = null;
+                return;
+            }
+
+            const currentText = words.slice(0, wordIndex + 1).join(' ');
+            element.innerHTML = renderMarkdown(currentText);
+            wordIndex++;
+        }, speed);
+
+        // Return cancel function
+        currentStreamCancel = () => {
+            clearInterval(interval);
+            element.classList.remove('ic-streaming');
+            element.innerHTML = renderMarkdown(text);
+        };
     }
 
     function formatHintContent(text) {
-        // Check if it looks like code
-        if (text.includes('function') || text.includes('const ') || text.includes('class ')) {
-            return `<pre class="ic-code">${escapeHtml(text)}</pre>`;
-        }
-        return escapeHtml(text);
+        return renderMarkdown(text);
     }
 
     function escapeHtml(text) {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+
     }
 
     // Keep-alive heartbeat to prevent service worker from sleeping

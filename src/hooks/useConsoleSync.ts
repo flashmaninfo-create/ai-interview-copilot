@@ -13,10 +13,12 @@ export interface Transcript {
 
 export interface Hint {
     id: number | string;
-    type: 'hint' | 'code' | 'explain' | 'error';
+    type: 'hint' | 'code' | 'explain' | 'error' | 'help' | 'answer' | 'custom';
     text: string;
     timestamp: string;
     hint?: string; // Legacy support
+    model?: string; // LLM model used
+    provider?: string; // LLM provider (openai, deepseek, etc.)
 }
 
 export interface Screenshot {

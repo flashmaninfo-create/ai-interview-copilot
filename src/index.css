@@ -10,52 +10,52 @@
 @layer base {
   :root {
     /* Primary Colors */
-    --color-primary: #1B365D; /* navy-900 */
-    --color-primary-foreground: #FFFFFF; /* white */
-    
+    --color-primary: #1B365D;
+    --color-primary-foreground: #FFFFFF;
+
     /* Secondary Colors */
-    --color-secondary: #4A90A4; /* blue-500 */
-    --color-secondary-foreground: #FFFFFF; /* white */
-    
+    --color-secondary: #4A90A4;
+    --color-secondary-foreground: #FFFFFF;
+
     /* Accent Colors */
-    --color-accent: #FF6B47; /* coral-500 */
-    --color-accent-foreground: #FFFFFF; /* white */
-    
+    --color-accent: #FF6B47;
+    --color-accent-foreground: #FFFFFF;
+
     /* Background Colors */
-    --color-background: #FAFBFC; /* gray-50 */
-    --color-foreground: #2D3748; /* gray-800 */
-    
+    --color-background: #FAFBFC;
+    --color-foreground: #2D3748;
+
     /* Surface Colors */
-    --color-card: #FFFFFF; /* white */
-    --color-card-foreground: #2D3748; /* gray-800 */
-    
+    --color-card: #FFFFFF;
+    --color-card-foreground: #2D3748;
+
     /* Popover Colors */
-    --color-popover: #FFFFFF; /* white */
-    --color-popover-foreground: #2D3748; /* gray-800 */
-    
+    --color-popover: #FFFFFF;
+    --color-popover-foreground: #2D3748;
+
     /* Muted Colors */
-    --color-muted: #E2E8F0; /* gray-200 */
-    --color-muted-foreground: #718096; /* gray-500 */
-    
+    --color-muted: #E2E8F0;
+    --color-muted-foreground: #718096;
+
     /* Destructive/Error Colors */
-    --color-destructive: #E53E3E; /* red-600 */
-    --color-destructive-foreground: #FFFFFF; /* white */
-    --color-error: #E53E3E; /* red-600 */
-    --color-error-foreground: #FFFFFF; /* white */
-    
+    --color-destructive: #E53E3E;
+    --color-destructive-foreground: #FFFFFF;
+    --color-error: #E53E3E;
+    --color-error-foreground: #FFFFFF;
+
     /* Success Colors */
-    --color-success: #38A169; /* green-600 */
-    --color-success-foreground: #FFFFFF; /* white */
-    
+    --color-success: #38A169;
+    --color-success-foreground: #FFFFFF;
+
     /* Warning Colors */
-    --color-warning: #ED8936; /* orange-500 */
-    --color-warning-foreground: #FFFFFF; /* white */
-    
+    --color-warning: #ED8936;
+    --color-warning-foreground: #FFFFFF;
+
     /* Border and Input Colors */
-    --color-border: #E2E8F0; /* gray-200 */
-    --color-input: #E2E8F0; /* gray-200 */
-    --color-ring: #4A90A4; /* blue-500 */
-    
+    --color-border: #E2E8F0;
+    --color-input: #E2E8F0;
+    --color-ring: #4A90A4;
+
     /* Border Radius */
     --radius: 0.5rem;
   }
@@ -65,11 +65,45 @@
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground;
     font-family: 'Source Sans 3', sans-serif;
   }
-  h1, h2, h3, h4, h5, h6 {
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     font-family: 'Crimson Text', serif;
   }
+}
+
+/* Custom Scrollbars for Dark Theme - Add this class to scrollable elements */
+.scrollbar-dark {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(139, 92, 246, 0.4) rgba(0, 0, 0, 0.2);
+}
+
+.scrollbar-dark::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.scrollbar-dark::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+.scrollbar-dark::-webkit-scrollbar-thumb {
+  background: rgba(139, 92, 246, 0.4);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.scrollbar-dark::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 92, 246, 0.6);
 }

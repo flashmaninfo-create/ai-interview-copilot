@@ -334,16 +334,32 @@ async function captureScreenFrame() {
         const video = document.createElement('video');
         video.srcObject = screenStream;
         video.muted = true;
+        video.autoplay = true; // Ensure autoplay is set
+        video.playsInline = true;
 
         await new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => {
+                video.onloadedmetadata = null;
+                video.onplay = null;
+                reject(new Error('Video load timeout'));
+            }, 3000);
+
+            // Wait for both metadata AND actual playing state
             video.onloadedmetadata = () => {
-                video.play().then(resolve).catch(reject);
+                video.play().catch(e => { /* ignore play errors if already playing */ });
             };
-            video.onerror = reject;
-            setTimeout(() => reject(new Error('Video load timeout')), 5000);
+
+            video.onplaying = () => {
+                clearTimeout(timeout);
+                resolve();
+            };
+
+            // Trigger load
+            video.load();
         });
 
-        await new Promise(resolve => requestAnimationFrame(resolve));
+        // Small buffer to ensure frame is rendered
+        await new Promise(resolve => setTimeout(resolve, 100));
 
         const canvas = document.createElement('canvas');
         canvas.width = settings.width || video.videoWidth;
@@ -352,8 +368,10 @@ async function captureScreenFrame() {
         const ctx = canvas.getContext('2d');
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
+        // Cleanup
         video.pause();
         video.srcObject = null;
+        video.remove(); // Explicitly remove
 
         const dataUrl = canvas.toDataURL('image/png', 0.9);
 

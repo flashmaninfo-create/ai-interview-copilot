@@ -9,6 +9,7 @@ export class ConsoleSync {
         this.connected = false;
         this.messageHandler = null;
         this.pollInterval = null;
+        this.lastProcessedId = null; // Track handled messages to avoid duplicates
     }
 
     async connect(token, sessionId) {
@@ -76,16 +77,30 @@ export class ConsoleSync {
             if (!this.connected || !this.sessionId) return;
 
             try {
-                const messages = await supabaseREST.select(
-                    'sync_messages',
-                    `session_id=eq.${this.sessionId}&source=eq.console&created_at=gt.${new Date(lastChecked).toISOString()}`
-                );
+                // Buffer period: query 5 seconds overlap to ensure nothing is missed due to clock drift
+                const queryTime = new Date(lastChecked - 5000).toISOString();
 
+                // Update local time BEFORE fetch to capture window
+                // If fetch takes 1s, next poll will cover that 1s gap
                 lastChecked = Date.now();
 
+                const messages = await supabaseREST.select(
+                    'sync_messages',
+                    `session_id=eq.${this.sessionId}&source=eq.console&created_at=gt.${queryTime}`
+                );
+
                 if (messages && messages.length > 0) {
+                    console.log(`[ConsoleSync] Polled ${messages.length} messages`);
+                    // Sort by time to process in order
+                    messages.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+
                     for (const msg of messages) {
+                        // Prevent re-processing messages we've already seen
+                        if (this.lastProcessedId === msg.id) continue;
+                        this.lastProcessedId = msg.id;
+
                         if (this.messageHandler) {
+                            console.log(`[ConsoleSync] Processing message: ${msg.message_type}`, msg.payload);
                             this.messageHandler({
                                 type: msg.message_type,
                                 data: msg.payload
@@ -94,7 +109,7 @@ export class ConsoleSync {
                     }
                 }
             } catch (error) {
-                // Silently fail polling errors
+                console.error('[ConsoleSync] Polling error:', error);
             }
         }, 2000);
     }

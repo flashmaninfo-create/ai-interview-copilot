@@ -1,9 +1,15 @@
 // AI Service - Real LLM Integration with Mode-Specific Prompts
 // Uses PromptEngine for strict behavior control per button mode
+// Ntro-level accuracy with router, validator, and metrics
 
 import { supabaseREST } from './supabase-config.js';
 import { PromptEngine } from './prompt-engine.js';
 import { getVisionPreprocessor } from './vision-preprocessor.js';
+import { LLMRouter } from './llm-router.js';
+import { ResponseValidator } from './response-validator.js';
+import { LanguageResolver } from './language-resolver.js';
+import { IntentClassifier } from './intent-classifier.js';
+import { getMetricsLogger } from './metrics-logger.js';
 
 export class AIService {
     constructor() {
@@ -71,24 +77,75 @@ export class AIService {
                     console.error('[AIService] Failed to process live screen frame:', err);
                 }
             }
+            // FALLBACK: Process saved screenshots if no live screenFrame
+            else if (context.screenshots?.length > 0) {
+                console.log('[AIService] Processing saved screenshots for context:', context.screenshots.length);
+                try {
+                    // Filter to selected screenshots if specified
+                    let screenshotsToProcess = context.screenshots;
+                    if (context.selectedScreenshotIds?.length > 0) {
+                        screenshotsToProcess = context.screenshots.filter(s =>
+                            context.selectedScreenshotIds.includes(s.id)
+                        );
+                    }
+
+                    // Take most recent screenshots (limit to 3 for performance)
+                    const recentScreenshots = screenshotsToProcess.slice(-3);
+
+                    if (recentScreenshots.length > 0) {
+                        const processed = await this.visionPreprocessor.processScreenshots(
+                            recentScreenshots.map((s, i) => ({
+                                id: s.id,
+                                imageUrl: s.image_url || s.imageUrl,
+                                order: i
+                            }))
+                        );
+
+                        context.visualContext = processed;
+                        console.log('[AIService] Screenshot context extracted. Code found:', !!processed.code, 'Problem found:', !!processed.problemStatement);
+                    }
+                } catch (err) {
+                    console.error('[AIService] Failed to process screenshots:', err);
+                }
+            }
 
             // Build the prompt using PromptEngine
             const prompt = this.buildPrompt(context);
+
+            // Track timing for metrics
+            const startTime = Date.now();
+
             // Call the appropriate LLM API with mode-specific settings
             const response = await this.callLLM(config, prompt);
 
-            // Apply stealth formatting
-            const formattedResponse = PromptEngine.formatResponse(
+            const responseTime = Date.now() - startTime;
+
+            // Apply quality validation and stealth formatting
+            const validated = ResponseValidator.validate(
                 response,
-                context.requestType || 'help'
+                context.requestType || 'help',
+                { ocrText: context.visualContext?.extractedTexts?.join(' ') || '' }
             );
 
+            // Log metrics
+            const metrics = getMetricsLogger();
+            metrics.log({
+                mode: context.requestType || 'help',
+                provider: config.provider.slug,
+                model: config.model.model_id,
+                responseTime,
+                languageMatch: true, // TODO: implement language match check
+                bannedPhraseHits: validated.metrics?.bannedPhraseHits || 0,
+                success: validated.valid
+            });
+
             return {
-                hint: formattedResponse,
+                hint: validated.text,
                 type: context.requestType || 'hint',
                 timestamp: new Date().toISOString(),
                 model: config.model.model_id,
-                provider: config.provider.slug
+                provider: config.provider.slug,
+                validationIssues: validated.issues
             };
         } catch (error) {
             console.error('[AIService] Error getting hint:', error);
@@ -214,6 +271,9 @@ export class AIService {
         const { provider, model } = config;
         const apiKey = provider.api_key;
 
+        // Log that we're using the admin-configured provider exclusively
+        console.log(`[AIService] ✅ Using admin-configured provider: ${provider.slug} (model: ${model.model_id})`);
+
         if (!apiKey) {
             throw new Error('No API key configured for provider');
         }
@@ -235,6 +295,7 @@ export class AIService {
                 throw new Error(`Unsupported provider: ${provider.slug}`);
         }
     }
+
 
     async callDeepSeek(apiKey, modelId, prompt, maxTokens = 200, temperature = 0.3) {
         console.log('[AIService] Calling DeepSeek:', modelId, 'temp:', temperature, 'tokens:', maxTokens);

@@ -1,139 +1,107 @@
 /**
- * Admin Providers Page (Settings Style)
+ * AI Providers Configuration Page
  *
- * Unified settings page for AI provider configuration.
- * - Left: Radio selection for active provider
- * - Right: Model selection per provider
- * - Bottom: API Keys
+ * Manage connections to AI models (OpenAI, Anthropic, Gemini).
+ * Allows setting API keys, enabling providers, and configuring default models.
  */
 
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import { adminService, type LLMProvider } from '../../lib/services/adminService';
-import {
-    ArrowLeft,
-    Key,
-    Save,
-    CheckCircle,
-    AlertCircle,
-    ChevronDown,
-    Eye,
-    EyeOff
-} from 'lucide-react';
+import { Cpu, Save, Key, AlertCircle, CheckCircle2, ArrowLeft, RefreshCw, Eye, EyeOff } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
-interface ProviderConfig {
+interface LLMModel {
     id: string;
     name: string;
-    description: string;
-    models: { id: string; name: string }[];
-    defaultModel: string;
+    model_id: string;
+    enabled: boolean;
 }
 
-// Predefined provider configurations
-const PROVIDER_CONFIGS: ProviderConfig[] = [
-    {
-        id: 'openai',
-        name: 'OpenAI',
-        description: 'Use GPT models (recommended for rich, conversational feedback).',
-        models: [
-            { id: 'gpt-4o', name: 'GPT-4o' },
-            { id: 'gpt-4o-mini', name: 'GPT-4o Mini' },
-            { id: 'gpt-4.1-mini', name: 'GPT-4.1 Mini' },
-            { id: 'gpt-4-turbo', name: 'GPT-4 Turbo' },
-            { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo' },
-        ],
-        defaultModel: 'gpt-4o-mini'
-    },
-    {
-        id: 'google',
-        name: 'Google Gemini',
-        description: 'Use Gemini models for multilingual and Google-aligned responses.',
-        models: [
-            { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash' },
-            { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash' },
-            { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro' },
-            { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash' },
-        ],
-        defaultModel: 'gemini-2.5-flash'
-    },
-    {
-        id: 'deepseek',
-        name: 'DeepSeek',
-        description: 'Use DeepSeek for efficient and cost-effective interview analysis.',
-        models: [
-            { id: 'deepseek-chat', name: 'DeepSeek Chat' },
-            { id: 'deepseek-coder', name: 'DeepSeek Coder' },
-        ],
-        defaultModel: 'deepseek-chat'
-    },
-    {
-        id: 'anthropic',
-        name: 'Anthropic Claude',
-        description: 'Use Claude models for nuanced, safety-focused responses.',
-        models: [
-            { id: 'claude-3-5-sonnet', name: 'Claude 3.5 Sonnet' },
-            { id: 'claude-3-opus', name: 'Claude 3 Opus' },
-            { id: 'claude-3-haiku', name: 'Claude 3 Haiku' },
-        ],
-        defaultModel: 'claude-3-5-sonnet'
-    }
-];
+interface ProviderModelConfig {
+    selectedModel: string;
+    customModel: string;
+}
 
 export function AdminProvidersPage() {
-    const [activeProvider, setActiveProvider] = useState<string>('openai');
-    const [selectedModels, setSelectedModels] = useState<Record<string, string>>({});
-    const [customModels, setCustomModels] = useState<Record<string, string>>({});
-    const [apiKeys, setApiKeys] = useState<Record<string, string>>({});
+    const [providers, setProviders] = useState<LLMProvider[]>([]);
+    const [activeProviderId, setActiveProviderId] = useState<string | null>(null);
+    
+    // Store models available for each provider: { 'openai': [models], 'anthropic': [models] }
+    const [allProviderModels, setAllProviderModels] = useState<Record<string, LLMModel[]>>({});
+    
+    // Store selected config for each provider: { 'openai': { selectedModel: 'gpt-4', customModel: '' } }
+    const [modelConfigs, setModelConfigs] = useState<Record<string, ProviderModelConfig>>({});
+    
+    // Local state for API keys and visibility
+    const [apiKeyEdits, setApiKeyEdits] = useState<Record<string, string>>({});
     const [visibleKeys, setVisibleKeys] = useState<Record<string, boolean>>({});
+    
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const [saved, setSaved] = useState(false);
+    const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
     useEffect(() => {
-        loadSettings();
+        loadConfig();
     }, []);
 
-    const loadSettings = async () => {
+    const loadConfig = async () => {
         try {
             setLoading(true);
-
-            // Load providers from DB
-            const providers = await adminService.getProviders();
-
-            // Find active provider (Must be in PROVIDER_CONFIGS to be considered an "LLM" provider)
-            const active = providers.find(p => p.enabled && PROVIDER_CONFIGS.some(c => c.id === p.provider));
+            const fetchedProviders = await adminService.getProviders();
+            setProviders(fetchedProviders);
+            
+            // 1. Determine active provider
+            const active = fetchedProviders.find(p => p.enabled && p.provider !== 'deepgram');
             if (active) {
-                setActiveProvider(active.provider);
-            }
-
-            // Build API keys map
-            const keys: Record<string, string> = {};
-            providers.forEach(p => {
-                keys[p.provider] = p.apiKey || '';
-            });
-            setApiKeys(keys);
-
-            // Load saved model selections from app config
-            const savedModels = await adminService.getAppConfig('selected_models');
-            if (savedModels) {
-                setSelectedModels(savedModels);
+                setActiveProviderId(active.id);
             } else {
-                // Set defaults
-                const defaults: Record<string, string> = {};
-                PROVIDER_CONFIGS.forEach(p => {
-                    defaults[p.id] = p.defaultModel;
-                });
-                defaults['deepgram'] = 'nova-2'; // Default for Deepgram
-                setSelectedModels(defaults);
+                const firstLLM = fetchedProviders.find(p => p.provider !== 'deepgram');
+                if (firstLLM) setActiveProviderId(firstLLM.id);
             }
 
-            const savedCustomModels = await adminService.getAppConfig('custom_models');
-            if (savedCustomModels) {
-                setCustomModels(savedCustomModels);
-            }
+            // 2. Initialize API Keys
+            const initialKeys: Record<string, string> = {};
+            fetchedProviders.forEach(p => {
+                initialKeys[p.id] = p.apiKey || ''; 
+            });
+            setApiKeyEdits(initialKeys);
+
+            // 3. Load models and configs for ALL LLM providers
+            const llmProviders = fetchedProviders.filter(p => p.provider !== 'deepgram');
+            const modelsMap: Record<string, LLMModel[]> = {};
+            const configsMap: Record<string, ProviderModelConfig> = {};
+
+            await Promise.all(llmProviders.map(async (p) => {
+                // Fetch available models
+                try {
+                    const models = await adminService.getModels(p.id);
+                    modelsMap[p.id] = models as unknown as LLMModel[];
+                } catch (e) {
+                    console.error(`Failed to load models for ${p.name}`, e);
+                    modelsMap[p.id] = [];
+                }
+
+                // Fetch saved config (default model) from app_config
+                // Key format: "{provider_slug}_model" and "{provider_slug}_custom_model"
+                try {
+                    const savedModel = await adminService.getAppConfig(`${p.provider}_model`);
+                    const savedCustom = await adminService.getAppConfig(`${p.provider}_custom_model`);
+                    
+                    configsMap[p.id] = {
+                        selectedModel: String(savedModel || ''),
+                        customModel: String(savedCustom || '')
+                    };
+                } catch (e) {
+                     configsMap[p.id] = { selectedModel: '', customModel: '' };
+                }
+            }));
+
+            setAllProviderModels(modelsMap);
+            setModelConfigs(configsMap);
 
         } catch (err) {
-            console.error('Failed to load settings:', err);
+            console.error('Failed to load provider config:', err);
+            setMessage({ type: 'error', text: 'Failed to load configuration' });
         } finally {
             setLoading(false);
         }
@@ -142,56 +110,62 @@ export function AdminProvidersPage() {
     const handleSave = async () => {
         try {
             setSaving(true);
+            setMessage(null);
 
-            // Get all providers
-            const providers = await adminService.getProviders();
+            // 1. Save Providers (Active Status & API Keys)
+            for (const provider of providers) {
+                let isEnabled = provider.id === activeProviderId;
+                if (provider.provider === 'deepgram') {
+                    isEnabled = provider.enabled; // Preserve Deepgram state
+                }
 
-            // 1. Update LLM Providers
-            for (const config of PROVIDER_CONFIGS) {
-                const existingProvider = providers.find(p => p.provider === config.id);
-
-                const providerData: LLMProvider = {
-                    id: existingProvider?.id || crypto.randomUUID(),
-                    name: config.name,
-                    provider: config.id,
-                    apiKey: apiKeys[config.id] || '',
-                    enabled: activeProvider === config.id,
-                    isCustom: false,
-                    baseUrl: undefined
-                };
-
-                await adminService.saveProvider(providerData);
-
-                // Sync models for this provider (Ensures DB table is populated so RPC works)
-                await adminService.syncProviderModels(providerData.id, config.models);
+                const updatedKey = apiKeyEdits[provider.id];
+                
+                if (provider.enabled !== isEnabled || (updatedKey !== undefined && updatedKey !== provider.apiKey)) {
+                     await adminService.saveProvider({
+                        ...provider,
+                        enabled: isEnabled,
+                        apiKey: updatedKey
+                    });
+                }
             }
 
-            // 2. Update Deepgram Provider
-            const existingDeepgram = providers.find(p => p.provider === 'deepgram');
-            const deepgramData: LLMProvider = {
-                id: existingDeepgram?.id || crypto.randomUUID(),
-                name: 'Deepgram',
-                provider: 'deepgram',
-                apiKey: apiKeys['deepgram'] || '',
-                enabled: true, // Always enabled if configured
-                isCustom: false,
-                baseUrl: undefined
-            };
-            await adminService.saveProvider(deepgramData);
+            // 2. Save Model Configs
+            const llmProviders = providers.filter(p => p.provider !== 'deepgram');
+            for (const p of llmProviders) {
+                const config = modelConfigs[p.id];
+                if (config) {
+                     await adminService.setAppConfig(`${p.provider}_model`, config.selectedModel);
+                     await adminService.setAppConfig(`${p.provider}_custom_model`, config.customModel);
+                }
+            }
+            
+            // Refresh
+            const updatedProviders = await adminService.getProviders();
+            setProviders(updatedProviders);
 
-            // Save model selections
-            await adminService.setAppConfig('selected_models', selectedModels);
-            await adminService.setAppConfig('custom_models', customModels);
-
-            setSaved(true);
-            setTimeout(() => setSaved(false), 3000);
-
-        } catch (err) {
-            console.error('Failed to save settings:', err);
-            alert('Failed to save settings');
+            setMessage({ type: 'success', text: 'Configuration saved successfully' });
+            setTimeout(() => setMessage(null), 3000);
+        } catch (err: any) {
+            console.error('Failed to save config:', err);
+            setMessage({ type: 'error', text: err.message || 'Failed to save changes' });
         } finally {
             setSaving(false);
         }
+    };
+
+    const toggleKeyVisibility = (id: string) => {
+        setVisibleKeys(prev => ({
+            ...prev,
+            [id]: !prev[id]
+        }));
+    };
+
+    const updateModelConfig = (providerId: string, updates: Partial<ProviderModelConfig>) => {
+        setModelConfigs(prev => ({
+            ...prev,
+            [providerId]: { ...prev[providerId], ...updates }
+        }));
     };
 
     if (loading) {
@@ -202,79 +176,96 @@ export function AdminProvidersPage() {
         );
     }
 
+    const llmProviders = providers.filter(p => p.provider !== 'deepgram');
+
     return (
         <div className="space-y-8">
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
                     <div className="flex items-center gap-3 mb-2">
-                        <Link
-                            to="/admin/dashboard"
-                            className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+                         <Link 
+                            to="/admin/dashboard" 
+                            className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
                         >
                             <ArrowLeft className="w-5 h-5" />
                         </Link>
-                        <h1 className="text-2xl font-bold text-white">AI Provider Settings</h1>
+                        <h1 className="text-2xl font-bold text-foreground">AI Providers</h1>
                     </div>
-                    <p className="text-slate-400 ml-11">Configure AI providers and model selection</p>
+                    <p className="text-muted-foreground ml-11">Configure LLM providers and API connections</p>
                 </div>
                 <button
                     onClick={handleSave}
                     disabled={saving}
-                    className="bg-primary text-white px-6 py-2.5 rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2 disabled:opacity-50"
+                    className="bg-primary text-primary-foreground px-6 py-2.5 rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2 disabled:opacity-50 shadow-sm"
                 >
                     {saving ? (
-                        <>
-                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                            Saving...
-                        </>
-                    ) : saved ? (
-                        <>
-                            <CheckCircle className="w-4 h-4" />
-                            Saved!
-                        </>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
                     ) : (
-                        <>
-                            <Save className="w-4 h-4" />
-                            Save Settings
-                        </>
+                        <Save className="w-4 h-4" />
                     )}
+                    {saving ? 'Saving...' : 'Save Changes'}
                 </button>
             </div>
+
+            {message && (
+                <div className={`p-4 rounded-xl border flex items-center gap-3 ${
+                    message.type === 'success' 
+                        ? 'bg-green-500/10 border-green-500/20 text-green-600' 
+                        : 'bg-destructive/10 border-destructive/20 text-destructive'
+                }`}>
+                    {message.type === 'success' ? (
+                        <CheckCircle2 className="w-5 h-5" />
+                    ) : (
+                        <AlertCircle className="w-5 h-5" />
+                    )}
+                    {message.text}
+                </div>
+            )}
 
             {/* Main Content - Two Columns */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Left Column - Provider Selection */}
-                <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
-                    <h2 className="text-lg font-semibold text-white mb-2">AI Provider</h2>
-                    <p className="text-sm text-slate-400 mb-6">
+                <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
+                    <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+                        <Cpu className="w-5 h-5 text-primary" />
+                        AI Provider
+                    </h2>
+                    <p className="text-sm text-muted-foreground mb-6">
                         Select one provider below. The selected card becomes the system default.
                     </p>
 
-                    <div className="space-y-3">
-                        {PROVIDER_CONFIGS.map((config) => (
+                    <div className="space-y-4">
+                        {llmProviders.map((provider) => (
                             <label
-                                key={config.id}
+                                key={provider.id}
                                 className={`
                                     block p-4 rounded-xl border-2 cursor-pointer transition-all
-                                    ${activeProvider === config.id
-                                        ? 'border-primary bg-primary/5'
-                                        : 'border-slate-700 hover:border-slate-600 bg-slate-800/50'
+                                    ${activeProviderId === provider.id
+                                        ? 'border-primary bg-primary/5 shadow-md shadow-primary/5'
+                                        : 'border-border hover:border-muted-foreground/30 bg-muted/30'
                                     }
                                 `}
                             >
-                                <div className="flex items-start gap-3">
+                                <div className="flex items-center gap-4">
                                     <input
                                         type="radio"
                                         name="provider"
-                                        value={config.id}
-                                        checked={activeProvider === config.id}
-                                        onChange={(e) => setActiveProvider(e.target.value)}
-                                        className="mt-1 w-4 h-4 text-primary border-slate-600 focus:ring-primary/50 bg-slate-800"
+                                        value={provider.id}
+                                        checked={activeProviderId === provider.id}
+                                        onChange={() => setActiveProviderId(provider.id)}
+                                        className="w-5 h-5 text-primary border-muted-foreground focus:ring-primary bg-background"
                                     />
-                                    <div className="flex-1">
-                                        <p className="font-semibold text-white">{config.name}</p>
-                                        <p className="text-sm text-slate-400 mt-0.5">{config.description}</p>
+                                    <div>
+                                        <div className="font-semibold text-foreground flex items-center gap-2">
+                                            {provider.name}
+                                            {activeProviderId === provider.id && (
+                                                <span className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full">Active</span>
+                                            )}
+                                        </div>
+                                        <p className="text-sm text-muted-foreground mt-0.5 capitalize">
+                                            Use {provider.name} models for interview analysis.
+                                        </p>
                                     </div>
                                 </div>
                             </label>
@@ -283,168 +274,87 @@ export function AdminProvidersPage() {
                 </div>
 
                 {/* Right Column - Model Selection */}
-                <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
-                    <h2 className="text-lg font-semibold text-white mb-2">Model Selection</h2>
-                    <p className="text-sm text-slate-400 mb-6">
+                <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
+                    <h2 className="text-lg font-semibold text-foreground mb-4">Model Selection</h2>
+                    <p className="text-sm text-muted-foreground mb-6">
                         Choose the model to use for each provider or provide a custom identifier.
                     </p>
 
-                    <div className="space-y-6">
-                        {PROVIDER_CONFIGS.map((config) => (
-                            <div key={config.id}>
-                                <label className="block text-sm font-medium text-slate-300 mb-2">
-                                    {config.name} Model
-                                </label>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                    <div className="relative">
+                    <div className="space-y-8">
+                        {llmProviders.map((provider) => {
+                             const models = allProviderModels[provider.id] || [];
+                             const config = modelConfigs[provider.id] || { selectedModel: '', customModel: '' };
+
+                             return (
+                                <div key={provider.id} className="space-y-3">
+                                    <label className="block text-sm font-medium text-foreground">
+                                        {provider.name} Model
+                                    </label>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                         <select
-                                            value={selectedModels[config.id] || config.defaultModel}
-                                            onChange={(e) => setSelectedModels(prev => ({
-                                                ...prev,
-                                                [config.id]: e.target.value
-                                            }))}
-                                            className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-primary appearance-none cursor-pointer"
+                                            value={config.selectedModel}
+                                            onChange={(e) => updateModelConfig(provider.id, { selectedModel: e.target.value })}
+                                            className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-foreground text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
                                         >
-                                            {config.models.map(model => (
-                                                <option key={model.id} value={model.id}>
-                                                    {model.name}
-                                                </option>
+                                            <option value="">Select a model...</option>
+                                            {models.map(m => (
+                                                <option key={m.id} value={m.model_id}>{m.name}</option>
                                             ))}
                                         </select>
-                                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+                                        
+                                        <input
+                                            type="text"
+                                            value={config.customModel}
+                                            onChange={(e) => updateModelConfig(provider.id, { customModel: e.target.value })}
+                                            placeholder={`Custom ${provider.name} model`}
+                                            className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-foreground text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
+                                        />
                                     </div>
-                                    <input
-                                        type="text"
-                                        placeholder={`Custom ${config.name} model`}
-                                        value={customModels[config.id] || ''}
-                                        onChange={(e) => setCustomModels(prev => ({
-                                            ...prev,
-                                            [config.id]: e.target.value
-                                        }))}
-                                        className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-primary"
-                                    />
+                                    <p className="text-[10px] text-muted-foreground">
+                                        Custom entry overrides the dropdown value if supported by the system.
+                                    </p>
                                 </div>
-                                <p className="text-xs text-slate-500 mt-1.5">
-                                    Custom entry overrides the dropdown value.
-                                </p>
-                            </div>
-                        ))}
-
-                        {/* Deepgram Model */}
-                        <div className="pt-4 border-t border-slate-800">
-                            <div className="flex items-center gap-2 mb-3">
-                                <div className="p-1 bg-purple-500/20 rounded">
-                                    <svg className="w-3 h-3 text-purple-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-                                        <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                                        <line x1="12" y1="19" x2="12" y2="23" />
-                                        <line x1="8" y1="23" x2="16" y2="23" />
-                                    </svg>
-                                </div>
-                                <label className="text-sm font-medium text-slate-300">Deepgram Model (Speech)</label>
-                            </div>
-                            <div className="relative">
-                                <select
-                                    value={selectedModels['deepgram'] || 'nova-2'}
-                                    onChange={(e) => setSelectedModels(prev => ({
-                                        ...prev,
-                                        ['deepgram']: e.target.value
-                                    }))}
-                                    className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-primary appearance-none cursor-pointer"
-                                >
-                                    <option value="nova-2">Nova 2 (Recommended)</option>
-                                    <option value="nova">Nova</option>
-                                    <option value="enhanced">Enhanced</option>
-                                    <option value="base">Base</option>
-                                </select>
-                                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
-                            </div>
-                        </div>
+                             );
+                        })}
                     </div>
                 </div>
             </div>
 
             {/* API Keys Section */}
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
-                <div className="flex items-center gap-2 mb-2">
+            <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
+                <div className="flex items-center gap-2 mb-6">
                     <Key className="w-5 h-5 text-primary" />
-                    <h2 className="text-lg font-semibold text-white">API Keys</h2>
+                    <h2 className="text-lg font-semibold text-foreground">API Keys</h2>
                 </div>
-                <p className="text-sm text-slate-400 mb-6">
-                    Enter API keys for each provider you wish to use. Keys are stored securely.
-                </p>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {PROVIDER_CONFIGS.map((config) => (
-                        <div key={config.id}>
-                            <label className="block text-sm font-medium text-slate-300 mb-2">
-                                {config.name} API Key
-                            </label>
+                    {providers.map((provider) => (
+                        <div key={provider.id}>
+                            <label className="block text-sm font-medium text-foreground mb-1">{provider.name} API Key</label>
                             <div className="relative">
                                 <input
-                                    type={visibleKeys[config.id] ? 'text' : 'password'}
-                                    placeholder={`Enter ${config.name} API key...`}
-                                    value={apiKeys[config.id] || ''}
-                                    onChange={(e) => setApiKeys(prev => ({
-                                        ...prev,
-                                        [config.id]: e.target.value
-                                    }))}
-                                    className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-primary font-mono text-sm pr-20"
+                                    type={visibleKeys[provider.id] ? 'text' : 'password'}
+                                    value={apiKeyEdits[provider.id] || ''}
+                                    onChange={(e) => setApiKeyEdits(prev => ({ ...prev, [provider.id]: e.target.value }))}
+                                    className="w-full bg-background border border-border rounded-lg px-4 py-2 pr-10 text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
+                                    placeholder={`Enter ${provider.name} API Key...`}
                                 />
-                                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                                    <button
-                                        type="button"
-                                        onClick={() => setVisibleKeys(prev => ({ ...prev, [config.id]: !prev[config.id] }))}
-                                        className="text-slate-500 hover:text-white"
-                                        title={visibleKeys[config.id] ? "Hide Key" : "Show Key"}
-                                    >
-                                        {visibleKeys[config.id] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                                    </button>
-                                    {apiKeys[config.id] ? (
-                                        <CheckCircle className="w-4 h-4 text-green-500" />
-                                    ) : (
-                                        <AlertCircle className="w-4 h-4 text-slate-500" />
-                                    )}
-                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => toggleKeyVisibility(provider.id)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                >
+                                    {visibleKeys[provider.id] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                </button>
                             </div>
                         </div>
                     ))}
-
-                    {/* Deepgram Key */}
-                    <div>
-                        <div className="flex items-center gap-2 mb-2">
-                            <label className="block text-sm font-medium text-slate-300">Deepgram API Key</label>
-                            <span className="text-xs bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded border border-purple-500/20">Speech</span>
-                        </div>
-                        <div className="relative">
-                            <input
-                                type={visibleKeys['deepgram'] ? 'text' : 'password'}
-                                placeholder="Enter Deepgram API Key..."
-                                value={apiKeys['deepgram'] || ''}
-                                onChange={(e) => setApiKeys(prev => ({
-                                    ...prev,
-                                    ['deepgram']: e.target.value
-                                }))}
-                                className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-primary font-mono text-sm pr-20"
-                            />
-                            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                                <button
-                                    type="button"
-                                    onClick={() => setVisibleKeys(prev => ({ ...prev, 'deepgram': !prev['deepgram'] }))}
-                                    className="text-slate-500 hover:text-white"
-                                    title={visibleKeys['deepgram'] ? "Hide Key" : "Show Key"}
-                                >
-                                    {visibleKeys['deepgram'] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                                </button>
-                                {apiKeys['deepgram'] ? (
-                                    <CheckCircle className="w-4 h-4 text-green-500" />
-                                ) : (
-                                    <AlertCircle className="w-4 h-4 text-slate-500" />
-                                )}
-                            </div>
-                        </div>
-                    </div>
                 </div>
+                
+                <p className="text-sm text-muted-foreground mt-6 bg-muted/50 p-4 rounded-lg">
+                    <AlertCircle className="w-4 h-4 inline mr-2 -mt-0.5" />
+                    Keys are stored securely. You may revert a key to empty to remove it.
+                </p>
             </div>
         </div>
     );

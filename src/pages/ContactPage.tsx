@@ -3,12 +3,35 @@
  * Contact form and company information
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Header from '../components/common/Header';
 import Footer from './LandingPage/sections/Footer';
 import Icon from '../components/ui/AppIcon';
 import { contactService } from '../lib/services/contactService';
+import { adminService } from '../lib/services/adminService';
+
+// Define types for settings
+interface ContactMethod {
+    icon: string;
+    title: string;
+    description: string;
+    value: string;
+    link: string;
+}
+
+interface OfficeLocation {
+    city: string;
+    address: string;
+    region: string;
+    country: string;
+}
+
+interface BusinessHours {
+    weekday: string;
+    saturday: string;
+    sunday: string;
+}
 
 const ContactPage = () => {
   const [formData, setFormData] = useState({
@@ -22,6 +45,129 @@ const ContactPage = () => {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Dynamic Settings State
+  const [contactMethods, setContactMethods] = useState<ContactMethod[]>([]);
+  const [offices, setOffices] = useState<OfficeLocation[]>([]);
+  const [hours, setHours] = useState<BusinessHours>({
+      weekday: '9:00 AM - 6:00 PM PST',
+      saturday: '10:00 AM - 4:00 PM PST',
+      sunday: 'Closed'
+  });
+
+  useEffect(() => {
+    loadSettings();
+  }, []);
+
+  const loadSettings = async () => {
+    try {
+        const [methods, locs, busHours] = await Promise.all([
+            adminService.getAppConfig('contact_methods'),
+            adminService.getAppConfig('office_locations'),
+            adminService.getAppConfig('business_hours')
+        ]);
+
+        const parseConfig = (val: any) => {
+            if (!val) return null;
+            if (typeof val === 'string') {
+                try {
+                    return JSON.parse(val);
+                } catch (e) {
+                     console.error('Failed to parse config:', e);
+                     return null;
+                }
+            }
+            return val;
+        };
+
+        const parsedMethods = parseConfig(methods);
+        const parsedLocs = parseConfig(locs);
+        const parsedHours = parseConfig(busHours);
+
+        if (parsedMethods) setContactMethods(parsedMethods as ContactMethod[]);
+        else {
+             // Fallback Defaults
+             setContactMethods([
+                {
+                  icon: 'EnvelopeIcon',
+                  title: 'Email Us',
+                  description: 'Our team responds within 24 hours',
+                  value: 'support@interviewcopilot.ai',
+                  link: 'mailto:support@interviewcopilot.ai',
+                },
+                {
+                  icon: 'ChatBubbleLeftRightIcon',
+                  title: 'Live Chat',
+                  description: 'Available Mon-Fri, 9am-6pm PST',
+                  value: 'Start Chat',
+                  link: '#',
+                },
+                {
+                  icon: 'PhoneIcon',
+                  title: 'Call Us',
+                  description: 'For urgent enterprise inquiries',
+                  value: '+1 (555) 123-4567',
+                  link: 'tel:+15551234567',
+                },
+              ]);
+        }
+
+        if (parsedLocs) setOffices(parsedLocs as OfficeLocation[]);
+        else {
+            setOffices([
+                {
+                  city: 'San Francisco',
+                  address: '123 Market Street, Suite 400',
+                  region: 'San Francisco, CA 94103',
+                  country: 'United States',
+                },
+                {
+                  city: 'New York',
+                  address: '456 Broadway, Floor 12',
+                  region: 'New York, NY 10013',
+                  country: 'United States',
+                },
+                {
+                  city: 'London',
+                  address: '789 Tech Hub, Shoreditch',
+                  region: 'London EC2A 3AY',
+                  country: 'United Kingdom',
+                },
+              ]);
+        }
+
+        if (parsedHours) setHours(parsedHours as BusinessHours);
+
+    } catch (err) {
+        console.error('Failed to load contact settings:', err);
+        // Defaults are already set for hours, and arrays default to empty which is fine as fallbacks are handled above if desired
+        if (contactMethods.length === 0) {
+             setContactMethods([
+                {
+                  icon: 'EnvelopeIcon',
+                  title: 'Email Us',
+                  description: 'Our team responds within 24 hours',
+                  value: 'support@interviewcopilot.ai',
+                  link: 'mailto:support@interviewcopilot.ai',
+                },
+                {
+                    icon: 'ChatBubbleLeftRightIcon',
+                    title: 'Live Chat',
+                    description: 'Available Mon-Fri, 9am-6pm PST',
+                    value: 'Start Chat',
+                    link: '#',
+                },
+                {
+                    icon: 'PhoneIcon',
+                    title: 'Call Us',
+                    description: 'For urgent enterprise inquiries',
+                    value: '+1 (555) 123-4567',
+                    link: 'tel:+15551234567',
+                },
+             ]);
+        }
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,51 +229,6 @@ const ContactPage = () => {
     });
   };
 
-  const contactMethods = [
-    {
-      icon: 'EnvelopeIcon',
-      title: 'Email Us',
-      description: 'Our team responds within 24 hours',
-      value: 'support@interviewcopilot.ai',
-      link: 'mailto:support@interviewcopilot.ai',
-    },
-    {
-      icon: 'ChatBubbleLeftRightIcon',
-      title: 'Live Chat',
-      description: 'Available Mon-Fri, 9am-6pm PST',
-      value: 'Start Chat',
-      link: '#',
-    },
-    {
-      icon: 'PhoneIcon',
-      title: 'Call Us',
-      description: 'For urgent enterprise inquiries',
-      value: '+1 (555) 123-4567',
-      link: 'tel:+15551234567',
-    },
-  ];
-
-  const offices = [
-    {
-      city: 'San Francisco',
-      address: '123 Market Street, Suite 400',
-      region: 'San Francisco, CA 94103',
-      country: 'United States',
-    },
-    {
-      city: 'New York',
-      address: '456 Broadway, Floor 12',
-      region: 'New York, NY 10013',
-      country: 'United States',
-    },
-    {
-      city: 'London',
-      address: '789 Tech Hub, Shoreditch',
-      region: 'London EC2A 3AY',
-      country: 'United Kingdom',
-    },
-  ];
-
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -150,9 +251,9 @@ const ContactPage = () => {
       <section className="py-12 border-b border-border">
         <div className="mx-auto max-w-7xl px-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {contactMethods.map((method) => (
+            {contactMethods.map((method, idx) => (
               <a
-                key={method.title}
+                key={idx}
                 href={method.link}
                 className="bg-card rounded-xl border border-border p-6 hover:shadow-lg transition-all hover:border-primary group"
               >
@@ -356,8 +457,8 @@ const ContactPage = () => {
                   Our Offices
                 </h3>
                 <div className="space-y-4">
-                  {offices.map((office) => (
-                    <div key={office.city} className="pb-4 border-b border-border last:border-0 last:pb-0">
+                  {offices.map((office, idx) => (
+                    <div key={idx} className="pb-4 border-b border-border last:border-0 last:pb-0">
                       <h4 className="font-semibold text-foreground mb-1">{office.city}</h4>
                       <p className="text-sm text-muted-foreground">{office.address}</p>
                       <p className="text-sm text-muted-foreground">{office.region}</p>
@@ -376,15 +477,15 @@ const ContactPage = () => {
                 <div className="space-y-2 font-body">
                   <div className="flex justify-between">
                     <span>Monday - Friday:</span>
-                    <span className="font-semibold">9:00 AM - 6:00 PM PST</span>
+                    <span className="font-semibold">{hours.weekday}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Saturday:</span>
-                    <span className="font-semibold">10:00 AM - 4:00 PM PST</span>
+                    <span className="font-semibold">{hours.saturday}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Sunday:</span>
-                    <span className="font-semibold">Closed</span>
+                    <span className="font-semibold">{hours.sunday}</span>
                   </div>
                 </div>
                 <p className="mt-4 text-sm opacity-90">

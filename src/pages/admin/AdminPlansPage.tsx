@@ -114,17 +114,17 @@ export function AdminPlansPage() {
                     <div className="flex items-center gap-3 mb-2">
                         <Link 
                             to="/admin/dashboard" 
-                            className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+                            className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
                         >
                             <ArrowLeft className="w-5 h-5" />
                         </Link>
-                        <h1 className="text-2xl font-bold text-white">Credit Plans</h1>
+                        <h1 className="text-2xl font-bold text-foreground">Credit Plans</h1>
                     </div>
-                    <p className="text-slate-400 ml-11">Manage credit packages and pricing</p>
+                    <p className="text-muted-foreground ml-11">Manage credit packages and pricing</p>
                 </div>
                 <button
                     onClick={() => navigate('/admin/plans/new')}
-                    className="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2"
+                    className="bg-primary text-primary-foreground px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2 shadow-sm"
                 >
                     <Plus className="w-4 h-4" />
                     Create Plan
@@ -132,39 +132,39 @@ export function AdminPlansPage() {
             </div>
 
             {/* Price per Credit Setting */}
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+            <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
                 <div className="flex items-center gap-3 mb-4">
-                    <div className="p-3 bg-emerald-500/10 rounded-xl">
-                        <DollarSign className="w-6 h-6 text-emerald-400" />
+                    <div className="p-3 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
+                        <DollarSign className="w-6 h-6 text-emerald-500" />
                     </div>
                     <div>
-                        <h2 className="text-lg font-semibold text-white">Price per Credit</h2>
-                        <p className="text-slate-400 text-sm">Set the base price for 1 credit. Plan prices will be calculated automatically.</p>
+                        <h2 className="text-lg font-semibold text-foreground">Price per Credit</h2>
+                        <p className="text-muted-foreground text-sm">Set the base price for 1 credit. Plan prices will be calculated automatically.</p>
                     </div>
                 </div>
 
                 <div className="flex items-end gap-4 flex-wrap">
                     <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-2">Price per Credit (₹ INR)</label>
+                        <label className="block text-sm font-medium text-foreground mb-2">Price per Credit (₹ INR)</label>
                         <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">₹</span>
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">₹</span>
                             <input
                                 type="number"
                                 step="0.01"
                                 min="0"
                                 value={pricePerCredit}
                                 onChange={(e) => setPricePerCredit(e.target.value)}
-                                className="w-32 pl-8 pr-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                className="w-32 pl-8 pr-4 py-2.5 bg-background border border-border rounded-lg text-foreground text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-primary/50 shadow-sm"
                             />
                         </div>
                     </div>
                     <button
                         onClick={handleSavePriceSettings}
                         disabled={savingSettings}
-                        className={`px-6 py-2.5 rounded-lg font-semibold flex items-center gap-2 transition-all ${
+                        className={`px-6 py-2.5 rounded-lg font-semibold flex items-center gap-2 transition-all shadow-sm ${
                             settingsSaved
                                 ? 'bg-green-500 text-white'
-                                : 'bg-primary text-white hover:bg-primary/90'
+                                : 'bg-primary text-primary-foreground hover:bg-primary/90'
                         } disabled:opacity-50`}
                     >
                         <Save className="w-4 h-4" />
@@ -173,9 +173,9 @@ export function AdminPlansPage() {
                 </div>
 
                 {/* Preview */}
-                <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg flex items-start gap-3">
-                    <Info className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
-                    <div className="text-sm text-blue-300">
+                <div className="mt-4 p-3 bg-sky-500/10 border border-sky-500/20 rounded-lg flex items-start gap-3">
+                    <Info className="w-5 h-5 text-sky-500 flex-shrink-0 mt-0.5" />
+                    <div className="text-sm text-sky-600 dark:text-sky-400">
                         <span className="font-medium">Preview:</span> At ₹{pricePerCredit}/credit, 
                         a plan with <strong>100 credits</strong> = <strong>₹{getSuggestedPrice(100)}</strong>, 
                         <strong> 200 credits</strong> = <strong>₹{getSuggestedPrice(200)}</strong>
@@ -188,25 +188,25 @@ export function AdminPlansPage() {
                 {plans.map((plan) => (
                     <div 
                         key={plan.id}
-                        className="bg-slate-900 border border-slate-800 rounded-xl p-6 relative group hover:border-slate-700 transition-all"
+                        className="bg-card border border-border rounded-xl p-6 relative group hover:border-primary/50 transition-all shadow-sm"
                     >
                         {plan.popular && (
-                            <div className="absolute top-0 right-0 bg-primary text-white text-xs font-bold px-3 py-1 rounded-bl-xl rounded-tr-xl">
+                            <div className="absolute top-0 right-0 bg-primary text-primary-foreground text-xs font-bold px-3 py-1 rounded-bl-xl rounded-tr-xl">
                                 POPULAR
                             </div>
                         )}
                         
                         <div className="flex justify-between items-start mb-4">
                             <div>
-                                <h3 className="text-lg font-bold text-white mb-1">{plan.name}</h3>
+                                <h3 className="text-lg font-bold text-foreground mb-1">{plan.name}</h3>
                                 <div className="flex items-baseline gap-1">
-                                    <span className="text-2xl font-bold text-white">
+                                    <span className="text-2xl font-bold text-foreground">
                                         ₹{plan.price}
                                     </span>
-                                    <span className="text-slate-500 text-sm">/ pack</span>
+                                    <span className="text-muted-foreground text-sm">/ pack</span>
                                 </div>
                             </div>
-                            <div className={`p-2 rounded-lg ${plan.active ? 'bg-green-500/10 text-green-400' : 'bg-slate-800 text-slate-500'}`}>
+                            <div className={`p-2 rounded-lg ${plan.active ? 'bg-green-500/10 text-green-500' : 'bg-muted text-muted-foreground'}`}>
                                 <CreditCard className="w-5 h-5" />
                             </div>
                         </div>
@@ -215,31 +215,31 @@ export function AdminPlansPage() {
                              <div className="text-3xl font-bold text-primary mb-1">
                                 {plan.credits}
                              </div>
-                             <div className="text-sm text-slate-400 font-medium">
+                             <div className="text-sm text-muted-foreground font-medium">
                                 CREDITS
                              </div>
                         </div>
 
                         <div className="space-y-2 mb-6 min-h-[100px]">
                             {plan.features.slice(0, 4).map((feature, i) => (
-                                <div key={i} className="flex items-start gap-2 text-sm text-slate-400">
+                                <div key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
                                     <Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
                                     <span>{feature}</span>
                                 </div>
                             ))}
                         </div>
 
-                        <div className="flex items-center gap-3 pt-4 border-t border-slate-800">
+                        <div className="flex items-center gap-3 pt-4 border-t border-border">
                             <button
                                 onClick={() => navigate(`/admin/plans/${plan.id}`)}
-                                className="flex-1 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                                className="flex-1 px-3 py-2 bg-muted hover:bg-muted/80 text-foreground rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 border border-border"
                             >
                                 <Edit2 className="w-4 h-4" />
                                 Edit
                             </button>
                             <button
                                 onClick={() => handleDelete(plan.id)}
-                                className="px-3 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg text-sm font-medium transition-colors flex items-center justify-center"
+                                className="px-3 py-2 bg-destructive/10 hover:bg-destructive/20 text-destructive rounded-lg text-sm font-medium transition-colors flex items-center justify-center border border-destructive/20"
                             >
                                 <Trash2 className="w-4 h-4" />
                             </button>
@@ -249,9 +249,9 @@ export function AdminPlansPage() {
 
                 {/* Empty State */}
                 {plans.length === 0 && !loading && (
-                    <div className="col-span-full py-12 text-center text-slate-500 border border-dashed border-slate-800 rounded-xl">
+                    <div className="col-span-full py-12 text-center text-muted-foreground border border-dashed border-border rounded-xl">
                         <CreditCard className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                        <p className="text-lg font-medium text-slate-400">No credit plans found</p>
+                        <p className="text-lg font-medium text-foreground">No credit plans found</p>
                         <p className="text-sm mb-4">Create your first credit package to start selling.</p>
                         <button
                             onClick={() => navigate('/admin/plans/new')}

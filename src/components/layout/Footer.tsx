@@ -47,7 +47,6 @@ export function Footer({ variant = 'dark' }: FooterProps) {
             <ul className="space-y-3 text-sm">
               <li><Link to="/features" className={cn("transition-colors", isLight ? "text-slate-600 hover:text-primary" : "text-slate-400 hover:text-primary")}>Features</Link></li>
               <li><Link to="/pricing" className={cn("transition-colors", isLight ? "text-slate-600 hover:text-primary" : "text-slate-400 hover:text-primary")}>Pricing</Link></li>
-              <li><Link to="/how-it-works" className={cn("transition-colors", isLight ? "text-slate-600 hover:text-primary" : "text-slate-400 hover:text-primary")}>How it Works</Link></li>
               <li><Link to="/extension" className={cn("transition-colors", isLight ? "text-slate-600 hover:text-primary" : "text-slate-400 hover:text-primary")}>Chrome Extension</Link></li>
             </ul>
           </div>
@@ -56,8 +55,7 @@ export function Footer({ variant = 'dark' }: FooterProps) {
             <h4 className={cn("font-semibold mb-6", isLight ? "text-slate-900" : "text-white")}>Company</h4>
             <ul className="space-y-3 text-sm">
               <li><Link to="/about" className={cn("transition-colors", isLight ? "text-slate-600 hover:text-primary" : "text-slate-400 hover:text-primary")}>About Us</Link></li>
-              <li><Link to="/blog" className={cn("transition-colors", isLight ? "text-slate-600 hover:text-primary" : "text-slate-400 hover:text-primary")}>Blog</Link></li>
-              <li><Link to="/careers" className={cn("transition-colors", isLight ? "text-slate-600 hover:text-primary" : "text-slate-400 hover:text-primary")}>Careers</Link></li>
+              <li><Link to="/how-it-works" className={cn("transition-colors", isLight ? "text-slate-600 hover:text-primary" : "text-slate-400 hover:text-primary")}>How it Works</Link></li>
               <li><Link to="/#contact" className={cn("transition-colors", isLight ? "text-slate-600 hover:text-primary" : "text-slate-400 hover:text-primary")}>Contact</Link></li>
             </ul>
           </div>

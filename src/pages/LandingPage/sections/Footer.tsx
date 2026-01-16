@@ -15,20 +15,17 @@ const Footer = () => {
     product: [
       { label: 'Features', href: '#features' },
       { label: 'Pricing', href: '#pricing' },
-      { label: 'How It Works', href: '#how-it-works' },
-      { label: 'FAQ', href: '#faq' }
+      { label: 'How It Works', href: '#how-it-works' }
     ],
     company: [
       { label: 'About Us', href: '/about-us' },
       { label: 'Contact', href: '/contact' },
-      { label: 'Blog', href: '/blog' },
-      { label: 'Careers', href: '/careers' }
+      { label: 'FAQ', href: '#faq' }
     ],
     legal: [
       { label: 'Privacy Policy', href: '/privacy-policy' },
       { label: 'Terms of Service', href: '/terms-of-service' },
-      { label: 'Responsible Use', href: '/responsible-ai-use' },
-      { label: 'Security', href: '/security' }
+      { label: 'Responsible Use', href: '/responsible-ai-use' }
     ]
   };
 

@@ -140,22 +140,22 @@ export function AdminPaymentsPage() {
                     <div className="flex items-center gap-3 mb-2">
                         <Link
                             to="/admin/dashboard"
-                            className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+                            className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
                         >
                             <ArrowLeft className="w-5 h-5" />
                         </Link>
-                        <h1 className="text-2xl font-bold text-white">Payment Settings</h1>
+                        <h1 className="text-2xl font-bold text-foreground">Payment Settings</h1>
                     </div>
-                    <p className="text-slate-400 ml-11">Configure payment processor integration</p>
+                    <p className="text-muted-foreground ml-11">Configure payment processor integration</p>
                 </div>
                 <button
                     onClick={handleSave}
                     disabled={saving}
-                    className="px-6 py-2.5 bg-primary text-white font-medium rounded-lg hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20 disabled:opacity-50 flex items-center gap-2"
+                    className="px-6 py-2.5 bg-primary text-primary-foreground font-medium rounded-lg hover:bg-primary/90 transition-colors shadow-sm disabled:opacity-50 flex items-center gap-2"
                 >
                     {saving ? (
                         <>
-                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
                             Saving...
                         </>
                     ) : saveSuccess ? (
@@ -176,25 +176,25 @@ export function AdminPaymentsPage() {
             <div className={`rounded-xl p-4 border flex items-center gap-4 ${
                 isConfigured && config.paymentsEnabled
                     ? 'bg-green-500/10 border-green-500/20'
-                    : 'bg-slate-800/50 border-slate-700'
+                    : 'bg-muted/50 border-border'
             }`}>
                 <div className={`p-3 rounded-xl ${
                     isConfigured && config.paymentsEnabled
                         ? 'bg-green-500/20'
-                        : 'bg-slate-700'
+                        : 'bg-muted'
                 }`}>
                     <CreditCard className={`w-6 h-6 ${
                         isConfigured && config.paymentsEnabled
-                            ? 'text-green-400'
-                            : 'text-slate-400'
+                            ? 'text-green-500'
+                            : 'text-muted-foreground'
                     }`} />
                 </div>
                 <div className="flex-1">
-                    <p className="font-medium text-white">Payment Status</p>
+                    <p className="font-medium text-foreground">Payment Status</p>
                     <p className={`text-sm ${
                         isConfigured && config.paymentsEnabled
-                            ? 'text-green-400'
-                            : 'text-slate-400'
+                            ? 'text-green-600 dark:text-green-400'
+                            : 'text-muted-foreground'
                     }`}>
                         {isConfigured && config.paymentsEnabled
                             ? `Payments enabled via ${config.activeProvider === 'stripe' ? 'Stripe' : 'Razorpay'}`
@@ -204,21 +204,21 @@ export function AdminPaymentsPage() {
                     </p>
                 </div>
                 {isConfigured && config.paymentsEnabled && (
-                    <CheckCircle className="w-6 h-6 text-green-400" />
+                    <CheckCircle className="w-6 h-6 text-green-500" />
                 )}
             </div>
 
             {error && (
-                <div className="bg-red-500/10 text-red-400 p-4 rounded-lg border border-red-500/20 flex items-start gap-3">
+                <div className="bg-destructive/10 text-destructive p-4 rounded-lg border border-destructive/20 flex items-start gap-3">
                     <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
                     <p>{error}</p>
                 </div>
             )}
 
             {/* Provider Selection */}
-            <div className="bg-slate-900 rounded-xl border border-slate-800 p-6">
-                <h2 className="text-lg font-semibold text-white mb-4">Payment Provider</h2>
-                <p className="text-sm text-slate-400 mb-6">Select your preferred payment processor. Only one can be active at a time.</p>
+            <div className="bg-card rounded-xl border border-border p-6 shadow-sm">
+                <h2 className="text-lg font-semibold text-foreground mb-4">Payment Provider</h2>
+                <p className="text-sm text-muted-foreground mb-6">Select your preferred payment processor. Only one can be active at a time.</p>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                     {/* Stripe Option */}
@@ -226,7 +226,7 @@ export function AdminPaymentsPage() {
                         block p-4 rounded-xl border-2 cursor-pointer transition-all
                         ${config.activeProvider === 'stripe' 
                             ? 'border-primary bg-primary/5' 
-                            : 'border-slate-700 hover:border-slate-600 bg-slate-800/50'
+                            : 'border-border hover:border-muted-foreground/30 bg-muted/30'
                         }
                     `}>
                         <div className="flex items-center gap-3">
@@ -236,14 +236,14 @@ export function AdminPaymentsPage() {
                                 value="stripe"
                                 checked={config.activeProvider === 'stripe'}
                                 onChange={() => setConfig(prev => ({ ...prev, activeProvider: 'stripe' }))}
-                                className="w-4 h-4 text-primary border-slate-600 focus:ring-primary/50 bg-slate-800"
+                                className="w-4 h-4 text-primary border-muted-foreground focus:ring-primary/50 bg-background"
                             />
                             <div className="flex-1">
                                 <div className="flex items-center gap-2">
-                                    <span className="font-semibold text-white">Stripe</span>
-                                    <span className="text-xs bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded">Global</span>
+                                    <span className="font-semibold text-foreground">Stripe</span>
+                                    <span className="text-xs bg-blue-500/10 text-blue-500 px-2 py-0.5 rounded border border-blue-500/20">Global</span>
                                 </div>
-                                <p className="text-sm text-slate-400 mt-0.5">Ideal for international payments</p>
+                                <p className="text-sm text-muted-foreground mt-0.5">Ideal for international payments</p>
                             </div>
                         </div>
                     </label>
@@ -253,7 +253,7 @@ export function AdminPaymentsPage() {
                         block p-4 rounded-xl border-2 cursor-pointer transition-all
                         ${config.activeProvider === 'razorpay' 
                             ? 'border-primary bg-primary/5' 
-                            : 'border-slate-700 hover:border-slate-600 bg-slate-800/50'
+                            : 'border-border hover:border-muted-foreground/30 bg-muted/30'
                         }
                     `}>
                         <div className="flex items-center gap-3">
@@ -263,24 +263,24 @@ export function AdminPaymentsPage() {
                                 value="razorpay"
                                 checked={config.activeProvider === 'razorpay'}
                                 onChange={() => setConfig(prev => ({ ...prev, activeProvider: 'razorpay' }))}
-                                className="w-4 h-4 text-primary border-slate-600 focus:ring-primary/50 bg-slate-800"
+                                className="w-4 h-4 text-primary border-muted-foreground focus:ring-primary/50 bg-background"
                             />
                             <div className="flex-1">
                                 <div className="flex items-center gap-2">
-                                    <span className="font-semibold text-white">Razorpay</span>
-                                    <span className="text-xs bg-green-500/10 text-green-400 px-2 py-0.5 rounded">India</span>
+                                    <span className="font-semibold text-foreground">Razorpay</span>
+                                    <span className="text-xs bg-green-500/10 text-green-500 px-2 py-0.5 rounded border border-green-500/20">India</span>
                                 </div>
-                                <p className="text-sm text-slate-400 mt-0.5">Best for Indian payments (UPI, cards)</p>
+                                <p className="text-sm text-muted-foreground mt-0.5">Best for Indian payments (UPI, cards)</p>
                             </div>
                         </div>
                     </label>
                 </div>
 
                 {/* Enable Toggle */}
-                <div className="flex items-center justify-between p-4 bg-slate-800/50 rounded-xl">
+                <div className="flex items-center justify-between p-4 bg-muted/50 rounded-xl border border-border">
                     <div>
-                        <p className="text-white font-medium">Enable Payments</p>
-                        <p className="text-sm text-slate-400">Accept payments from users</p>
+                        <p className="text-foreground font-medium">Enable Payments</p>
+                        <p className="text-sm text-muted-foreground">Accept payments from users</p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                         <input
@@ -289,25 +289,25 @@ export function AdminPaymentsPage() {
                             onChange={(e) => setConfig({ ...config, paymentsEnabled: e.target.checked })}
                             className="sr-only peer"
                         />
-                        <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                        <div className="w-11 h-6 bg-muted-foreground/30 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                     </label>
                 </div>
             </div>
 
             {/* Stripe Configuration */}
-            <div className={`bg-slate-900 rounded-xl border border-slate-800 p-6 transition-opacity ${
-                config.activeProvider !== 'stripe' ? 'opacity-50' : ''
+            <div className={`bg-card rounded-xl border border-border p-6 shadow-sm transition-opacity ${
+                config.activeProvider !== 'stripe' ? 'opacity-50 pointer-events-none' : ''
             }`}>
                 <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-[#635bff] rounded-lg flex items-center justify-center text-white font-bold text-lg">S</div>
-                        <span className="text-white font-medium">Stripe Configuration</span>
+                        <div className="w-10 h-10 bg-[#635bff] rounded-lg flex items-center justify-center text-white font-bold text-lg shadow-sm">S</div>
+                        <span className="text-foreground font-medium">Stripe Configuration</span>
                     </div>
                     <a
                         href="https://dashboard.stripe.com/apikeys"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-sm text-primary hover:text-primary/80 flex items-center gap-1"
+                        className="text-sm text-primary hover:text-primary/80 flex items-center gap-1 hover:underline"
                     >
                         Get API Keys <ExternalLink className="w-4 h-4" />
                     </a>
@@ -315,7 +315,7 @@ export function AdminPaymentsPage() {
 
                 <div className="space-y-4">
                     <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-2">Publishable Key</label>
+                        <label className="block text-sm font-medium text-foreground mb-2">Publishable Key</label>
                         <input
                             type="text"
                             value={config.stripe.publishableKey}
@@ -325,12 +325,12 @@ export function AdminPaymentsPage() {
                             }))}
                             placeholder="pk_test_..."
                             disabled={config.activeProvider !== 'stripe'}
-                            className="w-full px-4 py-3 rounded-lg border border-slate-700 bg-slate-800 text-white placeholder-slate-500 font-mono text-sm disabled:opacity-50"
+                            className="w-full px-4 py-3 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary font-mono text-sm disabled:opacity-50 shadow-sm"
                         />
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-2">Secret Key</label>
+                        <label className="block text-sm font-medium text-foreground mb-2">Secret Key</label>
                         <div className="relative">
                             <input
                                 type={showSecrets['stripe_secret'] ? 'text' : 'password'}
@@ -341,12 +341,12 @@ export function AdminPaymentsPage() {
                                 }))}
                                 placeholder="sk_test_..."
                                 disabled={config.activeProvider !== 'stripe'}
-                                className="w-full px-4 py-3 pr-12 rounded-lg border border-slate-700 bg-slate-800 text-white placeholder-slate-500 font-mono text-sm disabled:opacity-50"
+                                className="w-full px-4 py-3 pr-12 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary font-mono text-sm disabled:opacity-50 shadow-sm"
                             />
                             <button
                                 type="button"
                                 onClick={() => toggleShowSecret('stripe_secret')}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                             >
                                 {showSecrets['stripe_secret'] ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                             </button>
@@ -354,7 +354,7 @@ export function AdminPaymentsPage() {
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-2">Webhook Secret <span className="text-slate-500">(optional)</span></label>
+                        <label className="block text-sm font-medium text-foreground mb-2">Webhook Secret <span className="text-muted-foreground font-normal">(optional)</span></label>
                         <div className="relative">
                             <input
                                 type={showSecrets['stripe_webhook'] ? 'text' : 'password'}
@@ -365,12 +365,12 @@ export function AdminPaymentsPage() {
                                 }))}
                                 placeholder="whsec_..."
                                 disabled={config.activeProvider !== 'stripe'}
-                                className="w-full px-4 py-3 pr-12 rounded-lg border border-slate-700 bg-slate-800 text-white placeholder-slate-500 font-mono text-sm disabled:opacity-50"
+                                className="w-full px-4 py-3 pr-12 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary font-mono text-sm disabled:opacity-50 shadow-sm"
                             />
                             <button
                                 type="button"
                                 onClick={() => toggleShowSecret('stripe_webhook')}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                             >
                                 {showSecrets['stripe_webhook'] ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                             </button>
@@ -380,19 +380,19 @@ export function AdminPaymentsPage() {
             </div>
 
             {/* Razorpay Configuration */}
-            <div className={`bg-slate-900 rounded-xl border border-slate-800 p-6 transition-opacity ${
-                config.activeProvider !== 'razorpay' ? 'opacity-50' : ''
+            <div className={`bg-card rounded-xl border border-border p-6 shadow-sm transition-opacity ${
+                config.activeProvider !== 'razorpay' ? 'opacity-50 pointer-events-none' : ''
             }`}>
                 <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-[#072654] rounded-lg flex items-center justify-center text-white font-bold text-lg">R</div>
-                        <span className="text-white font-medium">Razorpay Configuration</span>
+                        <div className="w-10 h-10 bg-[#072654] rounded-lg flex items-center justify-center text-white font-bold text-lg shadow-sm">R</div>
+                        <span className="text-foreground font-medium">Razorpay Configuration</span>
                     </div>
                     <a
                         href="https://dashboard.razorpay.com/app/website-app-settings/api-keys"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-sm text-primary hover:text-primary/80 flex items-center gap-1"
+                        className="text-sm text-primary hover:text-primary/80 flex items-center gap-1 hover:underline"
                     >
                         Get API Keys <ExternalLink className="w-4 h-4" />
                     </a>
@@ -400,7 +400,7 @@ export function AdminPaymentsPage() {
 
                 <div className="space-y-4">
                     <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-2">Key ID</label>
+                        <label className="block text-sm font-medium text-foreground mb-2">Key ID</label>
                         <input
                             type="text"
                             value={config.razorpay.keyId}
@@ -410,12 +410,12 @@ export function AdminPaymentsPage() {
                             }))}
                             placeholder="rzp_test_..."
                             disabled={config.activeProvider !== 'razorpay'}
-                            className="w-full px-4 py-3 rounded-lg border border-slate-700 bg-slate-800 text-white placeholder-slate-500 font-mono text-sm disabled:opacity-50"
+                            className="w-full px-4 py-3 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary font-mono text-sm disabled:opacity-50 shadow-sm"
                         />
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-2">Key Secret</label>
+                        <label className="block text-sm font-medium text-foreground mb-2">Key Secret</label>
                         <div className="relative">
                             <input
                                 type={showSecrets['razorpay_secret'] ? 'text' : 'password'}
@@ -426,12 +426,12 @@ export function AdminPaymentsPage() {
                                 }))}
                                 placeholder="Your Razorpay secret..."
                                 disabled={config.activeProvider !== 'razorpay'}
-                                className="w-full px-4 py-3 pr-12 rounded-lg border border-slate-700 bg-slate-800 text-white placeholder-slate-500 font-mono text-sm disabled:opacity-50"
+                                className="w-full px-4 py-3 pr-12 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary font-mono text-sm disabled:opacity-50 shadow-sm"
                             />
                             <button
                                 type="button"
                                 onClick={() => toggleShowSecret('razorpay_secret')}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                             >
                                 {showSecrets['razorpay_secret'] ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                             </button>
@@ -439,7 +439,7 @@ export function AdminPaymentsPage() {
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-2">Webhook Secret <span className="text-slate-500">(optional)</span></label>
+                        <label className="block text-sm font-medium text-foreground mb-2">Webhook Secret <span className="text-muted-foreground font-normal">(optional)</span></label>
                         <div className="relative">
                             <input
                                 type={showSecrets['razorpay_webhook'] ? 'text' : 'password'}
@@ -450,12 +450,12 @@ export function AdminPaymentsPage() {
                                 }))}
                                 placeholder="Webhook secret..."
                                 disabled={config.activeProvider !== 'razorpay'}
-                                className="w-full px-4 py-3 pr-12 rounded-lg border border-slate-700 bg-slate-800 text-white placeholder-slate-500 font-mono text-sm disabled:opacity-50"
+                                className="w-full px-4 py-3 pr-12 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary font-mono text-sm disabled:opacity-50 shadow-sm"
                             />
                             <button
                                 type="button"
                                 onClick={() => toggleShowSecret('razorpay_webhook')}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                             >
                                 {showSecrets['razorpay_webhook'] ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                             </button>
@@ -465,11 +465,11 @@ export function AdminPaymentsPage() {
             </div>
 
             {/* Info Card */}
-            <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700">
-                <p className="text-slate-400 text-sm">
-                    <strong className="text-white">Note:</strong> Use test keys during development. 
-                    Stripe test keys start with <code className="text-primary">pk_test_</code> / <code className="text-primary">sk_test_</code>.
-                    Razorpay test keys start with <code className="text-primary">rzp_test_</code>.
+            <div className="bg-muted/50 rounded-xl p-4 border border-border">
+                <p className="text-muted-foreground text-sm">
+                    <strong className="text-foreground">Note:</strong> Use test keys during development. 
+                    Stripe test keys start with <code className="text-primary bg-primary/10 px-1 rounded">pk_test_</code> / <code className="text-primary bg-primary/10 px-1 rounded">sk_test_</code>.
+                    Razorpay test keys start with <code className="text-primary bg-primary/10 px-1 rounded">rzp_test_</code>.
                 </p>
             </div>
         </div>

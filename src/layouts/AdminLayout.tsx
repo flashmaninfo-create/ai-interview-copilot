@@ -18,7 +18,8 @@ import {
     LogOut,
     Menu,
     X,
-    DollarSign
+    DollarSign,
+    Settings
 } from 'lucide-react';
 
 interface NavItem {
@@ -72,6 +73,11 @@ export function AdminLayout() {
             path: '/admin/plans',
             icon: <DollarSign className="w-5 h-5" />
         },
+        {
+            label: 'Settings',
+            path: '/admin/settings',
+            icon: <Settings className="w-5 h-5" />
+        },
     ];
 
     const handleSignOut = async () => {
@@ -80,7 +86,7 @@ export function AdminLayout() {
     };
 
     return (
-        <div className="min-h-screen bg-slate-950">
+        <div className="min-h-screen bg-background">
             {/* Mobile overlay */}
             {sidebarOpen && (
                 <div
@@ -91,24 +97,21 @@ export function AdminLayout() {
 
             {/* Sidebar */}
             <aside className={`
-                fixed top-0 left-0 bottom-0 w-64 bg-slate-900 border-r border-slate-800 z-30
+                fixed top-0 left-0 bottom-0 w-64 bg-card border-r border-border z-30
                 transition-transform duration-300 ease-in-out
                 lg:translate-x-0
                 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
             `}>
                 <div className="h-full flex flex-col">
                     {/* Header */}
-                    <div className="h-16 flex items-center justify-between px-4 border-b border-slate-800">
+                    <div className="h-16 flex items-center justify-between px-4 border-b border-border">
                         <Link to="/admin/dashboard" className="flex items-center gap-3">
-                            <img src="/1.svg" alt="Admin Logo" className="w-10 h-10 rounded-xl shadow-lg shadow-primary/20" />
-                            <div>
-                                <span className="text-lg font-bold text-white">Admin</span>
-                                <span className="text-xs text-slate-500 block -mt-0.5">Control Panel</span>
-                            </div>
+                            <img src="/assets/images/XTROONE.svg" alt="Xtroone Admin" className="w-24" />
+                            <span className="sr-only">Admin Control Panel</span>
                         </Link>
                         <button
                             onClick={() => setSidebarOpen(false)}
-                            className="lg:hidden p-2 text-slate-400 hover:text-white"
+                            className="lg:hidden p-2 text-muted-foreground hover:text-foreground"
                         >
                             <X className="w-5 h-5" />
                         </button>
@@ -122,10 +125,10 @@ export function AdminLayout() {
                                 to={item.path}
                                 onClick={() => window.innerWidth < 1024 && setSidebarOpen(false)}
                                 className={`
-                                    w-full px-4 py-3 text-sm font-medium rounded-xl flex items-center gap-3 transition-all
+                                    w-full px-4 py-3 text-sm font-medium rounded-xl flex items-center gap-3 transition-colors duration-250
                                     ${isActive(item.path)
-                                        ? 'bg-primary text-white shadow-lg shadow-primary/20'
-                                        : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                                        ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20'
+                                        : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                                     }
                                 `}
                             >
@@ -136,23 +139,23 @@ export function AdminLayout() {
                     </nav>
 
                     {/* User info & sign out */}
-                    <div className="p-4 border-t border-slate-800">
+                    <div className="p-4 border-t border-border">
                         <div className="flex items-center gap-3 mb-4 px-2">
                             <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary text-sm font-bold">
                                 {profile?.fullName?.[0] || profile?.email?.[0]?.toUpperCase() || 'A'}
                             </div>
                             <div className="flex-1 min-w-0">
-                                <div className="text-sm font-medium text-white truncate">
+                                <div className="text-sm font-medium text-foreground truncate">
                                     {profile?.fullName || 'Admin'}
                                 </div>
-                                <div className="text-xs text-slate-500 truncate">
+                                <div className="text-xs text-muted-foreground truncate">
                                     {profile?.email}
                                 </div>
                             </div>
                         </div>
                         <button
                             onClick={handleSignOut}
-                            className="w-full px-4 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors flex items-center gap-2"
+                            className="w-full px-4 py-2.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors flex items-center gap-2"
                         >
                             <LogOut className="w-4 h-4" />
                             Sign Out
@@ -162,21 +165,20 @@ export function AdminLayout() {
             </aside>
 
             {/* Mobile Header */}
-            <header className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-slate-900 border-b border-slate-800 flex items-center px-4 z-20">
+            <header className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-card border-b border-border flex items-center px-4 z-20">
                 <button
                     onClick={() => setSidebarOpen(true)}
-                    className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg"
+                    className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg"
                 >
                     <Menu className="w-6 h-6" />
                 </button>
                 <div className="ml-4 flex items-center gap-3">
-                    <img src="/1.svg" alt="Admin Logo" className="w-8 h-8 rounded-lg" />
-                    <span className="text-lg font-bold text-white">Admin Panel</span>
+                    <img src="/assets/images/XTROONE.svg" alt="Xtroone Admin" className="w-24" />
                 </div>
             </header>
 
             {/* Main Content */}
-            <main className="lg:ml-64 p-4 lg:p-8 pt-20 lg:pt-8">
+            <main className="lg:ml-64 p-4 lg:p-8 pt-20 lg:pt-8 bg-background text-foreground transition-colors duration-250">
                 <Outlet />
             </main>
         </div>

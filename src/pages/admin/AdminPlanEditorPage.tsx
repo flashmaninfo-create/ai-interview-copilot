@@ -140,11 +140,11 @@ export function AdminPlanEditorPage() {
                     <div className="flex items-center gap-3 mb-2">
                         <Link 
                             to="/admin/plans" 
-                            className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+                            className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
                         >
                             <ArrowLeft className="w-5 h-5" />
                         </Link>
-                        <h1 className="text-2xl font-bold text-white">
+                        <h1 className="text-2xl font-bold text-foreground">
                             {isNew ? 'Create Credit Plan' : 'Edit Plan'}
                         </h1>
                     </div>
@@ -153,21 +153,21 @@ export function AdminPlanEditorPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Form */}
-                <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-6">
+                <div className="bg-card border border-border rounded-xl p-6 space-y-6 shadow-sm">
                     <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-2">Plan Name</label>
+                        <label className="block text-sm font-medium text-foreground mb-2">Plan Name</label>
                         <input
                             type="text"
                             value={plan.name}
                             onChange={e => setPlan(p => ({ ...p, name: e.target.value }))}
                             placeholder="e.g. Starter Pack"
-                            className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-primary"
+                            className="w-full px-4 py-2 bg-background border border-border rounded-lg text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm"
                         />
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-sm font-medium text-slate-300 mb-2">Credits</label>
+                            <label className="block text-sm font-medium text-foreground mb-2">Credits</label>
                             <input
                                 type="number"
                                 value={plan.credits}
@@ -179,12 +179,12 @@ export function AdminPlanEditorPage() {
                                         price: autoCalculate ? calculatePrice(credits) : p.price
                                     }));
                                 }}
-                                className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-primary"
+                                className="w-full px-4 py-2 bg-background border border-border rounded-lg text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm"
                             />
                         </div>
                         <div>
                             <div className="flex items-center justify-between mb-2">
-                                <label className="block text-sm font-medium text-slate-300">Price (₹ INR)</label>
+                                <label className="block text-sm font-medium text-foreground">Price (₹ INR)</label>
                                 <label className="flex items-center gap-2 cursor-pointer">
                                     <input
                                         type="checkbox"
@@ -195,9 +195,9 @@ export function AdminPlanEditorPage() {
                                                 setPlan(p => ({ ...p, price: calculatePrice(p.credits) }));
                                             }
                                         }}
-                                        className="rounded border-slate-700 bg-slate-800 text-primary focus:ring-primary/50"
+                                        className="rounded border-border bg-background text-primary focus:ring-primary/50"
                                     />
-                                    <span className="text-xs text-slate-400">Auto</span>
+                                    <span className="text-xs text-muted-foreground">Auto</span>
                                 </label>
                             </div>
                             <input
@@ -206,10 +206,10 @@ export function AdminPlanEditorPage() {
                                 value={plan.price}
                                 onChange={e => setPlan(p => ({ ...p, price: parseFloat(e.target.value) || 0 }))}
                                 disabled={autoCalculate}
-                                className={`w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-primary ${autoCalculate ? 'opacity-60' : ''}`}
+                                className={`w-full px-4 py-2 bg-background border border-border rounded-lg text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm ${autoCalculate ? 'opacity-60' : ''}`}
                             />
                             {autoCalculate && (
-                                <p className="text-xs text-emerald-400 mt-1">
+                                <p className="text-xs text-emerald-500 mt-1">
                                     Auto-calculated: {plan.credits} credits × ₹{pricePerCredit} = ₹{plan.price}
                                 </p>
                             )}
@@ -217,7 +217,7 @@ export function AdminPlanEditorPage() {
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-2">Features List</label>
+                        <label className="block text-sm font-medium text-foreground mb-2">Features List</label>
                         <div className="space-y-3">
                             {plan.features.map((feature, i) => (
                                 <div key={i} className="flex gap-2">
@@ -225,11 +225,11 @@ export function AdminPlanEditorPage() {
                                         type="text"
                                         value={feature}
                                         onChange={e => updateFeature(i, e.target.value)}
-                                        className="flex-1 px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:border-primary"
+                                        className="flex-1 px-3 py-2 bg-background border border-border rounded-lg text-foreground text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm"
                                     />
                                     <button
                                         onClick={() => removeFeature(i)}
-                                        className="p-2 text-slate-500 hover:text-red-400 hover:bg-slate-800 rounded-lg"
+                                        className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg"
                                     >
                                         <X className="w-4 h-4" />
                                     </button>
@@ -237,7 +237,7 @@ export function AdminPlanEditorPage() {
                             ))}
                             <button
                                 onClick={addFeature}
-                                className="w-full py-2 bg-slate-800/50 hover:bg-slate-800 text-slate-400 hover:text-white rounded-lg text-sm border border-dashed border-slate-700 transition-colors flex items-center justify-center gap-2"
+                                className="w-full py-2 bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground rounded-lg text-sm border border-dashed border-border transition-colors flex items-center justify-center gap-2"
                             >
                                 <Plus className="w-4 h-4" />
                                 Add Feature
@@ -245,15 +245,15 @@ export function AdminPlanEditorPage() {
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-4 pt-4 border-t border-slate-800">
+                    <div className="flex items-center gap-4 pt-4 border-t border-border">
                         <label className="flex items-center gap-2 cursor-pointer">
                             <input
                                 type="checkbox"
                                 checked={plan.active}
                                 onChange={e => setPlan(p => ({ ...p, active: e.target.checked }))}
-                                className="rounded border-slate-700 bg-slate-800 text-primary focus:ring-primary/50"
+                                className="rounded border-border bg-background text-primary focus:ring-primary/50"
                             />
-                            <span className="text-sm text-slate-300">Active</span>
+                            <span className="text-sm text-foreground">Active</span>
                         </label>
 
                         <label className="flex items-center gap-2 cursor-pointer">
@@ -261,9 +261,9 @@ export function AdminPlanEditorPage() {
                                 type="checkbox"
                                 checked={plan.popular}
                                 onChange={e => setPlan(p => ({ ...p, popular: e.target.checked }))}
-                                className="rounded border-slate-700 bg-slate-800 text-primary focus:ring-primary/50"
+                                className="rounded border-border bg-background text-primary focus:ring-primary/50"
                             />
-                            <span className="text-sm text-slate-300">Mark as Popular</span>
+                            <span className="text-sm text-foreground">Mark as Popular</span>
                         </label>
                     </div>
 
@@ -271,7 +271,7 @@ export function AdminPlanEditorPage() {
                         <button
                             onClick={handleSave}
                             disabled={saving}
-                            className="w-full py-3 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20 flex items-center justify-center gap-2 disabled:opacity-50"
+                            className="w-full py-3 bg-primary text-primary-foreground font-bold rounded-xl hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20 flex items-center justify-center gap-2 disabled:opacity-50"
                         >
                             {saving ? 'Saving...' : (
                                 <>
@@ -285,19 +285,19 @@ export function AdminPlanEditorPage() {
 
                 {/* Preview */}
                 <div>
-                    <h3 className="text-sm font-medium text-slate-400 mb-4 uppercase tracking-wider">Preview</h3>
-                    <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 relative group hover:border-primary/50 transition-all max-w-sm mx-auto shadow-2xl">
+                    <h3 className="text-sm font-medium text-muted-foreground mb-4 uppercase tracking-wider">Preview</h3>
+                    <div className="bg-card border border-border rounded-xl p-6 relative group hover:border-primary/50 transition-all max-w-sm mx-auto shadow-sm">
                         {plan.popular && (
-                            <div className="absolute top-0 right-0 bg-primary text-white text-xs font-bold px-3 py-1 rounded-bl-xl rounded-tr-xl">
+                            <div className="absolute top-0 right-0 bg-primary text-primary-foreground text-xs font-bold px-3 py-1 rounded-bl-xl rounded-tr-xl">
                                 POPULAR
                             </div>
                         )}
                         
                         <div className="flex justify-between items-start mb-6">
                             <div>
-                                <h3 className="text-lg font-bold text-white mb-1">{plan.name || 'Plan Name'}</h3>
+                                <h3 className="text-lg font-bold text-foreground mb-1">{plan.name || 'Plan Name'}</h3>
                                 <div className="flex items-baseline gap-1">
-                                    <span className="text-3xl font-bold text-white">
+                                    <span className="text-3xl font-bold text-foreground">
                                         ₹{plan.price}
                                     </span>
                                 </div>
@@ -307,28 +307,28 @@ export function AdminPlanEditorPage() {
                             </div>
                         </div>
 
-                        <div className="mb-6 p-4 bg-slate-800/50 rounded-xl text-center border border-slate-800">
+                        <div className="mb-6 p-4 bg-muted/50 rounded-xl text-center border border-border">
                              <div className="text-4xl font-bold text-primary mb-1">
                                 {plan.credits}
                              </div>
-                             <div className="text-xs text-slate-400 font-bold tracking-widest uppercase">
+                             <div className="text-xs text-muted-foreground font-bold tracking-widest uppercase">
                                 CREDITS
                              </div>
                         </div>
 
                         <div className="space-y-3 mb-8">
                             {plan.features.map((feature, i) => (
-                                <div key={i} className="flex items-start gap-3 text-sm text-slate-300">
+                                <div key={i} className="flex items-start gap-3 text-sm text-muted-foreground">
                                     <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
                                     <span>{feature}</span>
                                 </div>
                             ))}
                             {plan.features.length === 0 && (
-                                <p className="text-slate-500 text-center text-sm italic">Add features to see them listed here</p>
+                                <p className="text-muted-foreground text-center text-sm italic">Add features to see them listed here</p>
                             )}
                         </div>
 
-                        <button className="w-full py-3 bg-white text-slate-900 font-bold rounded-xl hover:bg-slate-200 transition-colors">
+                        <button className="w-full py-3 bg-foreground text-background font-bold rounded-xl hover:bg-foreground/90 transition-colors">
                             Buy Now
                         </button>
                     </div>

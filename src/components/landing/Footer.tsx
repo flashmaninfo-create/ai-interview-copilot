@@ -47,7 +47,6 @@ export function Footer() {
                             <Link to="#" className="hover:text-white/80 transition-opacity opacity-90">Privacy Policy</Link>
                             <Link to="#" className="hover:text-white/80 transition-opacity opacity-90">Terms of Service</Link>
                             <Link to="#" className="hover:text-white/80 transition-opacity opacity-90">About Us</Link>
-                            <Link to="#" className="hover:text-white/80 transition-opacity opacity-90">Blog</Link>
                         </div>
                     </div>
 

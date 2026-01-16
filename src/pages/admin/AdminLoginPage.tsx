@@ -6,10 +6,10 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { AuthError } from '../../components/auth/AuthError';
-import { Shield } from 'lucide-react';
+import Icon from '../../components/ui/AppIcon';
 
 export function AdminLoginPage() {
     const { isAuthenticated, isAdmin, status, signIn, error, clearError } = useAuth();
@@ -53,105 +53,172 @@ export function AdminLoginPage() {
 
     if (status === 'loading') {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-slate-950">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary via-primary/95 to-secondary">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-foreground"></div>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
-            {/* Background gradient effect */}
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-purple-500/5 pointer-events-none" />
-            
-            <div className="relative bg-slate-900 p-8 rounded-2xl shadow-2xl border border-slate-800 w-full max-w-md">
-                {/* Admin Badge */}
-                <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                    <div className="bg-primary px-4 py-1.5 rounded-full flex items-center gap-2 shadow-lg shadow-primary/20">
-                        <Shield className="w-4 h-4 text-white" />
-                        <span className="text-sm font-bold text-white">ADMIN PORTAL</span>
-                    </div>
-                </div>
-
-                <div className="text-center mb-8 mt-8">
-                    <img src="/assets/images/XTROONE.svg" alt="Xtroone" className="w-48 mx-auto mb-6" />
-                    <h1 className="text-2xl font-bold text-white">Admin Access</h1>
-                    <p className="text-slate-400 mt-1">Sign in with administrator credentials</p>
-                </div>
-
-                {/* Admin access error */}
-                {adminError && (
-                    <div className="bg-red-500/10 text-red-400 p-4 rounded-lg text-sm mb-4 border border-red-500/20 flex items-start gap-3">
-                        <Shield className="w-5 h-5 flex-shrink-0 mt-0.5" />
-                        <div>
-                            <p className="font-medium">Access Denied</p>
-                            <p className="text-red-400/80 mt-1">{adminError}</p>
+        <div className="min-h-screen bg-gradient-to-br from-primary via-primary/95 to-secondary flex items-center justify-center p-4">
+            <div className="w-full max-w-6xl grid lg:grid-cols-2 gap-0 bg-card rounded-2xl shadow-2xl overflow-hidden">
+                {/* Left Side - Illustration & Branding */}
+                <div className="hidden lg:flex flex-col justify-center items-center bg-gradient-to-br from-accent/10 to-secondary/10 p-12 relative overflow-hidden">
+                    <div className="absolute top-10 left-10 w-32 h-32 bg-accent/20 rounded-full blur-3xl"></div>
+                    <div className="absolute bottom-10 right-10 w-40 h-40 bg-secondary/20 rounded-full blur-3xl"></div>
+                    
+                    <div className="relative z-10 text-center space-y-6">
+                        <div className="flex justify-center">
+                            <div className="flex items-center justify-center mb-4">
+                                <img src="/assets/images/XTROONE.svg" alt="Xtroone" className="w-48" />
+                            </div>
+                        </div>
+                        
+                        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-accent text-accent-foreground text-sm font-bold shadow-lg">
+                            <Icon name="ShieldCheckIcon" size={16} variant="solid" />
+                            ADMIN PORTAL
+                        </div>
+                        
+                        <h2 className="font-headline text-4xl font-bold text-primary">
+                            System Administration
+                        </h2>
+                        
+                        <p className="text-lg text-muted-foreground max-w-md">
+                            Secure access point for system configuration, user management, and monitoring.
+                        </p>
+                        
+                        <div className="grid grid-cols-2 gap-4 pt-8">
+                            <div className="bg-card/50 backdrop-blur-sm rounded-xl p-4 border border-border">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <Icon name="Cog6ToothIcon" size={20} className="text-accent" variant="solid" />
+                                    <span className="text-sm font-semibold text-foreground">Management</span>
+                                </div>
+                                <p className="text-xs text-muted-foreground">Full system control</p>
+                            </div>
+                            
+                            <div className="bg-card/50 backdrop-blur-sm rounded-xl p-4 border border-border">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <Icon name="ChartBarIcon" size={20} className="text-success" variant="solid" />
+                                    <span className="text-sm font-semibold text-foreground">Analytics</span>
+                                </div>
+                                <p className="text-xs text-muted-foreground">Real-time insights</p>
+                            </div>
                         </div>
                     </div>
-                )}
+                </div>
 
-                {/* Auth error */}
-                <AuthError
-                    error={error}
-                    onDismiss={clearError}
-                    className="mb-4"
-                />
-
-                <form onSubmit={handleLogin} className="space-y-4">
-                    <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-1">
-                            Email
-                        </label>
-                        <input
-                            type="email"
-                            required
-                            autoComplete="email"
-                            className="w-full px-4 py-3 rounded-lg border border-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors bg-slate-800 text-white placeholder-slate-500"
-                            placeholder="admin@example.com"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            disabled={loading}
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-1">
-                            Password
-                        </label>
-                        <input
-                            type="password"
-                            required
-                            autoComplete="current-password"
-                            className="w-full px-4 py-3 rounded-lg border border-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors bg-slate-800 text-white placeholder-slate-500"
-                            placeholder="••••••••"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            disabled={loading}
-                        />
+                {/* Right Side - Login Form */}
+                <div className="p-8 lg:p-12 flex flex-col justify-center">
+                    <div className="mb-8">
+                        <Link to="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors duration-250">
+                            <Icon name="ArrowLeftIcon" size={20} />
+                            <span className="text-sm">Back to Home</span>
+                        </Link>
                     </div>
 
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="w-full py-3 bg-primary text-white font-bold rounded-lg hover:bg-opacity-90 transition-all shadow-lg shadow-primary/20 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                    >
-                        {loading ? (
-                            <>
-                                <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
-                                Authenticating...
-                            </>
-                        ) : (
-                            <>
-                                <Shield className="w-5 h-5" />
-                                Sign In as Admin
-                            </>
-                        )}
-                    </button>
-                </form>
+                    <div className="mb-8">
+                        <h1 className="font-headline text-3xl font-bold text-foreground mb-2">
+                            Admin Sign In
+                        </h1>
+                        <p className="text-muted-foreground">
+                            Enter your administrator credentials to continue
+                        </p>
+                    </div>
 
-                <div className="mt-6 text-center">
-                    <a href="/" className="text-sm text-slate-500 hover:text-slate-400 transition-colors">
-                        ← Back to main site
-                    </a>
+                    {/* Admin access error */}
+                    {adminError && (
+                        <div className="bg-destructive/10 text-destructive p-4 rounded-lg text-sm mb-4 border border-destructive/20 flex items-start gap-3">
+                            <Icon name="ExclamationTriangleIcon" size={20} className="flex-shrink-0 mt-0.5" />
+                            <div>
+                                <p className="font-medium">Access Denied</p>
+                                <p className="text-destructive/80 mt-1">{adminError}</p>
+                            </div>
+                        </div>
+                    )}
+
+                    <AuthError
+                        error={error}
+                        onDismiss={clearError}
+                        className="mb-4"
+                    />
+
+                    <form onSubmit={handleLogin} className="space-y-6">
+                        <div>
+                            <label className="block text-sm font-medium text-foreground mb-2">
+                                Email Address
+                            </label>
+                            <div className="relative">
+                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <Icon name="EnvelopeIcon" size={20} className="text-muted-foreground" />
+                                </div>
+                                <input
+                                    type="email"
+                                    required
+                                    autoComplete="email"
+                                    placeholder="admin@example.com"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    disabled={loading}
+                                    className="w-full pl-10 pr-4 py-3 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent transition-all duration-250"
+                                />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-foreground mb-2">
+                                Password
+                            </label>
+                            <div className="relative">
+                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <Icon name="LockClosedIcon" size={20} className="text-muted-foreground" />
+                                </div>
+                                <input
+                                    type="password"
+                                    required
+                                    autoComplete="current-password"
+                                    placeholder="••••••••"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    disabled={loading}
+                                    className="w-full pl-10 pr-4 py-3 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent transition-all duration-250"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex items-center justify-end">
+                            <Link to="/forgot-password" className="text-sm text-accent hover:text-accent/80 transition-colors duration-250">
+                                Forgot password?
+                            </Link>
+                        </div>
+
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className="w-full py-3 bg-accent text-accent-foreground rounded-lg font-semibold shadow-cta hover:bg-accent/90 transition-all duration-250 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {loading ? (
+                                <>
+                                    <Icon name="ArrowPathIcon" size={20} className="animate-spin" />
+                                    Authenticating...
+                                </>
+                            ) : (
+                                <>
+                                    <div className="flex items-center gap-2">
+                                        <Icon name="ShieldCheckIcon" size={20} />
+                                        <span>Sign In as Admin</span>
+                                    </div>
+                                    <Icon name="ArrowRightIcon" size={20} />
+                                </>
+                            )}
+                        </button>
+                    </form>
+
+                    <div className="mt-8 text-center text-sm text-muted-foreground">
+                        <div className="flex items-center justify-center gap-2">
+                            <Icon name="LockClosedIcon" size={14} />
+                            <span>This area is restricted to authorized personnel only.</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

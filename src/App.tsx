@@ -60,6 +60,7 @@ import { AdminProvidersPage } from './pages/admin/AdminProvidersPage';
 import { AdminPaymentsPage } from './pages/admin/AdminPaymentsPage';
 import { AdminCreditPage } from './pages/admin/AdminCreditPage';
 import { AdminMessagesPage } from './pages/admin/AdminMessagesPage';
+import { AdminSettingsPage } from './pages/admin/AdminSettingsPage';
 
 // Route Guards
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
@@ -153,6 +154,7 @@ function App() {
                   <Route path="/admin/providers" element={<AdminProvidersPage />} />
                   <Route path="/admin/payments" element={<AdminPaymentsPage />} />
                   <Route path="/admin/credit" element={<AdminCreditPage />} />
+                  <Route path="/admin/settings" element={<AdminSettingsPage />} />
                 </Route>
               </Route>
 

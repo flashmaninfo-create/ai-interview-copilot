@@ -59,6 +59,7 @@ export function AdminDashboardPage() {
         loadStats();
     }, []);
 
+    // Theme-compatible colors
     const statCards = [
         {
             label: 'Total Users',
@@ -66,7 +67,7 @@ export function AdminDashboardPage() {
             icon: <Users className="w-6 h-6" />,
             color: 'bg-blue-500',
             bgColor: 'bg-blue-500/10',
-            textColor: 'text-blue-400'
+            textColor: 'text-blue-500' 
         },
         {
             label: 'Admins',
@@ -74,7 +75,7 @@ export function AdminDashboardPage() {
             icon: <ShieldCheck className="w-6 h-6" />,
             color: 'bg-purple-500',
             bgColor: 'bg-purple-500/10',
-            textColor: 'text-purple-400'
+            textColor: 'text-purple-500'
         },
         {
             label: 'Active Provider',
@@ -82,7 +83,7 @@ export function AdminDashboardPage() {
             icon: <Cpu className="w-6 h-6" />,
             color: 'bg-green-500',
             bgColor: 'bg-green-500/10',
-            textColor: 'text-green-400'
+            textColor: 'text-green-500'
         }
     ];
 
@@ -128,8 +129,8 @@ export function AdminDashboardPage() {
         <div className="space-y-8">
             {/* Header */}
             <div>
-                <h1 className="text-3xl font-bold text-white">Admin Dashboard</h1>
-                <p className="text-slate-400 mt-1">Manage your platform settings and users</p>
+                <h1 className="text-3xl font-bold text-foreground">Admin Dashboard</h1>
+                <p className="text-muted-foreground mt-1">Manage your platform settings and users</p>
             </div>
 
             {/* Stats Grid */}
@@ -137,15 +138,15 @@ export function AdminDashboardPage() {
                 {statCards.map((stat) => (
                     <div
                         key={stat.label}
-                        className="bg-slate-900 border border-slate-800 rounded-xl p-6"
+                        className="bg-card border border-border rounded-xl p-6 shadow-sm"
                     >
                         <div className="flex items-start justify-between">
                             <div>
-                                <p className="text-slate-400 text-sm">{stat.label}</p>
+                                <p className="text-muted-foreground text-sm">{stat.label}</p>
                                 {loading ? (
-                                    <div className="h-8 w-16 bg-slate-800 rounded animate-pulse mt-1"></div>
+                                    <div className="h-8 w-16 bg-muted rounded animate-pulse mt-1"></div>
                                 ) : (
-                                    <p className="text-2xl font-bold text-white mt-1">
+                                    <p className="text-2xl font-bold text-foreground mt-1">
                                         {stat.value}
                                     </p>
                                 )}
@@ -159,23 +160,23 @@ export function AdminDashboardPage() {
             </div>
 
             {/* Status Banner */}
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex items-center gap-4">
+            <div className="bg-card border border-border rounded-xl p-4 flex items-center gap-4 shadow-sm">
                 <div className="p-3 bg-green-500/10 rounded-xl">
-                    <Activity className="w-6 h-6 text-green-400" />
+                    <Activity className="w-6 h-6 text-green-500" />
                 </div>
                 <div className="flex-1">
-                    <p className="text-white font-medium">System Status</p>
-                    <p className="text-slate-400 text-sm">All services are running normally</p>
+                    <p className="text-foreground font-medium">System Status</p>
+                    <p className="text-muted-foreground text-sm">All services are running normally</p>
                 </div>
                 <div className="flex items-center gap-2">
                     <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                    <span className="text-green-400 text-sm font-medium">Operational</span>
+                    <span className="text-green-500 text-sm font-medium">Operational</span>
                 </div>
             </div>
 
             {/* Navigation Cards */}
             <div>
-                <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
+                <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
                     <TrendingUp className="w-5 h-5 text-primary" />
                     Quick Actions
                 </h2>
@@ -184,21 +185,21 @@ export function AdminDashboardPage() {
                         <Link
                             key={card.path}
                             to={card.path}
-                            className="group bg-slate-900 border border-slate-800 rounded-xl p-6 hover:border-slate-700 transition-all hover:shadow-lg hover:shadow-primary/5"
+                            className="group bg-card border border-border rounded-xl p-6 hover:border-primary/50 transition-all hover:shadow-lg shadow-sm"
                         >
                             <div className="flex items-start gap-4">
                                 <div className={`p-4 rounded-xl bg-gradient-to-br ${card.color} text-white shadow-lg group-hover:scale-105 transition-transform`}>
                                     {card.icon}
                                 </div>
                                 <div className="flex-1">
-                                    <h3 className="text-lg font-semibold text-white group-hover:text-primary transition-colors">
+                                    <h3 className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors">
                                         {card.title}
                                     </h3>
-                                    <p className="text-slate-400 text-sm mt-1">
+                                    <p className="text-muted-foreground text-sm mt-1">
                                         {card.description}
                                     </p>
                                 </div>
-                                <div className="text-slate-600 group-hover:text-primary group-hover:translate-x-1 transition-all">
+                                <div className="text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all">
                                     →
                                 </div>
                             </div>

@@ -1680,6 +1680,15 @@ class BackgroundService {
       return;
     }
 
+    // Rate limiting: Prevent rapid successive calls (Chrome limits to ~1 call/second)
+    const now = Date.now();
+    if (this.lastScreenshotTime && now - this.lastScreenshotTime < 1000) {
+      console.log('[Background] Screenshot debounced - too soon after last request');
+      if (sendResponse) sendResponse({ success: false, error: 'Please wait before taking another screenshot' });
+      return;
+    }
+    this.lastScreenshotTime = now;
+
     try {
       let dataUrl;
       let captureMethod = 'native';

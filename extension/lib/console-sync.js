@@ -9,7 +9,7 @@ export class ConsoleSync {
         this.connected = false;
         this.messageHandler = null;
         this.pollInterval = null;
-        this.lastProcessedId = null; // Track handled messages to avoid duplicates
+        this.processedIds = new Set(); // Track handled messages to avoid duplicates
     }
 
     async connect(token, sessionId) {
@@ -79,11 +79,10 @@ export class ConsoleSync {
             if (!this.connected || !this.sessionId) return;
 
             try {
-                // Buffer period: query 5 seconds overlap to ensure nothing is missed due to clock drift
-                const queryTime = new Date(lastChecked - 5000).toISOString();
+                // Buffer period: query 2 seconds overlap (reduced from 5s to minimize duplicates)
+                const queryTime = new Date(lastChecked - 2000).toISOString();
 
                 // Update local time BEFORE fetch to capture window
-                // If fetch takes 1s, next poll will cover that 1s gap
                 lastChecked = Date.now();
 
                 const messages = await supabaseREST.select(
@@ -92,14 +91,17 @@ export class ConsoleSync {
                 );
 
                 if (messages && messages.length > 0) {
-                    console.log(`[ConsoleSync] Polled ${messages.length} messages`);
                     // Sort by time to process in order
                     messages.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
 
+                    let newMessages = 0;
                     for (const msg of messages) {
-                        // Prevent re-processing messages we've already seen
-                        if (this.lastProcessedId === msg.id) continue;
-                        this.lastProcessedId = msg.id;
+                        // Skip already processed messages
+                        if (this.processedIds.has(msg.id)) continue;
+
+                        // Mark as processed
+                        this.processedIds.add(msg.id);
+                        newMessages++;
 
                         if (this.messageHandler) {
                             console.log(`[ConsoleSync] Processing message: ${msg.message_type}`, msg.payload);
@@ -108,6 +110,17 @@ export class ConsoleSync {
                                 data: msg.payload
                             });
                         }
+                    }
+
+                    // Only log if there were new messages
+                    if (newMessages > 0) {
+                        console.log(`[ConsoleSync] Processed ${newMessages} new messages`);
+                    }
+
+                    // Cleanup: keep only last 100 processed IDs to prevent memory growth
+                    if (this.processedIds.size > 100) {
+                        const idsArray = Array.from(this.processedIds);
+                        this.processedIds = new Set(idsArray.slice(-50));
                     }
                 }
 

@@ -5,7 +5,8 @@ const STATE = {
     FORM: 'form',
     CARDS_LIST: 'cards-list',
     IN_MEETING: 'in-meeting',
-    FEEDBACK: 'feedback'
+    FEEDBACK: 'feedback',
+    STEALTH_CONSOLE_SETUP: 'stealth-console-setup'
 };
 
 let currentState = STATE.EMPTY;
@@ -39,8 +40,10 @@ const elements = {
     formView: null,
     cardsListView: null,
     cardsListView: null,
+    cardsListView: null,
     inMeetingView: null,
     feedbackView: null,
+    stealthConsoleSetupView: null,
 
     // Buttons
     createNewBtn: null,
@@ -130,6 +133,7 @@ function initializeElements() {
     elements.formView = document.getElementById('formView');
     elements.cardsListView = document.getElementById('cardsListView');
     elements.inMeetingView = document.getElementById('inMeetingView');
+    elements.stealthConsoleSetupView = document.getElementById('stealthConsoleSetupView');
 
     // Buttons
     elements.createNewBtn = document.getElementById('createNewBtn');
@@ -162,6 +166,7 @@ function initializeElements() {
     elements.interviewTypeInput = document.getElementById('interviewTypeInput');
     elements.techStackInput = document.getElementById('techStackInput');
     elements.jdInput = document.getElementById('jdInput');
+    elements.jobLiveCodingInput = document.getElementById('jobLiveCodingInput');
 
     elements.hrRoleInput = document.getElementById('hrRoleInput');
     elements.hrCompanyInput = document.getElementById('hrCompanyInput');
@@ -185,6 +190,21 @@ function initializeElements() {
     elements.assessmentPlatformInput = document.getElementById('assessmentPlatformInput');
     elements.assessmentLanguageInput = document.getElementById('assessmentLanguageInput');
     elements.assessmentTypeInput = document.getElementById('assessmentTypeInput');
+    elements.assessmentLiveCodingInput = document.getElementById('assessmentLiveCodingInput');
+    elements.assessmentResumeInput = document.getElementById('assessmentResumeInput');
+    elements.assessmentJdInput = document.getElementById('assessmentJdInput');
+
+    // Stealth Console Setup Elements
+    elements.stealthConsoleLink = document.getElementById('stealthConsoleLink');
+    elements.copyConsoleLinkBtn = document.getElementById('copyConsoleLinkBtn');
+    elements.consoleQrCode = document.getElementById('consoleQrCode');
+    elements.setupCurrentUrl = document.getElementById('setupCurrentUrl');
+    elements.setupUseThisPageBtn = document.getElementById('setupUseThisPageBtn');
+    elements.setupBackBtn = document.getElementById('setupBackBtn');
+    elements.setupConnectBtn = document.getElementById('setupConnectBtn');
+    elements.setupShareScreenBtn = document.getElementById('setupShareScreenBtn');
+    elements.screenShareStatus = document.getElementById('screenShareStatus');
+    elements.setupReadyBtn = document.getElementById('setupReadyBtn');
 
     // Keywords
     elements.keywordsInput = document.getElementById('keywordsInput');
@@ -233,6 +253,14 @@ function attachEventListeners() {
     elements.finishMeetingBtn?.addEventListener('click', handleFinishMeeting);
     elements.disconnectMeetingBtn?.addEventListener('click', handleDisconnectMeeting);
     elements.openConsoleLinkInMeeting?.addEventListener('click', handleDashboard);
+    
+    // Stealth Console Setup Buttons
+    elements.setupBackBtn?.addEventListener('click', handleSetupBack);
+    elements.setupConnectBtn?.addEventListener('click', handleStealthConnect);
+    elements.setupUseThisPageBtn?.addEventListener('click', handleUsePageInSetup);
+    elements.copyConsoleLinkBtn?.addEventListener('click', handleCopyConsoleLink);
+    elements.setupShareScreenBtn?.addEventListener('click', handleShareScreen);
+    elements.setupReadyBtn?.addEventListener('click', handleImReady);
 
     // Footer buttons
     if (elements.logoutBtn) {
@@ -296,7 +324,7 @@ function attachEventListeners() {
             if (!meetingId) return;
 
             if (target.classList.contains('card-start-btn')) {
-                startMeetingById(meetingId);
+                handleStartAttempt(meetingId);
             } else if (target.classList.contains('card-resume-btn')) {
                 resumeMeetingById(meetingId);
             } else if (target.classList.contains('card-edit-btn')) {
@@ -393,6 +421,10 @@ function setState(newState) {
                 }
             }
             setActivePhase('after');
+            break;
+        case STATE.STEALTH_CONSOLE_SETUP:
+            if (elements.stealthConsoleSetupView) elements.stealthConsoleSetupView.style.display = 'block';
+            setActivePhase('during');
             break;
     }
 }
@@ -498,7 +530,8 @@ async function handleSave(e) {
             experienceLevel: elements.experienceInput?.value || 'senior',
             interviewType: elements.interviewTypeInput?.value || 'technical',
             techStack: elements.techStackInput?.value || '',
-            jobDescription: elements.jdInput?.value || ''
+            jobDescription: elements.jdInput?.value || '',
+            liveCoding: elements.jobLiveCodingInput?.checked || false
         };
     } else if (scenario === 'hr-interview') {
         interviewContext = {
@@ -535,7 +568,10 @@ async function handleSave(e) {
         interviewContext = {
             platform: elements.assessmentPlatformInput?.value || '',
             language: elements.assessmentLanguageInput?.value || '',
-            type: elements.assessmentTypeInput?.value || 'algo'
+            type: elements.assessmentTypeInput?.value || 'algo',
+            liveCoding: elements.assessmentLiveCodingInput?.checked || false,
+            resume: elements.assessmentResumeInput?.value || '',
+            jobDescription: elements.assessmentJdInput?.value || ''
         };
     }
 
@@ -606,6 +642,162 @@ async function handleSave(e) {
     // Render all cards
     renderMeetingCards();
     setState(STATE.CARDS_LIST);
+    renderMeetingCards();
+    setState(STATE.CARDS_LIST);
+}
+
+// Function to handle opening the Start flow
+function handleStartAttempt(meetingId) {
+    const meeting = savedMeetings.find(m => m.id === meetingId);
+    if (!meeting) return;
+    
+    // Set as current meeting for session
+    window.currentMeeting = meeting;
+    
+    // Check if live coding mode is enabled (for job-interview or online-assessment)
+    const isLiveCodingEnabled = meeting.interviewContext?.liveCoding === true;
+    
+    if (meeting.scenario === 'online-assessment' || (meeting.scenario === 'job-interview' && isLiveCodingEnabled)) {
+        // Go to Stealth Console Setup flow for screen capture assistance
+        setupStealthConsoleView(meeting);
+        setState(STATE.STEALTH_CONSOLE_SETUP);
+    } else {
+        // Direct start for other types (audio only)
+        startSession(meeting);
+    }
+}
+
+function setupStealthConsoleView(meeting) {
+    // Generate the console URL
+    const consoleUrl = `${getDashboardUrl()}/dashboard/console`;
+    
+    if (elements.stealthConsoleLink) {
+        elements.stealthConsoleLink.textContent = consoleUrl;
+        elements.stealthConsoleLink.href = consoleUrl;
+    }
+    
+    // Show current tab URL
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        if (tabs[0] && elements.setupCurrentUrl) {
+            elements.setupCurrentUrl.textContent = tabs[0].url;
+        }
+    });
+
+    // TODO: Generate QR Code
+    if (elements.consoleQrCode) {
+        elements.consoleQrCode.textContent = "QR Code coming soon";
+    }
+}
+
+function handleSetupBack() {
+    setState(STATE.CARDS_LIST);
+}
+
+function handleCopyConsoleLink() {
+    const url = elements.stealthConsoleLink?.href;
+    if (url) {
+        navigator.clipboard.writeText(url).then(() => {
+            const originalIcon = elements.copyConsoleLinkBtn.innerHTML;
+            elements.copyConsoleLinkBtn.innerHTML = '<span style="color: #4CAF50;">✓</span>';
+            setTimeout(() => {
+                elements.copyConsoleLinkBtn.innerHTML = originalIcon;
+            }, 2000);
+        });
+    }
+}
+
+function handleUsePageInSetup() {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        const tab = tabs[0];
+        if (tab && window.currentMeeting) {
+            // Update current meeting URL in memory
+            window.currentMeeting.meetingUrl = tab.url;
+            window.currentMeeting.title = tab.title || window.currentMeeting.title; // Optional: update title? Maybe not.
+            
+            // Save to storage
+            const index = savedMeetings.findIndex(m => m.id === window.currentMeeting.id);
+            if (index !== -1) {
+                savedMeetings[index] = window.currentMeeting;
+                saveMeetingsData();
+            }
+            
+            if (elements.setupCurrentUrl) {
+                elements.setupCurrentUrl.textContent = tab.url;
+                elements.setupCurrentUrl.style.color = '#4CAF50'; // Green to indicate success
+            }
+        }
+    });
+}
+
+function handleStealthConnect() {
+    if (window.currentMeeting) {
+        startSession(window.currentMeeting);
+    }
+}
+
+// Handle Share Screen button click
+async function handleShareScreen() {
+    try {
+        // Disable button while processing
+        if (elements.setupShareScreenBtn) {
+            elements.setupShareScreenBtn.disabled = true;
+            elements.setupShareScreenBtn.textContent = 'Starting...';
+        }
+
+        // Request screen capture permission and start
+        // This sends a message to background.js to initiate screen capture
+        const response = await new Promise((resolve) => {
+            chrome.runtime.sendMessage({
+                type: 'START_SCREEN_CAPTURE',
+                data: { meetingId: window.currentMeeting?.id }
+            }, resolve);
+        });
+
+        if (response && response.success) {
+            console.log('[Popup] Screen capture started successfully');
+            
+            // Show success status
+            if (elements.screenShareStatus) {
+                elements.screenShareStatus.style.display = 'flex';
+            }
+            
+            // Hide the share button
+            if (elements.setupShareScreenBtn) {
+                elements.setupShareScreenBtn.style.display = 'none';
+            }
+            
+            // Enable "I'm Ready" button
+            if (elements.setupReadyBtn) {
+                elements.setupReadyBtn.disabled = false;
+            }
+        } else {
+            throw new Error(response?.error || 'Failed to start screen capture');
+        }
+    } catch (error) {
+        console.error('[Popup] Screen capture error:', error);
+        alert('Failed to start screen sharing: ' + error.message);
+        
+        // Re-enable button on failure
+        if (elements.setupShareScreenBtn) {
+            elements.setupShareScreenBtn.disabled = false;
+            elements.setupShareScreenBtn.innerHTML = `
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                    <line x1="8" y1="21" x2="16" y2="21"></line>
+                    <line x1="12" y1="17" x2="12" y2="21"></line>
+                </svg>
+                Share Entire Screen
+            `;
+        }
+    }
+}
+
+// Handle "I'm Ready" button click - finalize and start session
+function handleImReady() {
+    if (window.currentMeeting) {
+        // Start the actual meeting session
+        startSession(window.currentMeeting);
+    }
 }
 
 function handleBack(e) {
@@ -627,26 +819,26 @@ function handleBack(e) {
     }
 }
 
-function handleStart(e) {
-    e.preventDefault();
 
-    if (!currentMeeting) {
-        showAlert('No meeting data available', 'warning');
-        return;
-    }
+// Logic moved to handleStartAttempt and startSession
+function startSession(meeting) {
+    if (!meeting) return;
 
+    // Update global currentMeeting if not set
+    window.currentMeeting = meeting;
+    
     // Update In Meeting view with meeting data
     if (elements.activeMeetingTitle) {
-        elements.activeMeetingTitle.textContent = currentMeeting.title || 'Meeting';
+        elements.activeMeetingTitle.textContent = meeting.title || 'Meeting';
     }
     if (elements.activeMeetingSubtitle) {
-        elements.activeMeetingSubtitle.textContent = currentMeeting.subtitle || 'No description';
+        elements.activeMeetingSubtitle.textContent = meeting.subtitle || 'No description';
     }
     if (elements.activeMeetingPlatform) {
-        elements.activeMeetingPlatform.textContent = currentMeeting.platform || 'Web Browser';
+        elements.activeMeetingPlatform.textContent = meeting.platform || 'Web Browser';
     }
     if (elements.activeMeetingLanguage) {
-        elements.activeMeetingLanguage.textContent = capitalizeFirst(currentMeeting.meetingLanguage || 'English');
+        elements.activeMeetingLanguage.textContent = capitalizeFirst(meeting.meetingLanguage || 'English');
     }
 
     // Start session timer
@@ -660,7 +852,7 @@ function handleStart(e) {
     // Send message to background script to start the meeting
     chrome.runtime.sendMessage({
         type: 'START_MEETING',
-        meeting: currentMeeting
+        meeting: meeting
     }, (response) => {
         if (response && response.success) {
             console.log('Meeting started successfully');
@@ -680,9 +872,15 @@ function handleStart(e) {
             // Revert state
             sessionActive = false;
             stopTimer();
-            setState(STATE.CARD);
+            setState(STATE.CARDS_LIST);
         }
     });
+}
+
+// Deprecated old handleStart
+function handleStart(e) {
+    e.preventDefault();
+    if (window.currentMeeting) startSession(window.currentMeeting);
 }
 
 // Start session timer

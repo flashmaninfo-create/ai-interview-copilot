@@ -2,11 +2,14 @@ import { useState, useEffect } from 'react';
 import Icon from '../../../components/ui/AppIcon';
 import { useNavigate } from 'react-router-dom';
 import { adminService } from '../../../lib/services/adminService';
+import { PaymentModal } from '../../../components/payment/PaymentModal';
+import { useAuth } from '../../../contexts/AuthContext';
 
 interface PricingTier {
   id: string;
   name: string;
-  credits: string;
+  credits: number;
+  creditsDisplay: string;
   price: number | string;
   description: string;
   features: string[];
@@ -16,9 +19,18 @@ interface PricingTier {
 
 const PricingSection = () => {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const [pricingTiers, setPricingTiers] = useState<PricingTier[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  const [paymentModal, setPaymentModal] = useState({
+    isOpen: false,
+    planName: '',
+    amount: '',
+    credits: 0,
+    planId: ''
+  });
 
   useEffect(() => {
     const fetchPlans = async () => {
@@ -55,7 +67,8 @@ const PricingSection = () => {
           return {
             id: plan.id,
             name: plan.name,
-            credits: `${plan.credits} credits`,
+            credits: plan.credits,
+            creditsDisplay: `${plan.credits} credits`,
             price: formattedPrice,
             description,
             features: plan.features,
@@ -76,9 +89,42 @@ const PricingSection = () => {
     fetchPlans();
   }, []);
 
-  const handleCTAClick = () => {
-    // Navigate to payment page for all tiers
-    navigate('/payment');
+  const handleCTAClick = (tier: PricingTier) => {
+    // 1. Check Auth
+    if (!isAuthenticated) {
+        // Redirect to signup preserving context if possible, or just signup
+        navigate('/signup');
+        return;
+    }
+
+    // 2. Handle Free Plans
+    if (tier.price === 0 || tier.price === 'Free') {
+        navigate('/dashboard');
+        return;
+    }
+
+    // 3. Handle Custom/Enterprise
+    if (tier.price === 'Custom') {
+        window.location.href = 'mailto:sales@xtroone.com';
+        return;
+    }
+    
+    // 4. Open Payment Modal
+    // Parse numeric amount from "₹499" string or number
+    let numericAmount = '0';
+    if (typeof tier.price === 'number') {
+        numericAmount = String(tier.price);
+    } else {
+        numericAmount = String(tier.price).replace(/[^0-9.]/g, '');
+    }
+
+    setPaymentModal({
+        isOpen: true,
+        planName: tier.name,
+        amount: numericAmount,
+        credits: tier.credits,
+        planId: tier.id
+    });
   };
 
   if (loading) {
@@ -90,7 +136,7 @@ const PricingSection = () => {
   }
 
   return (
-    <section id="pricing" className="py-20 bg-gradient-to-br from-primary/5 to-secondary/5">
+    <section id="pricing" className="py-20 bg-gradient-to-br from-primary/5 to-secondary/5 relative">
       <div className="max-w-7xl mx-auto px-6">
         <div className="text-center mb-16">
           <div className="inline-flex items-center gap-2 bg-accent/10 px-4 py-2 rounded-full mb-6">
@@ -138,7 +184,7 @@ const PricingSection = () => {
                 <h3 className="font-headline text-2xl font-semibold text-foreground mb-2">
                   {tier.name}
                 </h3>
-                <div className="text-sm text-accent font-medium mb-4">{tier.credits}</div>
+                <div className="text-sm text-accent font-medium mb-4">{tier.creditsDisplay}</div>
                 <p className="text-muted-foreground mb-6">{tier.description}</p>
 
                 <div className="mb-6">
@@ -151,7 +197,7 @@ const PricingSection = () => {
                 </div>
 
                 <button
-                  onClick={() => handleCTAClick()}
+                  onClick={() => handleCTAClick(tier)}
                   className={`w-full py-4 rounded-lg font-semibold transition-all duration-250 mb-8 ${
                     tier.popular
                       ? 'bg-accent text-accent-foreground hover:bg-accent/90 shadow-cta'
@@ -203,6 +249,15 @@ const PricingSection = () => {
           </div>
         </div>
       </div>
+
+      <PaymentModal
+        isOpen={paymentModal.isOpen}
+        onClose={() => setPaymentModal(prev => ({ ...prev, isOpen: false }))}
+        planName={paymentModal.planName}
+        amount={paymentModal.amount}
+        credits={paymentModal.credits}
+        planId={paymentModal.planId}
+      />
     </section>
   );
 };

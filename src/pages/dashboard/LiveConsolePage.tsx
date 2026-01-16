@@ -70,6 +70,8 @@ export function LiveConsolePage() {
 
   /* ---------------- Actions ---------------- */
   const requestHint = async (type: string) => {
+    console.log('[LiveConsolePage] requestHint called with type:', type);
+    console.log('[LiveConsolePage] sessionStatus:', sessionStatus, 'connected:', connected);
     setLoading(true);
 
     await sendCommand('REQUEST_HINT', {
@@ -106,7 +108,7 @@ export function LiveConsolePage() {
         {/* Help Button */}
         <button
           onClick={() => requestHint('help')}
-          disabled={!connected || loading}
+          disabled={!(connected || sessionStatus === 'session_found' || sessionStatus === 'active') || loading}
           className="w-14 h-14 rounded-xl bg-[#2a2f48] hover:bg-[#3a3f58] flex flex-col items-center justify-center gap-1 transition-colors disabled:opacity-50"
         >
           <Sparkles className="w-5 h-5 text-gray-400" />
@@ -116,7 +118,7 @@ export function LiveConsolePage() {
         {/* Answer Button - Orange accent like overlay */}
         <button
           onClick={() => requestHint('answer')}
-          disabled={!connected || loading}
+          disabled={!(connected || sessionStatus === 'session_found' || sessionStatus === 'active') || loading}
           className="w-14 h-14 rounded-xl bg-[#ff6b35]/20 border border-[#ff6b35]/30 hover:bg-[#ff6b35]/30 flex flex-col items-center justify-center gap-1 transition-colors disabled:opacity-50"
         >
           <MessageSquare className="w-5 h-5 text-[#ff6b35]" />
@@ -126,7 +128,7 @@ export function LiveConsolePage() {
         {/* Code Button - Blue */}
         <button
           onClick={() => requestHint('code')}
-          disabled={!connected || loading}
+          disabled={!(connected || sessionStatus === 'session_found' || sessionStatus === 'active') || loading}
           className="w-14 h-14 rounded-xl bg-blue-500 hover:bg-blue-600 flex flex-col items-center justify-center gap-1 transition-colors disabled:opacity-50"
         >
           <Code2 className="w-5 h-5 text-white" />
@@ -136,7 +138,7 @@ export function LiveConsolePage() {
         {/* Explain Button - Purple */}
         <button
           onClick={() => requestHint('explain')}
-          disabled={!connected || loading}
+          disabled={!(connected || sessionStatus === 'session_found' || sessionStatus === 'active') || loading}
           className="w-14 h-14 rounded-xl bg-purple-500 hover:bg-purple-600 flex flex-col items-center justify-center gap-1 transition-colors disabled:opacity-50"
         >
           <BookOpen className="w-5 h-5 text-white" />
@@ -148,7 +150,7 @@ export function LiveConsolePage() {
           onClick={() => {
             sendCommand('TAKE_SCREENSHOT', { trigger: 'console' });
           }}
-          disabled={!connected || loading}
+          disabled={!(connected || sessionStatus === 'session_found' || sessionStatus === 'active') || loading}
           className="w-14 h-14 rounded-xl bg-[#ff6b35] hover:bg-[#ff8c42] flex flex-col items-center justify-center gap-1 transition-colors disabled:opacity-50"
         >
           <Camera className="w-5 h-5 text-white" />

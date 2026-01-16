@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Icon from '../../components/ui/AppIcon';
+import { useAuth } from '../../contexts/AuthContext';
 
 
 
@@ -8,6 +9,13 @@ const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState('');
+  const { isAuthenticated, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate('/');
+  };
 
   const navigationItems = [
     { label: 'How It Works', href: '/#how-it-works', description: 'AI coaching demo' },
@@ -53,29 +61,11 @@ const Header = () => {
           to="/"
           className="flex items-center space-x-3 transition-opacity duration-250 ease-out hover:opacity-80"
         >
-          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary">
-            <svg
-              width="32"
-              height="32"
-              viewBox="0 0 32 32"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M16 4L8 8V14C8 19.55 11.84 24.74 16 26C20.16 24.74 24 19.55 24 14V8L16 4Z"
-                fill="currentColor"
-                className="text-primary-foreground"
-              />
-              <path
-                d="M14 18L11 15L12.41 13.59L14 15.17L19.59 9.58L21 11L14 18Z"
-                fill="currentColor"
-                className="text-accent"
-              />
-            </svg>
-          </div>
-          <span className="font-headline text-2xl font-semibold text-primary">
-            Xtroone
-          </span>
+          <img
+            src="/assets/images/XTROONE.svg"
+            alt="Xtroone"
+            className="w-32"
+          />
         </Link>
 
         {/* Desktop Navigation */}
@@ -92,12 +82,30 @@ const Header = () => {
               {item.label}
             </Link>
           ))}
-          <Link
-            to="/login"
-            className="font-cta rounded-lg bg-accent px-6 py-3 text-base font-semibold text-accent-foreground shadow-cta transition-all duration-250 ease-out hover:bg-accent/90 hover:shadow-lg"
-          >
-            Start Free Trial
-          </Link>
+          {isAuthenticated && (
+            <>
+              <Link
+                to="/dashboard"
+                className="font-body text-base font-medium transition-colors duration-250 ease-out hover:text-primary text-foreground"
+              >
+                Dashboard
+              </Link>
+              <button
+                onClick={handleLogout}
+                className="font-body text-base font-medium transition-colors duration-250 ease-out hover:text-primary text-foreground"
+              >
+                Logout
+              </button>
+            </>
+          )}
+          {!isAuthenticated && (
+            <Link
+              to="/login"
+              className="font-cta rounded-lg bg-accent px-6 py-3 text-base font-semibold text-accent-foreground shadow-cta transition-all duration-250 ease-out hover:bg-accent/90 hover:shadow-lg"
+            >
+              Start Free Trial
+            </Link>
+          )}
         </div>
 
         <button
@@ -129,13 +137,35 @@ const Header = () => {
                 {item.label}
               </Link>
             ))}
-            <Link
-              to="/login"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="font-cta mt-4 rounded-lg bg-accent px-6 py-4 text-lg font-semibold text-accent-foreground shadow-cta transition-all duration-250 ease-out hover:bg-accent/90 text-center"
-            >
-              Start Free Trial
-            </Link>
+            {isAuthenticated && (
+              <>
+                <Link
+                  to="/dashboard"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="font-body text-left text-lg font-medium transition-colors duration-250 ease-out hover:text-primary text-foreground"
+                >
+                  Dashboard
+                </Link>
+                <button
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    handleLogout();
+                  }}
+                  className="font-body text-left text-lg font-medium transition-colors duration-250 ease-out hover:text-primary text-foreground"
+                >
+                  Logout
+                </button>
+              </>
+            )}
+            {!isAuthenticated && (
+              <Link
+                to="/login"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="font-cta mt-4 rounded-lg bg-accent px-6 py-4 text-lg font-semibold text-accent-foreground shadow-cta transition-all duration-250 ease-out hover:bg-accent/90 text-center"
+              >
+                Start Free Trial
+              </Link>
+            )}
           </div>
         </div>
       )}

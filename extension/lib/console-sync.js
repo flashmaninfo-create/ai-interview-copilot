@@ -69,22 +69,28 @@ export class ConsoleSync {
     }
 
     startPolling() {
-        // Poll for console commands every 2 seconds
+        // Poll for console commands every 1 second (faster responsiveness)
         let lastChecked = Date.now();
+
+        console.log('[ConsoleSync] Starting polling for session:', this.sessionId);
 
         this.pollInterval = setInterval(async () => {
             if (!this.connected || !this.sessionId) return;
 
             try {
+                const queryFilter = `session_id=eq.${this.sessionId}&source=eq.console&created_at=gt.${new Date(lastChecked).toISOString()}`;
                 const messages = await supabaseREST.select(
                     'sync_messages',
-                    `session_id=eq.${this.sessionId}&source=eq.console&created_at=gt.${new Date(lastChecked).toISOString()}`
+                    queryFilter
                 );
 
-                lastChecked = Date.now();
+                // Only update lastChecked AFTER successful query
+                const queryTime = Date.now();
 
                 if (messages && messages.length > 0) {
+                    console.log('[ConsoleSync] Received', messages.length, 'console command(s)');
                     for (const msg of messages) {
+                        console.log('[ConsoleSync] Processing command:', msg.message_type);
                         if (this.messageHandler) {
                             this.messageHandler({
                                 type: msg.message_type,
@@ -93,9 +99,11 @@ export class ConsoleSync {
                         }
                     }
                 }
+
+                lastChecked = queryTime;
             } catch (error) {
-                // Silently fail polling errors
+                console.error('[ConsoleSync] Polling error:', error.message);
             }
-        }, 2000);
+        }, 1000); // Poll every 1 second for faster response
     }
 }

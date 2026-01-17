@@ -19,14 +19,19 @@ import {
     Menu,
     X,
     DollarSign,
-    Settings
+    Settings,
+    UserCircle
 } from 'lucide-react';
 
 interface NavItem {
     label: string;
     path: string;
     icon: React.ReactNode;
+    superAdminOnly?: boolean;
 }
+
+// Super admin emails - only these accounts can access the Admins page
+const SUPER_ADMIN_EMAILS = ['flashman.info@gmail.com', 'admin@interview-master.com'];
 
 export function AdminLayout() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -56,7 +61,8 @@ export function AdminLayout() {
         {
             label: 'Admins',
             path: '/admin/admins',
-            icon: <ShieldCheck className="w-5 h-5" />
+            icon: <ShieldCheck className="w-5 h-5" />,
+            superAdminOnly: true
         },
         {
             label: 'AI Providers',
@@ -77,6 +83,11 @@ export function AdminLayout() {
             label: 'Settings',
             path: '/admin/settings',
             icon: <Settings className="w-5 h-5" />
+        },
+        {
+            label: 'Profile',
+            path: '/admin/profile',
+            icon: <UserCircle className="w-5 h-5" />
         },
     ];
 
@@ -119,7 +130,9 @@ export function AdminLayout() {
 
                     {/* Navigation */}
                     <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-                        {navItems.map((item) => (
+                        {navItems
+                            .filter(item => !item.superAdminOnly || (profile?.email && SUPER_ADMIN_EMAILS.includes(profile.email)))
+                            .map((item) => (
                             <Link
                                 key={item.path}
                                 to={item.path}

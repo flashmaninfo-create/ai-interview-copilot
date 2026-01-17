@@ -46,7 +46,6 @@ export function Footer({ variant = 'dark' }: FooterProps) {
               <Link to="/features" className={cn("transition-colors", isLight ? "text-slate-600 hover:text-primary" : "text-slate-400 hover:text-primary")}>Features</Link>
               <Link to="/pricing" className={cn("transition-colors", isLight ? "text-slate-600 hover:text-primary" : "text-slate-400 hover:text-primary")}>Pricing</Link>
               <Link to="/extension" className={cn("transition-colors", isLight ? "text-slate-600 hover:text-primary" : "text-slate-400 hover:text-primary")}>Chrome Extension</Link>
-              <Link to="/about" className={cn("transition-colors", isLight ? "text-slate-600 hover:text-primary" : "text-slate-400 hover:text-primary")}>About Us</Link>
               <Link to="/how-it-works" className={cn("transition-colors", isLight ? "text-slate-600 hover:text-primary" : "text-slate-400 hover:text-primary")}>How it Works</Link>
               <Link to="/#contact" className={cn("transition-colors", isLight ? "text-slate-600 hover:text-primary" : "text-slate-400 hover:text-primary")}>Contact</Link>
               <Link to="/privacy" className={cn("transition-colors", isLight ? "text-slate-600 hover:text-primary" : "text-slate-400 hover:text-primary")}>Privacy Policy</Link>

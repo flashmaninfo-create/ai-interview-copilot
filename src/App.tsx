@@ -61,6 +61,7 @@ import { AdminPaymentsPage } from './pages/admin/AdminPaymentsPage';
 import { AdminCreditPage } from './pages/admin/AdminCreditPage';
 import { AdminMessagesPage } from './pages/admin/AdminMessagesPage';
 import { AdminSettingsPage } from './pages/admin/AdminSettingsPage';
+import { AdminProfilePage } from './pages/admin/AdminProfilePage';
 
 // Route Guards
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
@@ -155,6 +156,7 @@ function App() {
                   <Route path="/admin/payments" element={<AdminPaymentsPage />} />
                   <Route path="/admin/credit" element={<AdminCreditPage />} />
                   <Route path="/admin/settings" element={<AdminSettingsPage />} />
+                  <Route path="/admin/profile" element={<AdminProfilePage />} />
                 </Route>
               </Route>
 

@@ -8,6 +8,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { adminService } from '../../lib/services/adminService';
+import { useAuth } from '../../contexts/AuthContext';
 import {
     Users,
     ShieldCheck,
@@ -24,7 +25,20 @@ interface Stats {
     activeProvider: string | null;
 }
 
+interface NavCard {
+    title: string;
+    description: string;
+    icon: React.ReactNode;
+    path: string;
+    color: string;
+    superAdminOnly?: boolean;
+}
+
+// Super admin emails - only these accounts can access the Admins features
+const SUPER_ADMIN_EMAILS = ['flashman.info@gmail.com', 'admin@interview-master.com'];
+
 export function AdminDashboardPage() {
+    const { profile } = useAuth();
     const [stats, setStats] = useState<Stats>({
         totalUsers: 0,
         totalAdmins: 0,
@@ -100,7 +114,8 @@ export function AdminDashboardPage() {
             description: 'Manage administrator accounts',
             icon: <ShieldCheck className="w-8 h-8" />,
             path: '/admin/admins',
-            color: 'from-purple-500 to-purple-600'
+            color: 'from-purple-500 to-purple-600',
+            superAdminOnly: true
         },
         {
             title: 'AI Providers',
@@ -181,7 +196,9 @@ export function AdminDashboardPage() {
                     Quick Actions
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {navCards.map((card) => (
+                    {navCards
+                        .filter(card => !card.superAdminOnly || (profile?.email && SUPER_ADMIN_EMAILS.includes(profile.email)))
+                        .map((card) => (
                         <Link
                             key={card.path}
                             to={card.path}

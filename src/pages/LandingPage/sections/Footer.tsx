@@ -18,7 +18,6 @@ const Footer = () => {
       { label: 'How It Works', href: '#how-it-works' }
     ],
     company: [
-      { label: 'About Us', href: '/about-us' },
       { label: 'Contact', href: '/contact' },
       { label: 'FAQ', href: '#faq' }
     ],

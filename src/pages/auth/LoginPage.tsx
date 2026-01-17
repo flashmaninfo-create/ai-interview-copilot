@@ -25,6 +25,7 @@ export function LoginPage() {
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [rememberMe, setRememberMe] = useState(false);
     const [redirectMessage, setRedirectMessage] = useState<{
@@ -98,7 +99,9 @@ export function LoginPage() {
                     <div className="relative z-10 text-center space-y-6">
                         <div className="flex justify-center">
                             <div className="flex items-center justify-center mb-4">
-                                <img src="/assets/images/XTROONE.svg" alt="Xtroone" className="w-48" />
+                                <Link to="/">
+                                    <img src="/assets/images/XTROONE.svg" alt="Xtroone" className="w-48 hover:opacity-90 transition-opacity" />
+                                </Link>
                             </div>
                         </div>
                         
@@ -198,15 +201,22 @@ export function LoginPage() {
                                     <Icon name="LockClosedIcon" size={20} className="text-muted-foreground" />
                                 </div>
                                 <input
-                                    type="password"
+                                    type={showPassword ? 'text' : 'password'}
                                     required
                                     autoComplete="current-password"
                                     placeholder="••••••••"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     disabled={loading}
-                                    className="w-full pl-10 pr-4 py-3 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent transition-all duration-250"
+                                    className="w-full pl-10 pr-10 py-3 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent transition-all duration-250"
                                 />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-muted-foreground hover:text-foreground transition-colors outline-none"
+                                >
+                                    <Icon name={showPassword ? 'EyeSlashIcon' : 'EyeIcon'} size={20} />
+                                </button>
                             </div>
                         </div>
 

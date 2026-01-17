@@ -9,7 +9,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { adminService } from '../../lib/services/adminService';
 import { ShieldCheck, Search, Plus, Trash2, Edit2, X, Eye, EyeOff, Lock, Unlock } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 
 interface AdminProfile {
@@ -20,8 +20,20 @@ interface AdminProfile {
     role: 'admin'; // Always admin for this page
 }
 
+// Super admin emails - only these accounts can add/delete admins
+const SUPER_ADMIN_EMAILS = ['flashman.info@gmail.com', 'admin@interview-master.com'];
+
 export function AdminAdminsPage() {
-    const { profile: currentAdmin } = useAuth();
+    const { profile: currentAdmin, status } = useAuth();
+    const navigate = useNavigate();
+    const isSuperAdmin = currentAdmin?.email ? SUPER_ADMIN_EMAILS.includes(currentAdmin.email) : false;
+    
+    // Route guard: Redirect non-super-admins
+    useEffect(() => {
+        if (status !== 'loading' && currentAdmin && !isSuperAdmin) {
+            navigate('/admin/dashboard', { replace: true });
+        }
+    }, [status, currentAdmin, isSuperAdmin, navigate]);
     const [admins, setAdmins] = useState<AdminProfile[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -118,6 +130,14 @@ export function AdminAdminsPage() {
     // or we might just have read-only for now if backend isn't ready.
     // Assuming backend support for delete:
     const handleDeleteAdmin = async (admin: AdminProfile) => {
+        if (!isSuperAdmin) {
+            alert("Only the super admin can remove administrators.");
+            return;
+        }
+        if (currentAdmin?.email && SUPER_ADMIN_EMAILS.includes(admin.email)) {
+            alert("Super admin accounts cannot be deleted.");
+            return;
+        }
         if (admin.id === currentAdmin?.id) {
             alert("You cannot remove yourself.");
             return;
@@ -126,15 +146,12 @@ export function AdminAdminsPage() {
 
         try {
             setActionLoading(admin.id);
-            // This would likely be a cloud function call. 
-            // For now, we'll assume a placeholder or that we can't do it easily without backend.
-            // But let's assume we have `adminService.removeAdmin(id)`
-            // await adminService.removeAdmin(admin.id); 
-            // ALERT: Verify if this exists. If not, maybe just omit or 'Revoke' by banning?
-            // Let's assume for now we just show an alert that this requires database access
-            alert("To remove an admin, please contact the super-admin or modify the database directly for safety.");
-        } catch (err) {
-            console.error(err);
+            await adminService.deleteUser(admin.id);
+            await fetchAdmins();
+            alert('Administrator removed successfully.');
+        } catch (err: any) {
+            console.error('Failed to delete admin:', err);
+            alert('Failed to remove admin: ' + (err.message || 'Unknown error'));
         } finally {
             setActionLoading(null);
         }
@@ -180,13 +197,15 @@ export function AdminAdminsPage() {
                     </div>
                     <p className="text-muted-foreground ml-11">Manage system administrators</p>
                 </div>
-                <button
-                    onClick={() => { resetForm(); setShowAddModal(true); }}
-                    className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-sm"
-                >
-                    <Plus className="w-4 h-4" />
-                    Add Admin
-                </button>
+                {isSuperAdmin && (
+                    <button
+                        onClick={() => { resetForm(); setShowAddModal(true); }}
+                        className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-sm"
+                    >
+                        <Plus className="w-4 h-4" />
+                        Add Admin
+                    </button>
+                )}
             </div>
 
             {/* Search */}
@@ -250,7 +269,7 @@ export function AdminAdminsPage() {
                                             >
                                                 <Edit2 className="w-4 h-4" />
                                             </button>
-                                            {admin.id !== currentAdmin?.id && (
+                                            {isSuperAdmin && admin.id !== currentAdmin?.id && !SUPER_ADMIN_EMAILS.includes(admin.email) && (
                                                 <button
                                                     onClick={() => handleDeleteAdmin(admin)}
                                                     className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors"

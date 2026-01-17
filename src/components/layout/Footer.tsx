@@ -14,9 +14,9 @@ export function Footer({ variant = 'dark' }: FooterProps) {
   return (
     <footer className={cn("pt-16 pb-8 border-t", isLight ? "bg-slate-50 border-slate-200" : "bg-[#0F172A] border-slate-800")}>
       <div className="container mx-auto px-4 md:px-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
+        <div className="flex flex-col items-center text-center gap-10 mb-10">
           {/* Brand Column */}
-          <div className="col-span-1 md:col-span-1">
+          <div className="flex flex-col items-center max-w-4xl">
             <Link to="/" className="flex items-center gap-2 mb-4 group">
               <img
                 src="/assets/images/XTROONE.svg"
@@ -24,7 +24,7 @@ export function Footer({ variant = 'dark' }: FooterProps) {
                 className="w-32"
               />
             </Link>
-            <p className={cn("text-sm leading-relaxed mb-6", isLight ? "text-slate-600" : "text-slate-400")}>
+            <p className={cn("text-sm leading-relaxed mb-6 text-center", isLight ? "text-slate-600" : "text-slate-400")}>
               Ace your next interview with real-time AI assistance.
               Privacy-focused, secure, and undetectable.
             </p>
@@ -41,32 +41,17 @@ export function Footer({ variant = 'dark' }: FooterProps) {
             </div>
           </div>
 
-          {/* Links Columns */}
-          <div>
-            <h4 className={cn("font-semibold mb-6", isLight ? "text-slate-900" : "text-white")}>Product</h4>
-            <ul className="space-y-3 text-sm">
-              <li><Link to="/features" className={cn("transition-colors", isLight ? "text-slate-600 hover:text-primary" : "text-slate-400 hover:text-primary")}>Features</Link></li>
-              <li><Link to="/pricing" className={cn("transition-colors", isLight ? "text-slate-600 hover:text-primary" : "text-slate-400 hover:text-primary")}>Pricing</Link></li>
-              <li><Link to="/extension" className={cn("transition-colors", isLight ? "text-slate-600 hover:text-primary" : "text-slate-400 hover:text-primary")}>Chrome Extension</Link></li>
-            </ul>
-          </div>
-
-          <div>
-            <h4 className={cn("font-semibold mb-6", isLight ? "text-slate-900" : "text-white")}>Company</h4>
-            <ul className="space-y-3 text-sm">
-              <li><Link to="/about" className={cn("transition-colors", isLight ? "text-slate-600 hover:text-primary" : "text-slate-400 hover:text-primary")}>About Us</Link></li>
-              <li><Link to="/how-it-works" className={cn("transition-colors", isLight ? "text-slate-600 hover:text-primary" : "text-slate-400 hover:text-primary")}>How it Works</Link></li>
-              <li><Link to="/#contact" className={cn("transition-colors", isLight ? "text-slate-600 hover:text-primary" : "text-slate-400 hover:text-primary")}>Contact</Link></li>
-            </ul>
-          </div>
-
-          <div>
-            <h4 className={cn("font-semibold mb-6", isLight ? "text-slate-900" : "text-white")}>Legal</h4>
-            <ul className="space-y-3 text-sm">
-              <li><Link to="/privacy" className={cn("transition-colors", isLight ? "text-slate-600 hover:text-primary" : "text-slate-400 hover:text-primary")}>Privacy Policy</Link></li>
-              <li><Link to="/terms" className={cn("transition-colors", isLight ? "text-slate-600 hover:text-primary" : "text-slate-400 hover:text-primary")}>Terms of Service</Link></li>
-              <li><Link to="/cookie" className={cn("transition-colors", isLight ? "text-slate-600 hover:text-primary" : "text-slate-400 hover:text-primary")}>Cookie Policy</Link></li>
-            </ul>
+          {/* Links Columns - Flattened */}
+          <div className="flex flex-wrap justify-center gap-6 text-sm font-medium">
+              <Link to="/features" className={cn("transition-colors", isLight ? "text-slate-600 hover:text-primary" : "text-slate-400 hover:text-primary")}>Features</Link>
+              <Link to="/pricing" className={cn("transition-colors", isLight ? "text-slate-600 hover:text-primary" : "text-slate-400 hover:text-primary")}>Pricing</Link>
+              <Link to="/extension" className={cn("transition-colors", isLight ? "text-slate-600 hover:text-primary" : "text-slate-400 hover:text-primary")}>Chrome Extension</Link>
+              <Link to="/about" className={cn("transition-colors", isLight ? "text-slate-600 hover:text-primary" : "text-slate-400 hover:text-primary")}>About Us</Link>
+              <Link to="/how-it-works" className={cn("transition-colors", isLight ? "text-slate-600 hover:text-primary" : "text-slate-400 hover:text-primary")}>How it Works</Link>
+              <Link to="/#contact" className={cn("transition-colors", isLight ? "text-slate-600 hover:text-primary" : "text-slate-400 hover:text-primary")}>Contact</Link>
+              <Link to="/privacy" className={cn("transition-colors", isLight ? "text-slate-600 hover:text-primary" : "text-slate-400 hover:text-primary")}>Privacy Policy</Link>
+              <Link to="/terms" className={cn("transition-colors", isLight ? "text-slate-600 hover:text-primary" : "text-slate-400 hover:text-primary")}>Terms of Service</Link>
+              <Link to="/cookie" className={cn("transition-colors", isLight ? "text-slate-600 hover:text-primary" : "text-slate-400 hover:text-primary")}>Cookie Policy</Link>
           </div>
         </div>
 

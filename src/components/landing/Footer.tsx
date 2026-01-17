@@ -21,9 +21,9 @@ export function Footer() {
     return (
         <footer className="bg-[#0F172A] text-white pt-20 pb-12 border-t border-slate-800">
             <div className="container mx-auto px-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 text-sm">
-                    {/* Brand Column */}
-                    <div>
+                <div className="flex flex-col items-center text-center gap-10">
+                    {/* Brand Section */}
+                    <div className="flex flex-col items-center max-w-2xl">
                         <div className="flex items-center gap-3 mb-4">
                             <img src="/1.svg" alt="Logo" className="w-10 h-10 rounded-lg" />
                             <div className="text-xl font-extrabold text-white">Smart AI<br /><span className="text-lg font-bold">Assistant</span><span className="text-xs align-top ml-1">TM</span></div>
@@ -32,55 +32,35 @@ export function Footer() {
 
                         <div>
                             <p className="font-bold text-white mb-1">Proudly based in</p>
-                            <div className="flex items-center gap-2 text-white/80">
+                            <div className="flex items-center justify-center gap-2 text-white/80">
                                 Seattle, Washington, USA <span className="text-lg">🇺🇸</span>
                             </div>
                         </div>
                     </div>
 
-                    {/* Links Column */}
-                    <div>
-                        <h4 className="font-bold text-white mb-6 text-lg">Links</h4>
-                        <div className="flex flex-col gap-4">
-                            <Link to="#" className="hover:text-white/80 transition-opacity opacity-90">Chrome Store</Link>
-                            <Link to="#" className="hover:text-white/80 transition-opacity opacity-90">Try Demo</Link>
-                            <Link to="#" className="hover:text-white/80 transition-opacity opacity-90">Privacy Policy</Link>
-                            <Link to="#" className="hover:text-white/80 transition-opacity opacity-90">Terms of Service</Link>
-                            <Link to="#" className="hover:text-white/80 transition-opacity opacity-90">About Us</Link>
-                        </div>
+                    {/* Links Section */}
+                    <div className="flex flex-wrap justify-center gap-6 text-sm font-medium text-white/80">
+                         <Link to="#" className="hover:text-white transition-opacity">Chrome Store</Link>
+                        <Link to="#" className="hover:text-white transition-opacity">Try Demo</Link>
+                        <Link to="#" className="hover:text-white transition-opacity">Privacy Policy</Link>
+                        <Link to="#" className="hover:text-white transition-opacity">Terms of Service</Link>
+                        <Link to="#" className="hover:text-white transition-opacity">About Us</Link>
+                        <Link to="#" className="hover:text-white transition-opacity">Support Desk</Link>
+                        <Link to="#" className="hover:text-white transition-opacity">Contact Us</Link>
+                        <Link to="/dashboard" className="hover:text-white transition-opacity">Dashboard</Link>
+                        <Link to="/dashboard/console" className="hover:text-white transition-opacity">Console</Link>
+                        <Link to="/logout" className="hover:text-white transition-opacity">Log Out</Link>
                     </div>
 
-                    {/* Follow Us Column */}
-                    <div>
-                        <h4 className="font-bold text-white mb-6 text-lg">Follow Us</h4>
-                        <div className="flex flex-col gap-4">
-                            <a href="#" className="flex items-center gap-3 hover:text-white/80 transition-opacity opacity-90"><SocialIcon path={Icons.Facebook} /> Facebook</a>
-                            <a href="#" className="flex items-center gap-3 hover:text-white/80 transition-opacity opacity-90"><SocialIcon path={Icons.LinkedIn} /> LinkedIn</a>
-                            <a href="#" className="flex items-center gap-3 hover:text-white/80 transition-opacity opacity-90"><SocialIcon path={Icons.X} /> X</a>
-                            <a href="#" className="flex items-center gap-3 hover:text-white/80 transition-opacity opacity-90"><SocialIcon path={Icons.YouTube} /> YouTube</a>
-                            <a href="#" className="flex items-center gap-3 hover:text-white/80 transition-opacity opacity-90"><SocialIcon path={Icons.Instagram} /> Instagram</a>
-                            <a href="#" className="flex items-center gap-3 hover:text-white/80 transition-opacity opacity-90"><SocialIcon path={Icons.TikTok} /> TikTok</a>
-                            <a href="#" className="flex items-center gap-3 hover:text-white/80 transition-opacity opacity-90"><SocialIcon path={Icons.Discord} /> Discord</a>
-                        </div>
-                    </div>
-
-                    {/* Support & Account Column */}
-                    <div className="space-y-10">
-                        <div>
-                            <h4 className="font-bold text-white mb-6 text-lg">Support</h4>
-                            <div className="flex flex-col gap-4">
-                                <Link to="#" className="hover:text-white/80 transition-opacity opacity-90">Support Desk</Link>
-                                <Link to="#" className="hover:text-white/80 transition-opacity opacity-90">Contact Us</Link>
-                            </div>
-                        </div>
-                        <div>
-                            <h4 className="font-bold text-white mb-6 text-lg">Account</h4>
-                            <div className="flex flex-col gap-4">
-                                <Link to="/dashboard" className="hover:text-white/80 transition-opacity opacity-90">Dashboard</Link>
-                                <Link to="/dashboard/console" className="hover:text-white/80 transition-opacity opacity-90">Console</Link>
-                                <Link to="/logout" className="hover:text-white/80 transition-opacity opacity-90">Log Out</Link>
-                            </div>
-                        </div>
+                    {/* Follow Us Section */}
+                    <div className="flex flex-wrap justify-center gap-4">
+                        <a href="#" className="flex items-center gap-2 hover:text-white transition-opacity text-white/80 bg-white/5 px-3 py-1.5 rounded-full"><SocialIcon path={Icons.Facebook} /> <span className="text-xs">Facebook</span></a>
+                        <a href="#" className="flex items-center gap-2 hover:text-white transition-opacity text-white/80 bg-white/5 px-3 py-1.5 rounded-full"><SocialIcon path={Icons.LinkedIn} /> <span className="text-xs">LinkedIn</span></a>
+                        <a href="#" className="flex items-center gap-2 hover:text-white transition-opacity text-white/80 bg-white/5 px-3 py-1.5 rounded-full"><SocialIcon path={Icons.X} /> <span className="text-xs">X</span></a>
+                        <a href="#" className="flex items-center gap-2 hover:text-white transition-opacity text-white/80 bg-white/5 px-3 py-1.5 rounded-full"><SocialIcon path={Icons.YouTube} /> <span className="text-xs">YouTube</span></a>
+                        <a href="#" className="flex items-center gap-2 hover:text-white transition-opacity text-white/80 bg-white/5 px-3 py-1.5 rounded-full"><SocialIcon path={Icons.Instagram} /> <span className="text-xs">Instagram</span></a>
+                        <a href="#" className="flex items-center gap-2 hover:text-white transition-opacity text-white/80 bg-white/5 px-3 py-1.5 rounded-full"><SocialIcon path={Icons.TikTok} /> <span className="text-xs">TikTok</span></a>
+                        <a href="#" className="flex items-center gap-2 hover:text-white transition-opacity text-white/80 bg-white/5 px-3 py-1.5 rounded-full"><SocialIcon path={Icons.Discord} /> <span className="text-xs">Discord</span></a>
                     </div>
                 </div>
             </div>

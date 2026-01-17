@@ -142,7 +142,7 @@ export const adminService = {
             }
         );
 
-        // 1. Create the user
+        // 1. Create the user in Supabase Auth
         const { data: authData, error: authError } = await tempClient.auth.signUp({
             email,
             password,
@@ -156,22 +156,20 @@ export const adminService = {
         if (authError) throw authError;
         if (!authData.user) throw new Error('Failed to create user');
 
-        // 2. Update the profile role to admin immediately
-        // Note: This requires the current admin (authenticated client) to perform the update
-        // because the new user (tempClient) might not have permission to set their own role to admin depending on RLS.
-        // We use the main `supabase` client here which is authenticated as the current admin.
-        const { error: profileError } = await supabase
-            .from('profiles')
-            .update({
-                role: 'admin',
-                full_name: fullName // Ensure name is set in profile
-            })
-            .eq('id', authData.user.id);
+        const newUserId = authData.user.id;
+        
+        // 2. Use RPC function to create/update profile with admin role
+        // This bypasses RLS using SECURITY DEFINER
+        const { error: rpcError } = await supabase.rpc('admin_create_profile', {
+            user_id: newUserId,
+            user_email: email,
+            user_full_name: fullName,
+            user_role: 'admin'
+        });
 
-        if (profileError) {
-            // If we fail to make them admin, we should probably warn or try to cleanup
-            console.error('Failed to promote new user to admin:', profileError);
-            throw new Error('User created but failed to promote to admin: ' + profileError.message);
+        if (rpcError) {
+            console.error('Failed to create admin profile via RPC:', rpcError);
+            throw new Error('User created but failed to create admin profile: ' + rpcError.message);
         }
 
         return authData.user;

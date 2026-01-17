@@ -9,6 +9,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { AuthError } from '../../components/auth/AuthError';
+import { Eye, EyeOff } from 'lucide-react';
 
 export function ResetPasswordPage() {
     const { updatePassword, error, clearError, isAuthenticated } = useAuth();
@@ -21,6 +22,8 @@ export function ResetPasswordPage() {
     const [loading, setLoading] = useState(false);
     const [validationError, setValidationError] = useState<string | null>(null);
     const [success, setSuccess] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -130,17 +133,26 @@ export function ResetPasswordPage() {
                         <label className="block text-sm font-medium text-foreground mb-1">
                             New Password
                         </label>
-                        <input
-                            type="password"
-                            name="password"
-                            required
-                            autoComplete="new-password"
-                            className="w-full px-4 py-3 rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors bg-background text-foreground placeholder-muted-foreground"
-                            placeholder="••••••••"
-                            value={formData.password}
-                            onChange={handleChange}
-                            disabled={loading}
-                        />
+                        <div className="relative">
+                            <input
+                                type={showPassword ? 'text' : 'password'}
+                                name="password"
+                                required
+                                autoComplete="new-password"
+                                className="w-full px-4 py-3 pr-10 rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors bg-background text-foreground placeholder-muted-foreground"
+                                placeholder="••••••••"
+                                value={formData.password}
+                                onChange={handleChange}
+                                disabled={loading}
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors outline-none"
+                            >
+                                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </button>
+                        </div>
                         <p className="text-xs text-muted-foreground mt-1">
                             Must be at least 6 characters
                         </p>
@@ -149,17 +161,26 @@ export function ResetPasswordPage() {
                         <label className="block text-sm font-medium text-foreground mb-1">
                             Confirm New Password
                         </label>
-                        <input
-                            type="password"
-                            name="confirmPassword"
-                            required
-                            autoComplete="new-password"
-                            className="w-full px-4 py-3 rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors bg-background text-foreground placeholder-muted-foreground"
-                            placeholder="••••••••"
-                            value={formData.confirmPassword}
-                            onChange={handleChange}
-                            disabled={loading}
-                        />
+                        <div className="relative">
+                            <input
+                                type={showConfirmPassword ? 'text' : 'password'}
+                                name="confirmPassword"
+                                required
+                                autoComplete="new-password"
+                                className="w-full px-4 py-3 pr-10 rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors bg-background text-foreground placeholder-muted-foreground"
+                                placeholder="••••••••"
+                                value={formData.confirmPassword}
+                                onChange={handleChange}
+                                disabled={loading}
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors outline-none"
+                            >
+                                {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </button>
+                        </div>
                     </div>
 
                     <button

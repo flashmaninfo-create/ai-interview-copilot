@@ -18,13 +18,30 @@ const ScrollToHash = () => {
       }
     }
 
-    if (hash) {
+    if (hash && hash !== '#') {
+      // Ignore auth hashes from Supabase/OAuth
+      if (
+        hash.startsWith('#access_token') ||
+        hash.startsWith('#refresh_token') ||
+        hash.startsWith('#error') ||
+        hash.startsWith('#type=recovery')
+      ) {
+        return;
+      }
+
       lastHash.current = hash;
       const scrollToElement = () => {
-        const element = document.querySelector(hash);
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth' });
-          return true;
+        try {
+          // Validate selector to prevent crashes with invalid hashes like "#123" (if IDs don't start with letter)
+          // or complex auth strings that might technically be valid selectors but not intended elements
+          const element = document.querySelector(hash);
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth' });
+            return true;
+          }
+        } catch (e) {
+          // Ignore invalid selector errors
+          console.warn('ScrollToHash: Invalid selector:', hash);
         }
         return false;
       };

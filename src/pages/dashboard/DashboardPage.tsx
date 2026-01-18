@@ -16,6 +16,7 @@ export function DashboardPage() {
     const [credits, setCredits] = useState<number | null>(null);
     const [recentSessions, setRecentSessions] = useState<SessionSummary[]>([]);
     const [activeSession, setActiveSession] = useState<SessionSummary | null>(null);
+    const [completedCount, setCompletedCount] = useState<number | null>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -38,13 +39,19 @@ export function DashboardPage() {
                 setActiveSession(active || null);
             }
 
+            // Fetch total count of completed interviews
+            const completedResult = await sessionService.list({ status: 'completed', limit: 1 });
+            if (completedResult.success) {
+                setCompletedCount(completedResult.data!.total);
+            }
+
             setLoading(false);
         };
 
         fetchData();
     }, []);
 
-    const completedCount = recentSessions.filter((s) => s.status === 'completed').length;
+
 
     const getStatusColor = (status: SessionSummary['status']) => {
         const colors = {

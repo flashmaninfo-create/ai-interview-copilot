@@ -22,7 +22,7 @@ const TestimonialsSection = () => {
     name: 'Sarah Chen',
     role: 'Software Engineer',
     company: 'Tech Startup',
-    content: 'Interview Copilot helped me stay calm during technical interviews. The real-time transcription was incredibly accurate, and the AI suggestions were spot-on for system design questions.',
+    content: 'Xtroone helped me stay calm during technical interviews. The real-time transcription was incredibly accurate, and the AI suggestions were spot-on for system design questions.',
     rating: 5,
     image: "https://img.rocket.new/generatedImages/rocket_gen_img_1c61a4c74-1763295402256.png",
     imageAlt: 'Professional Asian woman in business attire smiling confidently'
@@ -71,7 +71,7 @@ const TestimonialsSection = () => {
             Trusted by Professionals
           </h2>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            Real stories from candidates who used Interview Copilot to ace their interviews
+            Real stories from candidates who used Xtroone to ace their interviews
           </p>
         </div>
 

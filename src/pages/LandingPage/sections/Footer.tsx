@@ -41,13 +41,14 @@ const Footer = () => {
   return (
     <footer className="bg-primary text-primary-foreground">
       <div className="max-w-7xl mx-auto px-6 py-16">
-        <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-12 mb-12">
+        <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-12 mb-10">
           <div className="lg:col-span-2">
             <div className="flex items-center space-x-3 mb-6">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-accent">
-                <Icon name="SparklesIcon" size={24} className="text-accent-foreground" variant="solid" />
-              </div>
-              <span className="font-headline text-2xl font-semibold">Interview Copilot</span>
+              <img
+                src="/assets/images/XTROONE.svg"
+                alt="Xtroone"
+                className="w-32 "
+              />
             </div>
             <p className="text-primary-foreground/80 mb-6 max-w-sm">
               Real-time AI assistance for live interviews. Privacy-first, user-controlled, and designed for professional preparation.
@@ -121,9 +122,9 @@ const Footer = () => {
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="text-primary-foreground/70 text-sm">
               {isHydrated ? (
-                <>© {currentYear} Interview Copilot. All rights reserved.</>
+                <>© {currentYear} Xtroone. All rights reserved.</>
               ) : (
-                <>© 2026 Interview Copilot. All rights reserved.</>
+                <>© 2026 Xtroone. All rights reserved.</>
               )}
             </div>
             <div className="flex items-center gap-6 text-sm">

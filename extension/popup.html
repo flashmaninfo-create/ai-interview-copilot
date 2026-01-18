@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Ntro.io</title>
+    <title>Xtroone.com</title>
     <link rel="stylesheet" href="popup.css">
 </head>
 
@@ -15,7 +15,7 @@
             <div class="logo-section">
                 <div class="logo">
                     <span class="logo-icon">X</span>
-                    <span class="logo-text">Xtroon</span>
+                    <span class="logo-text">Xtroone</span>
                 </div>
                 <div class="version">4.7.4</div>
             </div>
@@ -34,7 +34,7 @@
                     <div class="phase-indicator"></div>
                     <div class="phase-content">
                         <div class="phase-title">In the Meeting</div>
-                        <div class="phase-desc">Connect Ntro.io to the meeting and go!</div>
+                        <div class="phase-desc">Connect Xtroone.com to the meeting and go!</div>
                     </div>
                 </div>
                 <div class="phase-connector"></div>
@@ -129,7 +129,7 @@
                         <div class="auth-image-overlay">
                             <div class="auth-brand">
                                 <div class="brand-icon">X</div>
-                                <div class="brand-name">Xtroon</div>
+                                <div class="brand-name">Xtroone</div>
                             </div>
                             <p class="auth-tagline">Your AI-powered interview assistant</p>
                         </div>
@@ -140,7 +140,7 @@
                         <div class="auth-form-container">
                             <div class="auth-header">
                                 <h1>Welcome</h1>
-                                <p>Please log in via our secure dashboard to access Interview Copilot.</p>
+                                <p>Please log in via our secure dashboard to access Xtroone.</p>
                             </div>
 
                             <div class="auth-buttons-container"
@@ -372,6 +372,18 @@
                                 <input type="text" id="assessmentPlatformInput" class="form-control"
                                     placeholder="e.g. HackerRank">
                             </div>
+                            
+                            <div class="form-group">
+                                <label class="toggle-label">
+                                    <span>Live Coding Mode</span>
+                                    <div class="toggle-wrapper">
+                                        <input type="checkbox" id="assessmentLiveCodingInput" class="toggle-input">
+                                        <div class="toggle-slider"></div>
+                                    </div>
+                                </label>
+                                <div class="form-hint">Enable real-time coding assistance</div>
+                            </div>
+
                             <div class="form-group">
                                 <label for="assessmentLanguageInput">Programming Language</label>
                                 <input type="text" id="assessmentLanguageInput" class="form-control"
@@ -551,6 +563,151 @@
                                 stroke-linejoin="round" />
                         </svg>
                     </a>
+                </div>
+            </div>
+
+            <!-- Stealth Console Setup View -->
+            <div class="view-content" id="stealthConsoleSetupView" style="display: none;">
+                <div class="stealth-setup-container">
+                    <div class="setup-header">
+                        <h2>Stealth Console Setup</h2>
+                        <p>Prepare your secondary device or monitor</p>
+                    </div>
+
+                    <!-- Live Coding Caution Alert -->
+                    <div class="caution-alert" id="liveCodingCaution">
+                        <div class="caution-icon">⚠️</div>
+                        <div class="caution-content">
+                            <strong>Important for Live Coding!</strong>
+                            <p>After clicking "Share Entire Screen", you'll see a widget saying:</p>
+                            <div class="caution-example">
+                                <span class="caution-dot"></span>
+                                <span>Xtroone.com is sharing your screen.</span>
+                                <span class="caution-hide-btn">Hide</span>
+                            </div>
+                            <p>Click <strong>"Hide"</strong> before your interviewer sees it!</p>
+                        </div>
+                    </div>
+
+                    <div class="setup-step-list">
+                        <!-- Step 1 -->
+                        <div class="setup-step">
+                            <div class="step-number">1</div>
+                            <div class="step-content">
+                                <h3>Open Stealth Console</h3>
+                                <p>Open this link on a secondary monitor or another device (phone/tablet).</p>
+                                <div class="console-link-box">
+                                    <a href="#" id="stealthConsoleLink" target="_blank">...</a>
+                                    <button class="copy-btn" id="copyConsoleLinkBtn">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                        </svg>
+                                    </button>
+                                </div>
+                                <div class="qr-placeholder" id="consoleQrCode">
+                                    <!-- QR Code will be generated here -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 2 -->
+                        <div class="setup-step">
+                            <div class="step-number">2</div>
+                            <div class="step-content">
+                                <h3>Link this page</h3>
+                                <p>Ensure this tab is the one where the interview will happen.</p>
+                                <div class="link-action-row">
+                                    <div class="current-url" id="setupCurrentUrl">https://...</div>
+                                    <button class="btn-sm btn-secondary" id="setupUseThisPageBtn">Use This Page</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 3: Share Screen -->
+                        <div class="setup-step">
+                            <div class="step-number">3</div>
+                            <div class="step-content">
+                                <h3>Share Your Screen</h3>
+                                <p>Allow the extension to see your screen so it can read questions and provide answers.</p>
+                                <div class="screen-share-action">
+                                    <button class="btn btn-primary" id="setupShareScreenBtn">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                                            <line x1="8" y1="21" x2="16" y2="21"></line>
+                                            <line x1="12" y1="17" x2="12" y2="21"></line>
+                                        </svg>
+                                        Share Entire Screen
+                                    </button>
+                                    <div class="screen-share-status" id="screenShareStatus" style="display: none;">
+                                        <span class="status-dot success"></span>
+                                        <span>Screen sharing active</span>
+                                    </div>
+                                </div>
+                                <div class="form-hint">Select "Entire Screen" when prompted for best results.</div>
+                            </div>
+                        </div>
+
+                        <!-- Step 4: I'm Ready -->
+                        <div class="setup-step">
+                            <div class="step-number">4</div>
+                            <div class="step-content">
+                                <h3>You're All Set!</h3>
+                                <p>Click "I'm Ready" to start receiving AI assistance on your Stealth Console.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="setup-actions">
+                        <button class="btn btn-secondary" id="setupBackBtn">Back</button>
+                        <button class="btn btn-primary btn-large" id="setupReadyBtn" disabled>I'm Ready</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Feedback View -->
+            <div class="view-content" id="feedbackView" style="display: none;">
+                <div class="feedback-container">
+                    <div class="meeting-finished-header">
+                        <div class="meeting-subtitle">Senior AI Platform Engineer</div>
+                        <button class="download-feedback-btn" id="downloadFeedbackBtn">
+                           Download AI Feedback 
+                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                               <polyline points="7 10 12 15 17 10"></polyline>
+                               <line x1="12" y1="15" x2="12" y2="3"></line>
+                           </svg>
+                        </button>
+                    </div>
+
+                    <div class="feedback-section">
+                        <label>How was your meeting?</label>
+                        <div class="rating-buttons" id="meetingRatingGroup">
+                             <button class="rating-pill" data-value="1">Worst</button>
+                             <button class="rating-pill" data-value="2">Bad</button>
+                             <button class="rating-pill" data-value="3">So So</button>
+                             <button class="rating-pill" data-value="4">Good</button>
+                             <button class="rating-pill" data-value="5">Perfect</button>
+                        </div>
+                    </div>
+
+                    <div class="feedback-section">
+                        <label>How was Xtroone.io?</label>
+                        <div class="star-rating" id="appRatingGroup">
+                             <span class="star" data-value="1">★</span>
+                             <span class="star" data-value="2">★</span>
+                             <span class="star" data-value="3">★</span>
+                             <span class="star" data-value="4">★</span>
+                             <span class="star" data-value="5">★</span>
+                        </div>
+                    </div>
+
+                    <div class="feedback-section">
+                        <label>Feedback (Optional)</label>
+                        <textarea id="feedbackText" class="feedback-input" placeholder="We are hungry with your feedback..."></textarea>
+                    </div>
+
+                    <button class="btn btn-primary btn-large btn-done" id="submitFeedbackBtn">Done</button>
                 </div>
             </div>
         </div>

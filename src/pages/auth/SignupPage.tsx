@@ -192,7 +192,7 @@ export function SignupPage() {
                             </div>
                         </div>
                         <p className="text-sm text-primary-foreground/90 italic">
-                            "Interview Copilot helped me land my dream job. The AI coaching was incredibly accurate and boosted my confidence."
+                            "Xtroone helped me land my dream job. The AI coaching was incredibly accurate and boosted my confidence."
                         </p>
                     </div>
                 </div>

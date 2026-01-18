@@ -7,6 +7,7 @@ import { ConsoleSync } from './lib/console-sync.js';
 import { supabaseREST, setTokens } from './lib/supabase-config.js';
 import { TranscriptionManager } from './lib/transcription-manager.js';
 import { InterviewContextManager } from './lib/interview-context-manager.js';
+import { ReportGenerator } from './lib/report-generator.js';
 
 class BackgroundService {
   constructor() {
@@ -22,6 +23,8 @@ class BackgroundService {
     // Rolling interview context for instant AI responses
     this.interviewContext = new InterviewContextManager();
     this.aiService.setContextManager(this.interviewContext);
+    
+    this.reportGenerator = new ReportGenerator();
 
     this.sessionActive = false;
     this.tabId = null;
@@ -78,10 +81,11 @@ class BackgroundService {
 
     // Listen for remote console commands (Supabase)
     this.consoleSync.onMessage((msg) => {
-      console.log('[Background] Received remote console command:', msg);
+      console.log('[Background] Received remote console command:', msg.type, 'Data:', JSON.stringify(msg.data));
 
       switch (msg.type) {
         case 'REQUEST_HINT':
+          console.log('[Background] Processing REQUEST_HINT from console, requestType:', msg.data?.requestType);
           this.requestHint({ ...msg.data, trigger: msg.data?.trigger || 'manual' });
           break;
         case 'TAKE_SCREENSHOT':
@@ -247,6 +251,14 @@ class BackgroundService {
 
       case 'CONSOLE_CONNECT':
         await this.connectConsole(msg.data, sender, sendResponse);
+        break;
+
+      case 'SAVE_FEEDBACK':
+        await this.handleSaveFeedback(msg.data, sendResponse);
+        break;
+
+      case 'DOWNLOAD_REPORT':
+        await this.handleDownloadReport(msg.data, sendResponse);
         break;
 
       case 'GET_CREDITS':
@@ -462,6 +474,8 @@ class BackgroundService {
 
   async handleLogout(sendResponse) {
     try {
+      console.log('[Background] Handling logout');
+      
       // Stop any active session
       if (this.sessionActive) {
         await this.stopSession(() => { });
@@ -471,6 +485,31 @@ class BackgroundService {
       this.state.data.user = null;
       await this.state.save();
 
+      // Send CLEAR_AUTH message to all dashboard tabs to clear localStorage
+      const tabs = await chrome.tabs.query({});
+      for (const tab of tabs) {
+        if (tab.url && (tab.url.includes('localhost:5173') || 
+                        tab.url.includes('127.0.0.1:5173') ||
+                        tab.url.includes('xtroone.com') || 
+                        tab.url.includes('vercel.app'))) {
+          try {
+            await chrome.tabs.sendMessage(tab.id, { type: 'CLEAR_AUTH' });
+            console.log('[Background] Sent CLEAR_AUTH to tab:', tab.id);
+          } catch (error) {
+            // Tab might not have content script, ignore
+            console.log('[Background] Could not send CLEAR_AUTH to tab:', tab.id);
+          }
+        }
+      }
+
+      // Set flag to ignore AUTH_SYNC for 5 seconds to prevent immediate re-authentication
+      this.ignoreAuthSync = true;
+      setTimeout(() => {
+        this.ignoreAuthSync = false;
+        console.log('[Background] Re-enabled AUTH_SYNC processing');
+      }, 5000);
+
+      console.log('[Background] Logout completed, AUTH_SYNC ignored for 5 seconds');
       sendResponse({ success: true });
 
     } catch (error) {
@@ -818,6 +857,37 @@ class BackgroundService {
       console.log('[Background] Audio capture stopped and offscreen document closed');
     } catch (error) {
       console.log('[Background] Error stopping audio capture:', error.message);
+    }
+  }
+
+  // Start screen capture for Online Assessment flow
+  async startScreenCapture(data, sendResponse) {
+    try {
+      console.log('[Background] Starting screen capture for Online Assessment');
+
+      // Create offscreen document if not exists
+      await this.createOffscreenDocument();
+
+      // Send to offscreen document to start screen capture
+      // The offscreen document will use getDisplayMedia to prompt the user
+      const response = await chrome.runtime.sendMessage({
+        type: 'START_SCREEN_CAPTURE'
+      });
+
+      if (!response?.success) {
+        throw new Error(response?.error || 'Failed to start screen capture');
+      }
+
+      // Store the screen sharing state
+      this.screenSharingActive = true;
+      await chrome.storage.local.set({ screenSharingActive: true });
+
+      console.log('[Background] Screen capture started successfully');
+      sendResponse({ success: true });
+
+    } catch (error) {
+      console.error('[Background] Screen capture error:', error);
+      sendResponse({ success: false, error: error.message });
     }
   }
 
@@ -1432,10 +1502,26 @@ class BackgroundService {
         throw new Error('No credits remaining');
       }
 
+      // If screen sharing is active, capture a screenshot first
+      let currentScreenshot = null;
+      if (this.screenSharingActive) {
+        try {
+          console.log('[Background] Capturing screenshot from screen share...');
+          const screenshotResponse = await chrome.runtime.sendMessage({ type: 'CAPTURE_SCREENSHOT' });
+          if (screenshotResponse?.success && screenshotResponse.screenshot) {
+            currentScreenshot = screenshotResponse.screenshot;
+            console.log('[Background] Screenshot captured, size:', Math.round(currentScreenshot.length / 1024), 'KB');
+          }
+        } catch (screenshotError) {
+          console.warn('[Background] Could not capture screenshot:', screenshotError.message);
+        }
+      }
+
       // Prepare context
       const context = {
         transcripts: this.transcriptionBuffer.slice(-10), // Last 10 transcripts
-        screenshots: this.screenshotQueue.slice(),
+        screenshots: currentScreenshot ? [currentScreenshot] : this.screenshotQueue.slice(),
+        currentScreenshot: currentScreenshot, // Pass as separate field for AI
         language: this.state.data.settings.language,
         verbosity: this.state.data.settings.verbosity,
         userProfile: this.state.data.userProfile,
@@ -1593,6 +1679,15 @@ class BackgroundService {
       if (sendResponse) sendResponse({ success: false, error: 'No active session' });
       return;
     }
+
+    // Rate limiting: Prevent rapid successive calls (Chrome limits to ~1 call/second)
+    const now = Date.now();
+    if (this.lastScreenshotTime && now - this.lastScreenshotTime < 1000) {
+      console.log('[Background] Screenshot debounced - too soon after last request');
+      if (sendResponse) sendResponse({ success: false, error: 'Please wait before taking another screenshot' });
+      return;
+    }
+    this.lastScreenshotTime = now;
 
     try {
       let dataUrl;
@@ -2093,6 +2188,13 @@ class BackgroundService {
   async handleAuthSync(msg, sendResponse) {
     try {
       console.log('[Background] Received AUTH_SYNC', msg.user?.id);
+
+      // Ignore AUTH_SYNC if we just logged out
+      if (this.ignoreAuthSync) {
+        console.log('[Background] Ignoring AUTH_SYNC due to recent logout');
+        sendResponse({ success: false, ignored: true });
+        return;
+      }
 
       if (msg.user && msg.token) {
         const updates = {

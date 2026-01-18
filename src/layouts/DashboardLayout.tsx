@@ -19,7 +19,7 @@ export function DashboardLayout() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                     </svg>
                 </button>
-                <span className="ml-4 text-lg font-bold text-primary tracking-tight">Smart AI Interview</span>
+                <img src="/assets/images/XTROONE.svg" alt="Xtroone" className="ml-4 w-28" />
             </header>
 
             {/* Main Content */}

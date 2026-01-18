@@ -1,6 +1,6 @@
 -- ============================================================================
 -- PHASE 2: DATABASE SCHEMA & ROW LEVEL SECURITY
--- ntro-clone SaaS Platform
+-- xtroon-clone SaaS Platform
 -- Generated: 2025-12-30
 -- ============================================================================
 -- 

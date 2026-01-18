@@ -73,7 +73,7 @@ const BenefitsSection = () => {
           <div className="space-y-8">
             <div>
               <h3 className="font-headline text-2xl font-semibold text-foreground mb-6">
-                Why Choose Interview Copilot?
+                Why Choose Xtroone?
               </h3>
               <div className="space-y-4">
                 <div className="flex items-start gap-4">

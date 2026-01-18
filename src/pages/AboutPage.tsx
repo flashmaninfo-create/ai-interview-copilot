@@ -27,7 +27,7 @@ export function AboutPage() {
               <h3 className="text-2xl font-bold text-white mb-4">Why we built this</h3>
               <p className="text-slate-400 leading-relaxed mb-6">
                 Technical interviews have become increasingly disconnected from day-to-day engineering reality. 
-                We built Interview Copilot to bridge that gap, providing an intelligent safety net that helps 
+                We built Xtroone to bridge that gap, providing an intelligent safety net that helps 
                 you recall knowledge you already have, exactly when you need it.
               </p>
             </SlideUp>

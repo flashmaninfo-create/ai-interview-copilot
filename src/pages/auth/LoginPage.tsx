@@ -97,8 +97,8 @@ export function LoginPage() {
                     
                     <div className="relative z-10 text-center space-y-6">
                         <div className="flex justify-center">
-                            <div className="w-24 h-24 bg-primary rounded-2xl flex items-center justify-center shadow-xl">
-                                <Icon name="UserCircleIcon" size={48} className="text-primary-foreground" variant="solid" />
+                            <div className="flex items-center justify-center mb-4">
+                                <img src="/assets/images/XTROONE.svg" alt="Xtroone" className="w-48" />
                             </div>
                         </div>
                         

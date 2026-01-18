@@ -99,7 +99,7 @@ export const extensionAuthBridge = {
 
         // Also dispatch custom event for extension popup
         window.dispatchEvent(
-            new CustomEvent('ntro-auth-state', {
+            new CustomEvent('xtroon-auth-state', {
                 detail: payload.data,
             })
         );
@@ -126,7 +126,7 @@ export const extensionAuthBridge = {
 
         window.postMessage(payload, window.location.origin);
         window.dispatchEvent(
-            new CustomEvent('ntro-auth-state', {
+            new CustomEvent('xtroon-auth-state', {
                 detail: payload.data,
             })
         );

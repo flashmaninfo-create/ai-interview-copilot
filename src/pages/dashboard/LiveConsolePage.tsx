@@ -40,7 +40,7 @@ export function LiveConsolePage() {
     transcripts,
     finalizedText,
     hints,
-    screenshots,
+    // screenshots, -- removed to avoid redeclaration
     sessionStatus,
     sessionId,
     lastScreenshotEvent,
@@ -59,6 +59,7 @@ export function LiveConsolePage() {
   const [screenshots, setScreenshots] = useState<Screenshot[]>([]);
   const [snapPopoverOpen, setSnapPopoverOpen] = useState(false);
   const popoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [activeTab, setActiveTab] = useState('hints');
 
   /* ---------------- Auto scroll ---------------- */
   useEffect(() => {
@@ -85,7 +86,7 @@ export function LiveConsolePage() {
     const interval = setInterval(fetchCredits, 30000);
     return () => clearInterval(interval);
   }, []);
-  */
+
 
   /* ---------------- Fetch Screenshots ---------------- */
   const fetchScreenshots = async () => {
@@ -739,9 +740,6 @@ export function LiveConsolePage() {
       </div>
 
       {/* Screenshot Gallery Panel - Slides in from right */}
-
-
-    </div>
 
 
     </div>

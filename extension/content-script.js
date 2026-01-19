@@ -1624,6 +1624,46 @@
         // Poll every 2 seconds to catch login/signup completion
         authPollInterval = setInterval(checkForAuthToken, 2000);
         checkForAuthToken();
+
+        // ALSO listen for AUTH_STATE_CHANGE messages from web app (extensionAuthBridge)
+        // This provides real-time auth sync when the web app broadcasts auth changes
+        window.addEventListener('message', (event) => {
+            // Only accept messages from same origin
+            if (event.origin !== window.location.origin) return;
+
+            const message = event.data;
+
+            // Handle AUTH_STATE_CHANGE from web app
+            if (message?.type === 'AUTH_STATE_CHANGE') {
+                console.log('[Content] Received AUTH_STATE_CHANGE from web app:', message.data);
+
+                if (message.data?.isAuthenticated && message.data?.accessToken) {
+                    // Forward to background as AUTH_SYNC
+                    chrome.runtime.sendMessage({
+                        type: 'AUTH_SYNC',
+                        user: {
+                            id: message.data.userId,
+                            email: message.data.email || 'user@example.com'
+                        },
+                        token: message.data.accessToken,
+                        session: {
+                            refresh_token: message.data.refreshToken,
+                            expires_at: message.data.expiresAt
+                        }
+                    }, (response) => {
+                        if (chrome.runtime.lastError) {
+                            console.error('[Content] Failed to forward AUTH_SYNC:', chrome.runtime.lastError);
+                        } else if (response?.success) {
+                            console.log('[Content] AUTH_SYNC forwarded successfully');
+                            authSynced = true;
+                            if (authPollInterval) clearInterval(authPollInterval);
+                        }
+                    }).catch(err => {
+                        console.error('[Content] Failed to send AUTH_SYNC:', err);
+                    });
+                }
+            }
+        });
     }
 })();
 

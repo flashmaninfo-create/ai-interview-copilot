@@ -15,20 +15,16 @@ const Footer = () => {
     product: [
       { label: 'Features', href: '#features' },
       { label: 'Pricing', href: '#pricing' },
-      { label: 'How It Works', href: '#how-it-works' },
-      { label: 'FAQ', href: '#faq' }
+      { label: 'How It Works', href: '#how-it-works' }
     ],
     company: [
-      { label: 'About Us', href: '/about-us' },
       { label: 'Contact', href: '/contact' },
-      { label: 'Blog', href: '/blog' },
-      { label: 'Careers', href: '/careers' }
+      { label: 'FAQ', href: '#faq' }
     ],
     legal: [
       { label: 'Privacy Policy', href: '/privacy-policy' },
       { label: 'Terms of Service', href: '/terms-of-service' },
-      { label: 'Responsible Use', href: '/responsible-ai-use' },
-      { label: 'Security', href: '/security' }
+      { label: 'Responsible Use', href: '/responsible-ai-use' }
     ]
   };
 
@@ -41,8 +37,9 @@ const Footer = () => {
   return (
     <footer className="bg-primary text-primary-foreground">
       <div className="max-w-7xl mx-auto px-6 py-16">
-        <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-12 mb-10">
-          <div className="lg:col-span-2">
+        <div className="flex flex-col items-center text-center gap-10 mb-10">
+          {/* Brand & Social Section */}
+          <div className="flex flex-col items-center max-w-4xl">
             <div className="flex items-center space-x-3 mb-6">
               <img
                 src="/assets/images/XTROONE.svg"
@@ -50,7 +47,7 @@ const Footer = () => {
                 className="w-32 "
               />
             </div>
-            <p className="text-primary-foreground/80 mb-6 max-w-sm">
+            <p className="text-primary-foreground/80 mb-6 text-center">
               Real-time AI assistance for live interviews. Privacy-first, user-controlled, and designed for professional preparation.
             </p>
             <div className="flex gap-4">
@@ -69,52 +66,35 @@ const Footer = () => {
             </div>
           </div>
 
-          <div>
-            <h3 className="font-semibold text-lg mb-4">Product</h3>
-            <ul className="space-y-3">
+          {/* Links Section */}
+          <div className="flex flex-wrap justify-center gap-x-8 gap-y-4">
               {footerLinks.product.map((link) => (
-                <li key={link.label}>
                   <a
+                    key={link.label}
                     href={link.href}
-                    className="text-primary-foreground/80 hover:text-accent transition-colors duration-250"
+                    className="text-primary-foreground/80 hover:text-accent transition-colors duration-250 font-medium"
                   >
                     {link.label}
                   </a>
-                </li>
               ))}
-            </ul>
-          </div>
-
-          <div>
-            <h3 className="font-semibold text-lg mb-4">Company</h3>
-            <ul className="space-y-3">
               {footerLinks.company.map((link) => (
-                <li key={link.label}>
-                  <Link
+                <Link
+                    key={link.label}
                     to={link.href}
-                    className="text-primary-foreground/80 hover:text-accent transition-colors duration-250"
+                    className="text-primary-foreground/80 hover:text-accent transition-colors duration-250 font-medium"
                   >
                     {link.label}
                   </Link>
-                </li>
               ))}
-            </ul>
-          </div>
-
-          <div>
-            <h3 className="font-semibold text-lg mb-4">Legal & Security</h3>
-            <ul className="space-y-3">
               {footerLinks.legal.map((link) => (
-                <li key={link.label}>
                   <Link
+                    key={link.label}
                     to={link.href}
-                    className="text-primary-foreground/80 hover:text-accent transition-colors duration-250"
+                    className="text-primary-foreground/80 hover:text-accent transition-colors duration-250 font-medium"
                   >
                     {link.label}
                   </Link>
-                </li>
               ))}
-            </ul>
           </div>
         </div>
 

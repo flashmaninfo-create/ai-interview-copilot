@@ -129,15 +129,15 @@ export function AdminUsersPage() {
                     <div className="flex items-center gap-3 mb-2">
                         <Link 
                             to="/admin/dashboard" 
-                            className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+                            className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
                         >
                             <ArrowLeft className="w-5 h-5" />
                         </Link>
-                        <h1 className="text-2xl font-bold text-white">Registered Users</h1>
+                        <h1 className="text-2xl font-bold text-foreground">Registered Users</h1>
                     </div>
-                    <p className="text-slate-400 ml-11">View all registered service users</p>
+                    <p className="text-muted-foreground ml-11">View all registered service users</p>
                 </div>
-                <div className="bg-blue-500/10 text-blue-400 px-4 py-2 rounded-lg text-sm border border-blue-500/20">
+                <div className="bg-blue-500/10 text-blue-500 px-4 py-2 rounded-lg text-sm border border-blue-500/20">
                     <Users className="w-4 h-4 inline mr-2" />
                     Total Users: <strong>{users.length}</strong>
                 </div>
@@ -145,64 +145,64 @@ export function AdminUsersPage() {
 
             {/* Search */}
             <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <input
                     type="text"
                     placeholder="Search by name or email..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-700 bg-slate-800 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"
+                    className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-border bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary shadow-sm"
                 />
             </div>
 
             {error && (
-                <div className="bg-red-500/10 text-red-400 p-4 rounded-lg border border-red-500/20">
+                <div className="bg-destructive/10 text-destructive p-4 rounded-lg border border-destructive/20">
                     {error}
                 </div>
             )}
 
             {/* Users Table */}
-            <div className="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden">
+            <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                         <thead>
-                            <tr className="bg-slate-800/50 border-b border-slate-700">
-                                <th className="px-6 py-4 text-sm font-semibold text-slate-300">User</th>
-                                <th className="px-6 py-4 text-sm font-semibold text-slate-300">Email</th>
-                                <th className="px-6 py-4 text-sm font-semibold text-slate-300">Joined</th>
-                                <th className="px-6 py-4 text-sm font-semibold text-slate-300">Status</th>
-                                <th className="px-6 py-4 text-sm font-semibold text-slate-300 text-right">Actions</th>
+                            <tr className="bg-muted/50 border-b border-border">
+                                <th className="px-6 py-4 text-sm font-semibold text-muted-foreground">User</th>
+                                <th className="px-6 py-4 text-sm font-semibold text-muted-foreground">Email</th>
+                                <th className="px-6 py-4 text-sm font-semibold text-muted-foreground">Joined</th>
+                                <th className="px-6 py-4 text-sm font-semibold text-muted-foreground">Status</th>
+                                <th className="px-6 py-4 text-sm font-semibold text-muted-foreground text-right">Actions</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-800">
+                        <tbody className="divide-y divide-border">
                             {filteredUsers.map((u) => {
                                 const isBanned = !!u.banned_until && new Date(u.banned_until) > new Date();
                                 return (
-                                    <tr key={u.id} className="hover:bg-slate-800/30 transition-colors">
+                                    <tr key={u.id} className="hover:bg-muted/30 transition-colors">
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center text-slate-300 font-bold text-sm">
+                                                <div className="w-10 h-10 rounded-full bg-muted/50 flex items-center justify-center text-muted-foreground font-bold text-sm border border-border">
                                                     {u.full_name ? u.full_name[0].toUpperCase() : u.email[0].toUpperCase()}
                                                 </div>
-                                                <div className="font-medium text-white">
+                                                <div className="font-medium text-foreground">
                                                     {u.full_name || 'No Name'}
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 text-sm text-slate-400">
+                                        <td className="px-6 py-4 text-sm text-muted-foreground">
                                             {u.email}
                                         </td>
-                                        <td className="px-6 py-4 text-sm text-slate-400">
+                                        <td className="px-6 py-4 text-sm text-muted-foreground">
                                             {new Date(u.created_at).toLocaleDateString()}
                                         </td>
                                         <td className="px-6 py-4">
                                             {isBanned ? (
-                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-red-500/10 text-red-400 border border-red-500/20">
+                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-destructive/10 text-destructive border border-destructive/20">
                                                     <Lock className="w-3 h-3" />
                                                     Locked
                                                 </span>
                                             ) : (
-                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-green-500/10 text-green-400 border border-green-500/20">
+                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-green-500/10 text-green-500 border border-green-500/20">
                                                     <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
                                                     Active
                                                 </span>
@@ -212,7 +212,7 @@ export function AdminUsersPage() {
                                             <div className="flex items-center justify-end gap-2">
                                                 <button
                                                     onClick={() => openResetModal(u)}
-                                                    className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
+                                                    className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
                                                     title="Reset Password"
                                                 >
                                                     <KeyRound className="w-4 h-4" />
@@ -221,8 +221,8 @@ export function AdminUsersPage() {
                                                     onClick={() => handleToggleBan(u)}
                                                     className={`p-2 rounded-lg transition-colors ${
                                                         isBanned 
-                                                            ? 'text-green-400 hover:text-green-300 hover:bg-green-500/10' 
-                                                            : 'text-red-400 hover:text-red-300 hover:bg-red-500/10'
+                                                            ? 'text-green-500 hover:text-green-600 hover:bg-green-500/10' 
+                                                            : 'text-destructive hover:text-destructive/80 hover:bg-destructive/10'
                                                     }`}
                                                     title={isBanned ? "Unlock User" : "Lock User"}
                                                     disabled={actionLoading === u.id}
@@ -242,7 +242,7 @@ export function AdminUsersPage() {
                             })}
                             {filteredUsers.length === 0 && (
                                 <tr>
-                                    <td colSpan={5} className="px-6 py-12 text-center text-slate-500">
+                                    <td colSpan={5} className="px-6 py-12 text-center text-muted-foreground">
                                         {searchQuery 
                                             ? 'No users match your search criteria.' 
                                             : 'No users found.'}
@@ -255,26 +255,26 @@ export function AdminUsersPage() {
 
                 {/* Reset Password Modal */}
                 {showResetModal && selectedUser && (
-                    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-                        <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 w-full max-w-md shadow-2xl">
+                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+                        <div className="bg-card border border-border rounded-xl p-6 w-full max-w-md shadow-2xl">
                             <div className="flex items-center justify-between mb-6">
-                                <h2 className="text-xl font-bold text-white">Reset Password</h2>
+                                <h2 className="text-xl font-bold text-foreground">Reset Password</h2>
                                 <button 
                                     onClick={() => setShowResetModal(false)}
-                                    className="text-slate-400 hover:text-white transition-colors"
+                                    className="text-muted-foreground hover:text-foreground transition-colors"
                                 >
                                     <X className="w-5 h-5" />
                                 </button>
                             </div>
 
-                            <div className="mb-6 p-4 bg-slate-800/50 rounded-lg border border-slate-700">
-                                <div className="text-sm text-slate-400 mb-1">Reseting password for:</div>
-                                <div className="font-medium text-white break-all">{selectedUser.email}</div>
+                            <div className="mb-6 p-4 bg-muted/50 rounded-lg border border-border">
+                                <div className="text-sm text-muted-foreground mb-1">Reseting password for:</div>
+                                <div className="font-medium text-foreground break-all">{selectedUser.email}</div>
                             </div>
 
                             <form onSubmit={handleResetPassword} className="space-y-6">
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-400 mb-1">New Password</label>
+                                    <label className="block text-sm font-medium text-muted-foreground mb-1">New Password</label>
                                     <div className="relative">
                                         <input
                                             type={showPassword ? 'text' : 'password'}
@@ -282,32 +282,32 @@ export function AdminUsersPage() {
                                             minLength={6}
                                             value={newPassword}
                                             onChange={e => setNewPassword(e.target.value)}
-                                            className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-primary pr-10"
+                                            className="w-full bg-background border border-border rounded-lg px-4 py-2 text-foreground focus:outline-none focus:border-primary pr-10"
                                             placeholder="Enter new password..."
                                         />
                                         <button
                                             type="button"
                                             onClick={() => setShowPassword(!showPassword)}
-                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                                         >
                                             {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                         </button>
                                     </div>
-                                    <p className="text-xs text-slate-500 mt-1">Must be at least 6 characters</p>
+                                    <p className="text-xs text-muted-foreground mt-1">Must be at least 6 characters</p>
                                 </div>
 
                                 <div className="flex items-center justify-end gap-3">
                                     <button
                                         type="button"
                                         onClick={() => setShowResetModal(false)}
-                                        className="px-4 py-2 text-slate-400 hover:text-white transition-colors"
+                                        className="px-4 py-2 text-muted-foreground hover:text-foreground transition-colors"
                                     >
                                         Cancel
                                     </button>
                                     <button
                                         type="submit"
                                         disabled={actionLoading === 'reset'}
-                                        className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center gap-2"
+                                        className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center gap-2"
                                     >
                                         {actionLoading === 'reset' ? 'Reseting...' : 'Reset Password'}
                                     </button>

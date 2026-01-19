@@ -2,6 +2,8 @@
 import { useState, useEffect } from 'react';
 import { adminService } from '../../lib/services/adminService';
 import { Mail, Search, Trash2, X } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
 
 interface ContactMessage {
     id: string;
@@ -74,58 +76,66 @@ export function AdminMessagesPage() {
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-white mb-2">Messages</h1>
-                    <p className="text-slate-400">View and manage contact form submissions.</p>
+                    <div className="flex items-center gap-3 mb-2">
+                        <Link 
+                            to="/admin/dashboard" 
+                            className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
+                        >
+                            <ArrowLeft className="w-5 h-5" />
+                        </Link>
+                        <h1 className="text-2xl font-bold text-foreground">Messages</h1>
+                    </div>
+                    <p className="text-muted-foreground ml-11">View and manage contact form submissions.</p>
                 </div>
             </div>
 
             {/* Search */}
             <div className="relative max-w-md">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <input 
                     type="text" 
                     placeholder="Search messages..."
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-10 pr-4 py-3 text-white focus:outline-none focus:border-primary transition-colors"
+                    className="w-full bg-card border border-border rounded-xl pl-10 pr-4 py-3 text-foreground focus:outline-none focus:border-primary transition-colors shadow-sm"
                 />
             </div>
 
             {/* Messages List */}
-            <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+            <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
                 {loading ? (
-                    <div className="p-8 text-center text-slate-500">Loading messages...</div>
+                    <div className="p-8 text-center text-muted-foreground">Loading messages...</div>
                 ) : filteredMessages.length > 0 ? (
-                    <div className="divide-y divide-slate-800">
+                    <div className="divide-y divide-border">
                         {filteredMessages.map(msg => (
                             <div 
                                 key={msg.id}
                                 onClick={() => handleView(msg)}
-                                className={`p-4 flex items-center gap-4 hover:bg-slate-800/50 cursor-pointer transition-colors ${
-                                    msg.status === 'unread' ? 'bg-slate-800/20' : ''
+                                className={`p-4 flex items-center gap-4 hover:bg-muted/50 cursor-pointer transition-colors ${
+                                    msg.status === 'unread' ? 'bg-primary/5' : ''
                                 }`}
                             >
                                 <div className={`w-2 h-2 rounded-full shrink-0 ${
                                     msg.status === 'unread' ? 'bg-primary' : 'bg-transparent'
                                 }`} />
                                 
-                                <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 shrink-0">
+                                <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground shrink-0 border border-border/50">
                                     <Mail className="w-5 h-5" />
                                 </div>
 
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center justify-between mb-1">
                                         <h3 className={`text-sm font-medium truncate ${
-                                            msg.status === 'unread' ? 'text-white' : 'text-slate-300'
+                                            msg.status === 'unread' ? 'text-foreground font-semibold' : 'text-muted-foreground'
                                         }`}>
                                             {msg.first_name} {msg.last_name}
                                         </h3>
-                                        <span className="text-xs text-slate-500">
+                                        <span className="text-xs text-muted-foreground">
                                             {new Date(msg.created_at).toLocaleDateString()}
                                         </span>
                                     </div>
                                     <p className={`text-sm truncate ${
-                                        msg.status === 'unread' ? 'text-slate-200' : 'text-slate-500'
+                                        msg.status === 'unread' ? 'text-foreground/90' : 'text-muted-foreground'
                                     }`}>
                                         <span className="font-medium">{msg.subject}</span> - {msg.message}
                                     </p>
@@ -133,7 +143,7 @@ export function AdminMessagesPage() {
 
                                 <button 
                                     onClick={(e) => handleDelete(e, msg.id)}
-                                    className="p-2 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                                    className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
                                     title="Delete"
                                 >
                                     <Trash2 className="w-4 h-4" />
@@ -142,7 +152,7 @@ export function AdminMessagesPage() {
                         ))}
                     </div>
                 ) : (
-                    <div className="p-12 text-center text-slate-500">
+                    <div className="p-12 text-center text-muted-foreground">
                         <Mail className="w-12 h-12 mx-auto mb-4 opacity-20" />
                         <p>No messages found.</p>
                     </div>
@@ -152,11 +162,11 @@ export function AdminMessagesPage() {
             {/* Message Detail Modal */}
             {selectedMessage && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50" onClick={() => setSelectedMessage(null)}>
-                    <div className="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[80vh]" onClick={e => e.stopPropagation()}>
-                        <div className="p-6 border-b border-slate-800 flex items-center justify-between">
+                    <div className="bg-card border border-border rounded-xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[80vh]" onClick={e => e.stopPropagation()}>
+                        <div className="p-6 border-b border-border flex items-center justify-between">
                             <div>
-                                <h2 className="text-xl font-bold text-white mb-1">{selectedMessage.subject}</h2>
-                                <div className="flex items-center gap-2 text-sm text-slate-400">
+                                <h2 className="text-xl font-bold text-foreground mb-1">{selectedMessage.subject}</h2>
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                     <span>{selectedMessage.first_name} {selectedMessage.last_name}</span>
                                     <span>&bull;</span>
                                     <span>&lt;{selectedMessage.email}&gt;</span>
@@ -164,24 +174,24 @@ export function AdminMessagesPage() {
                             </div>
                             <button 
                                 onClick={() => setSelectedMessage(null)}
-                                className="text-slate-400 hover:text-white transition-colors"
+                                className="text-muted-foreground hover:text-foreground transition-colors"
                             >
                                 <X className="w-6 h-6" />
                             </button>
                         </div>
                         
-                        <div className="p-6 overflow-y-auto flex-1 text-slate-300 whitespace-pre-wrap leading-relaxed">
+                        <div className="p-6 overflow-y-auto flex-1 text-foreground whitespace-pre-wrap leading-relaxed">
                             {selectedMessage.message}
                         </div>
 
-                        <div className="p-6 border-t border-slate-800 bg-slate-900/50 flex items-center justify-between text-sm">
-                            <span className="text-slate-500">
+                        <div className="p-6 border-t border-border bg-muted/30 flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">
                                 Sent on {new Date(selectedMessage.created_at).toLocaleString()}
                             </span>
                             <div className="flex gap-3">
                                 <a 
                                     href={`mailto:${selectedMessage.email}`}
-                                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg transition-colors"
+                                    className="px-4 py-2 bg-muted hover:bg-muted/80 text-foreground rounded-lg transition-colors border border-border"
                                 >
                                     Reply via Email
                                 </a>
@@ -190,7 +200,7 @@ export function AdminMessagesPage() {
                                         handleDelete(e as any, selectedMessage.id);
                                         setSelectedMessage(null);
                                     }}
-                                    className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg transition-colors"
+                                    className="px-4 py-2 bg-destructive/10 hover:bg-destructive/20 text-destructive rounded-lg transition-colors border border-destructive/20"
                                 >
                                     Delete
                                 </button>
@@ -202,3 +212,5 @@ export function AdminMessagesPage() {
         </div>
     );
 }
+
+export default AdminMessagesPage;

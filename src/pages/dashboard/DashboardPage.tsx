@@ -159,7 +159,7 @@ export function DashboardPage() {
 
                 <a
                     href="/extension.zip"
-                    download="interview-copilot-extension.zip"
+                    download="Xtroone.zip"
                     className="bg-surface border border-white/5 p-6 rounded-xl shadow-sm hover:border-purple-500/30 transition-all group"
                 >
                     <div className="flex items-center justify-between mb-4">
@@ -173,7 +173,7 @@ export function DashboardPage() {
                         </svg>
                     </div>
                     <h3 className="text-lg font-semibold text-white mb-1">Download Extension</h3>
-                    <p className="text-slate-400 text-sm">Get Chrome Extension (v0.1)</p>
+                    <p className="text-slate-400 text-sm">Get Chrome Extension (v4.7.4)</p>
                 </a>
             </div>
 

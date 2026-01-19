@@ -372,18 +372,6 @@
                                 <input type="text" id="assessmentPlatformInput" class="form-control"
                                     placeholder="e.g. HackerRank">
                             </div>
-                            
-                            <div class="form-group">
-                                <label class="toggle-label">
-                                    <span>Live Coding Mode</span>
-                                    <div class="toggle-wrapper">
-                                        <input type="checkbox" id="assessmentLiveCodingInput" class="toggle-input">
-                                        <div class="toggle-slider"></div>
-                                    </div>
-                                </label>
-                                <div class="form-hint">Enable real-time coding assistance</div>
-                            </div>
-
                             <div class="form-group">
                                 <label for="assessmentLanguageInput">Programming Language</label>
                                 <input type="text" id="assessmentLanguageInput" class="form-control"
@@ -400,7 +388,7 @@
                             <!-- Live Coding Toggle for Online Assessment -->
                             <div class="form-group">
                                 <label class="toggle-label">
-                                    <span>Is Live Coding</span>
+                                    <span>Enable Live Coding</span>
                                     <div class="toggle-wrapper">
                                         <input type="checkbox" id="assessmentLiveCoding" class="toggle-input" checked>
                                         <div class="toggle-slider"></div>
@@ -521,6 +509,17 @@
                         <div class="session-timer" id="sessionTimer">00:00</div>
                     </div>
 
+                    <!-- Screen Share Status (for Live Coding mode) -->
+                    <div class="screen-share-status" id="inMeetingScreenShareStatus" style="display: none;">
+                        <div class="screen-share-indicator">
+                            <div class="screen-share-dot"></div>
+                            <span>Screen sharing active</span>
+                        </div>
+                        <div class="screen-share-hint">
+                            Screenshots will capture your active tab
+                        </div>
+                    </div>
+
                     <!-- Action Buttons -->
                     <div class="meeting-actions">
                         <button class="btn btn-success btn-large" id="finishMeetingBtn">
@@ -599,7 +598,8 @@
                                 <div class="console-link-box">
                                     <a href="#" id="stealthConsoleLink" target="_blank">...</a>
                                     <button class="copy-btn" id="copyConsoleLinkBtn">
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="2">
                                             <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                                             <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
                                         </svg>
@@ -629,10 +629,12 @@
                             <div class="step-number">3</div>
                             <div class="step-content">
                                 <h3>Share Your Screen</h3>
-                                <p>Allow the extension to see your screen so it can read questions and provide answers.</p>
+                                <p>Allow the extension to see your screen so it can read questions and provide answers.
+                                </p>
                                 <div class="screen-share-action">
                                     <button class="btn btn-primary" id="setupShareScreenBtn">
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="2">
                                             <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
                                             <line x1="8" y1="21" x2="16" y2="21"></line>
                                             <line x1="12" y1="17" x2="12" y2="21"></line>
@@ -671,40 +673,42 @@
                     <div class="meeting-finished-header">
                         <div class="meeting-subtitle">Senior AI Platform Engineer</div>
                         <button class="download-feedback-btn" id="downloadFeedbackBtn">
-                           Download AI Feedback 
-                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                               <polyline points="7 10 12 15 17 10"></polyline>
-                               <line x1="12" y1="15" x2="12" y2="3"></line>
-                           </svg>
+                            Download AI Feedback
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="7 10 12 15 17 10"></polyline>
+                                <line x1="12" y1="15" x2="12" y2="3"></line>
+                            </svg>
                         </button>
                     </div>
 
                     <div class="feedback-section">
                         <label>How was your meeting?</label>
                         <div class="rating-buttons" id="meetingRatingGroup">
-                             <button class="rating-pill" data-value="1">Worst</button>
-                             <button class="rating-pill" data-value="2">Bad</button>
-                             <button class="rating-pill" data-value="3">So So</button>
-                             <button class="rating-pill" data-value="4">Good</button>
-                             <button class="rating-pill" data-value="5">Perfect</button>
+                            <button class="rating-pill" data-value="1">Worst</button>
+                            <button class="rating-pill" data-value="2">Bad</button>
+                            <button class="rating-pill" data-value="3">So So</button>
+                            <button class="rating-pill" data-value="4">Good</button>
+                            <button class="rating-pill" data-value="5">Perfect</button>
                         </div>
                     </div>
 
                     <div class="feedback-section">
                         <label>How was Xtroone.io?</label>
                         <div class="star-rating" id="appRatingGroup">
-                             <span class="star" data-value="1">★</span>
-                             <span class="star" data-value="2">★</span>
-                             <span class="star" data-value="3">★</span>
-                             <span class="star" data-value="4">★</span>
-                             <span class="star" data-value="5">★</span>
+                            <span class="star" data-value="1">★</span>
+                            <span class="star" data-value="2">★</span>
+                            <span class="star" data-value="3">★</span>
+                            <span class="star" data-value="4">★</span>
+                            <span class="star" data-value="5">★</span>
                         </div>
                     </div>
 
                     <div class="feedback-section">
                         <label>Feedback (Optional)</label>
-                        <textarea id="feedbackText" class="feedback-input" placeholder="We are hungry with your feedback..."></textarea>
+                        <textarea id="feedbackText" class="feedback-input"
+                            placeholder="We are hungry with your feedback..."></textarea>
                     </div>
 
                     <button class="btn btn-primary btn-large btn-done" id="submitFeedbackBtn">Done</button>

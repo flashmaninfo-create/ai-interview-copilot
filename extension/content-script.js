@@ -198,8 +198,35 @@
         });
 
         // ----------------------------------------------------
-        // Screenshot Popover Logic (hover popover on Snap button)
-        // Variables are at module level for accessibility by message handlers
+        /* Loading State */
+        const style = document.createElement('style');
+        style.textContent = `
+      .ic-btn.loading {
+        opacity: 0.7;
+        cursor: wait;
+        position: relative;
+      }
+      .ic-btn.loading svg {
+        animation: ic-spin 1s linear infinite;
+      }
+      @keyframes ic-spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+        `;
+        document.head.appendChild(style);
+
+        // Screenshot Gallery Popover Logic (hover popover on Snap button)
+        // Register this tab as the meeting tab so background knows which window to capture
+        if (window.location.hostname === 'meet.google.com' || window.location.hostname === 'teams.microsoft.com') {
+            chrome.runtime.sendMessage({ type: 'REGISTER_MEETING_TAB' }).catch(() => { });
+            // Also register regarding focus
+            window.addEventListener('focus', () => {
+                chrome.runtime.sendMessage({ type: 'REGISTER_MEETING_TAB' }).catch(() => { });
+            });
+        }
+
+        // --- State Variables ---are at module level for accessibility by message handlers
         // ----------------------------------------------------
 
         // Create screenshot popover (horizontal layout, positioned to the RIGHT of Snap button)
@@ -218,12 +245,13 @@
                 z-index: 10001;
                 flex-direction: row;
                 align-items: center;
+                margin-left: -10px; /* Overlap button to prevent gaps */
             `;
 
             // Wrapper contains: bridge + content (like console page)
             screenshotPopover.innerHTML = `
                 <!-- Invisible bridge to maintain hover -->
-                <div class="ic-popover-bridge" style="width:12px;height:60px;background:transparent;flex-shrink:0;"></div>
+                <div class="ic-popover-bridge" style="width:40px;height:60px;background:rgba(0,0,0,0.01);flex-shrink:0;cursor:default;"></div>
                 <!-- Actual popover content -->
                 <div class="ic-popover-content" style="
                     background: rgba(15, 23, 42, 0.98);
@@ -280,6 +308,7 @@
         }
 
         function showScreenshotPopover() {
+            console.log('[Content] Showing screenshot popover');
             if (!screenshotPopover) createScreenshotPopover();
             clearTimeout(popoverTimeout);
             screenshotPopover.style.display = 'flex';
@@ -287,7 +316,10 @@
         }
 
         function hideScreenshotPopover() {
-            if (screenshotPopover) screenshotPopover.style.display = 'none';
+            if (screenshotPopover) {
+                console.log('[Content] Hiding screenshot popover');
+                screenshotPopover.style.display = 'none';
+            }
         }
 
         function renderScreenshotPopover() {
@@ -369,6 +401,17 @@
                 // Click to select/deselect
                 thumb.addEventListener('click', (e) => {
                     e.stopPropagation();
+                    // Send toggle request to background (to sync with console)
+                    // Local state will be updated when confirmation message comes back
+                    chrome.runtime.sendMessage({
+                        type: 'TOGGLE_SCREENSHOT_SELECTION',
+                        data: {
+                            screenshotId: s.id,
+                            isSelected: !selectedScreenshots.has(s.id)
+                        }
+                    });
+
+                    // Optimistic update for responsiveness
                     if (selectedScreenshots.has(s.id)) {
                         selectedScreenshots.delete(s.id);
                     } else {
@@ -400,56 +443,37 @@
             if (screenshotPopover) {
                 screenshotPopover.addEventListener('mouseenter', () => {
                     mouseIsOverPopover = true;
+                    console.log('[Content] Popover mouseenter');
                     clearTimeout(popoverTimeout);
                 });
-                screenshotPopover.addEventListener('mouseleave', () => {
-                    mouseIsOverPopover = false;
-                    popoverTimeout = setTimeout(() => {
-                        if (!mouseIsOverPopover) {
-                            hideScreenshotPopover();
-                            popoverOpen = false;
-                        }
-                    }, 300);
-                });
+                // REMOVED: Redundant mouseleave on popover. 
+                // Since popover is a child of snapButton, snapButton.mouseleave handles the entire tree.
             }
 
-            // Show popover on hover (with delay for smoother UX)
+
+            // Simplified Hover Logic: Rely on CSS :hover state of parent button
+            // Since popover is a child of snapButton in DOM (via appendChild), 
+            // hovering the popover counts as hovering the button.
             snapButton.addEventListener('mouseenter', () => {
                 clearTimeout(popoverTimeout);
-                // Only show if there are screenshots
-                if (screenshots.length > 0) {
-                    // Create popover if needed first, so we can add listeners
-                    if (!screenshotPopover) {
-                        createScreenshotPopover();
-                        // Add listeners after creation
-                        screenshotPopover.addEventListener('mouseenter', () => {
-                            mouseIsOverPopover = true;
-                            clearTimeout(popoverTimeout);
-                        });
-                        screenshotPopover.addEventListener('mouseleave', () => {
-                            mouseIsOverPopover = false;
-                            popoverTimeout = setTimeout(() => {
-                                if (!mouseIsOverPopover) {
-                                    hideScreenshotPopover();
-                                    popoverOpen = false;
-                                }
-                            }, 300);
-                        });
-                    }
-                    showScreenshotPopover();
-                    popoverOpen = true;
-                }
+                if (!screenshotPopover) createScreenshotPopover();
+                showScreenshotPopover();
+                popoverOpen = true;
             });
 
             snapButton.addEventListener('mouseleave', () => {
                 clearTimeout(popoverTimeout);
                 popoverTimeout = setTimeout(() => {
-                    // Check explicit mouse state instead of :hover
-                    if (!mouseIsOverPopover) {
+                    // Check if mouse is still over the button (or its children, like popover)
+                    // .matches(':hover') is the most robust way to check this state
+                    if (!snapButton.matches(':hover')) {
+                        console.log('[Content] Mouse left button & popover - closing');
                         hideScreenshotPopover();
                         popoverOpen = false;
+                    } else {
+                        console.log('[Content] Timeout fired but still hovering - keeping open');
                     }
-                }, 400); // Give time to move mouse to popover
+                }, 800);
             });
         }
 
@@ -682,7 +706,18 @@
             }
 
             // Hide our overlay and screenshot strip during capture
-            if (overlay) overlay.style.visibility = 'hidden';
+            // NUCLEAR: Temporarily remove from DOM
+            const wasInDom = overlay && overlay.parentNode;
+            if (wasInDom) {
+                overlay.remove();
+            }
+
+            // Also check for separate popover
+            const popoverWasInDom = screenshotPopover && screenshotPopover.parentNode;
+            if (popoverWasInDom && (!overlay || !overlay.contains(screenshotPopover.parentNode))) {
+                screenshotPopover.remove();
+            }
+
             const strip = document.querySelector('.ic-screenshot-strip');
             if (strip) strip.style.visibility = 'hidden';
 
@@ -702,7 +737,7 @@
                 width: window.innerWidth,
                 height: window.innerHeight,
                 ignoreElements: (el) => {
-                    // Ignore our overlay and strip during capture
+                    // Ignore our overlay and strip during capture (redundant but safe)
                     return el.classList?.contains('ic-overlay') ||
                         el.classList?.contains('ic-screenshot-strip') ||
                         el.classList?.contains('ic-capture-flash');
@@ -710,7 +745,20 @@
             });
 
             // Show overlay and strip again
-            if (overlay) overlay.style.visibility = 'visible';
+            if (wasInDom && overlay) {
+                document.body.appendChild(overlay);
+                overlay.style.display = 'flex'; // Ensure visible
+                overlay.style.visibility = 'visible';
+            }
+
+            if (popoverWasInDom && screenshotPopover && !document.contains(screenshotPopover)) {
+                // If it wasn't part of overlay, put it back?? 
+                // Mostly it will be in overlay. If separate, we might lose parent.
+                // Just assuming it's fine for now or attached to body?
+                // Actually screenshotPopover is usually attached to snapBtn. 
+                // If snapBtn came back with overlay, this is fine.
+            }
+
             if (strip) strip.style.visibility = 'visible';
 
             // Use PNG for better quality (especially text)
@@ -781,11 +829,15 @@
     }
 
     async function takeScreenshot() {
-        // Try to update UI state, but don't fail if UI is missing (e.g. headless capture)
+        // Try to update UI state
         const btn = document.getElementById('ic-screenshot-btn');
+        let originalContent = '';
+
         if (btn) {
             btn.disabled = true;
             btn.classList.add('loading');
+            // Save original icon/text if needed, or just overlay a spinner
+            // For now, simpler is better - just opacity/cursor change via loading class
         }
 
         try {
@@ -876,8 +928,8 @@
     function openConsole(e) {
         e.preventDefault();
         // Use production URL by default, can be made configurable
-        const dashboardUrl = window.location.host.includes('localhost') 
-            ? 'http://localhost:5173' 
+        const dashboardUrl = window.location.host.includes('localhost')
+            ? 'http://localhost:5173'
             : window.location.host.includes('vercel.app')
                 ? 'https://ai-interview-copilot-kappa.vercel.app'
                 : 'https://xtroone.com';
@@ -1272,13 +1324,6 @@
                 showOverlay();
                 startKeepAlive(); // Start heartbeat
                 console.log('[Content] Session resumed with data:', message.data);
-                break;
-
-            case 'TAKE_SCREENSHOT_REQUEST':
-                console.log('[Content] Received screenshot request from background');
-                takeScreenshot();
-                sendResponse({ success: true });
-                break;
 
                 // Restore transcript if provided
                 if (message.data?.transcriptionText) {
@@ -1288,6 +1333,12 @@
                         displayText: message.data.transcriptionText
                     });
                 }
+                sendResponse({ success: true });
+                break;
+
+            case 'TAKE_SCREENSHOT_REQUEST':
+                console.log('[Content] Received screenshot request from background');
+                takeScreenshot();
                 sendResponse({ success: true });
                 break;
 
@@ -1339,6 +1390,18 @@
                 sendResponse({ success: true });
                 break;
 
+            case 'SCREENSHOT_SELECTION_UPDATED':
+                if (message.data && message.data.screenshotId) {
+                    if (message.data.isSelected) {
+                        selectedScreenshots.add(message.data.screenshotId);
+                    } else {
+                        selectedScreenshots.delete(message.data.screenshotId);
+                    }
+                    renderScreenshotPopover();
+                }
+                sendResponse({ success: true });
+                break;
+
             case 'CONSOLE_TOKEN':
                 consoleToken = message.data.token;
                 sessionId = message.data.sessionId;
@@ -1356,26 +1419,65 @@
                 sendResponse({ success: true });
                 break;
 
+
             case 'HIDE_OVERLAY_FOR_CAPTURE':
-                // Temporarily hide overlay for screenshot capture (use display:none for complete removal from render)
-                if (overlay) {
-                    overlay.dataset.prevDisplay = overlay.style.display || 'flex';
-                    overlay.style.display = 'none';
+                // NUCLEAR OPTION: Physically remove from DOM
+                const liveOverlayEx = document.getElementById('interview-copilot-overlay');
+                if (liveOverlayEx) liveOverlayEx.remove();
+
+                if (overlay && overlay.parentNode && (!liveOverlayEx || liveOverlayEx !== overlay)) {
+                    overlay.remove();
                 }
-                // Also hide screenshot popover if visible
-                if (screenshotPopover) {
-                    screenshotPopover.style.display = 'none';
+
+                // Screenshot popover is a child of overlay (in sidebar), so it's removed automatically.
+                // But just in case it's separate:
+                if (screenshotPopover && screenshotPopover.parentNode && (!overlay || !overlay.contains(screenshotPopover.parentNode))) {
+                    screenshotPopover.remove();
                 }
+
+                // Force layout recalc just in case (though remove() is usually immediate)
+                const _ = document.body.offsetHeight;
+
                 sendResponse({ success: true });
                 break;
 
             case 'SHOW_OVERLAY_AFTER_CAPTURE':
-                // Restore overlay visibility after screenshot
-                if (overlay) {
-                    overlay.style.display = overlay.dataset.prevDisplay || 'flex';
+                // Restore overlay by re-appending.
+                // Check if it's already there first
+                if (!document.getElementById('interview-copilot-overlay')) {
+                    if (overlay) {
+                        document.body.appendChild(overlay);
+                        // Ensure it's visible style-wise just in case
+                        overlay.style.display = 'flex';
+                        overlay.style.removeProperty('visibility');
+                    } else {
+                        createOverlay(); // Fallback if reference lost
+                    }
                 }
+
+                // Restore popover if it was separate
+                if (screenshotPopover && !document.contains(screenshotPopover)) {
+                    // Reset styles
+                    screenshotPopover.style.removeProperty('display');
+                    screenshotPopover.style.removeProperty('visibility');
+                    screenshotPopover.style.display = 'none';
+                }
+
                 sendResponse({ success: true });
                 break;
+
+            case 'TAKE_DOM_SCREENSHOT':
+                console.log('[Content] Received forced DOM screenshot request');
+                captureViewport().then(result => {
+                    sendResponse({
+                        success: result.success,
+                        dataUrl: result.data,
+                        error: result.error
+                    });
+                }).catch(err => {
+                    sendResponse({ success: false, error: err.message });
+                });
+                return true; // Keep channel open
         }
 
         return true;
@@ -1453,9 +1555,9 @@
 // Dashboard Auth Sync Logic
 // ==========================================
 (function () {
-    if (window.location.host.includes('localhost:5173') || 
+    if (window.location.host.includes('localhost:5173') ||
         window.location.host.includes('127.0.0.1:5173') ||
-        window.location.host.includes('xtroone.com') || 
+        window.location.host.includes('xtroone.com') ||
         window.location.host.includes('vercel.app')) {
         console.log('[Content] Checking for auth token on dashboard domain: ' + window.location.host);
 

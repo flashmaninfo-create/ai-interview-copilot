@@ -61,6 +61,24 @@ export function LiveConsolePage() {
   const popoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [activeTab, setActiveTab] = useState('hints');
 
+  // Screenshot capture state
+  const [isCapturing, setIsCapturing] = useState(false);
+
+  // Reset capturing state when a new screenshot arrives
+  useEffect(() => {
+    if (lastScreenshotEvent?.type === 'ADDED') {
+      setIsCapturing(false);
+    }
+  }, [lastScreenshotEvent]);
+
+  // Timeout safety for capturing state
+  useEffect(() => {
+    if (isCapturing) {
+      const timer = setTimeout(() => setIsCapturing(false), 8000); // 8s timeout
+      return () => clearTimeout(timer);
+    }
+  }, [isCapturing]);
+
   /* ---------------- Auto scroll ---------------- */
   useEffect(() => {
     if (transcriptRef.current && !userScrolledUp) {
@@ -140,8 +158,11 @@ export function LiveConsolePage() {
     if (lastScreenshotEvent.type === 'ADDED') {
       const rawScreenshot = lastScreenshotEvent.data;
       // Normalize screenshot data to match expected interface
+      // Ensure we have a unique ID (fallback to random if backend returns null)
+      const uniqueId = rawScreenshot.id || `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
       const newScreenshot: Screenshot = {
-        id: rawScreenshot.id,
+        id: uniqueId,
         image_url: rawScreenshot.image_url || rawScreenshot.url,
         display_order: rawScreenshot.display_order || 0,
         is_marked_important: rawScreenshot.is_marked_important ?? false,
@@ -149,8 +170,16 @@ export function LiveConsolePage() {
         capture_method: rawScreenshot.capture_method || 'dom',
         created_at: rawScreenshot.created_at || new Date().toISOString()
       };
+
+      console.log('[LiveConsolePage] Adding screenshot:', newScreenshot.id);
+
       setScreenshots(prev => {
-        if (prev.some(s => s.id === newScreenshot.id)) return prev;
+        // Strict deduplication only works if we have real IDs. 
+        // If we generated a temp ID, we assume it's new.
+        if (rawScreenshot.id && prev.some(s => s.id === rawScreenshot.id)) {
+          console.warn('[LiveConsolePage] Duplicate screenshot ID ignored:', rawScreenshot.id);
+          return prev;
+        }
         return [newScreenshot, ...prev];
       });
     } else if (lastScreenshotEvent.type === 'DELETED') {
@@ -158,6 +187,17 @@ export function LiveConsolePage() {
       setScreenshots(prev => prev.filter(s => s.id !== screenshotId));
     } else if (lastScreenshotEvent.type === 'CLEARED') {
       setScreenshots([]);
+    } else if (lastScreenshotEvent.type === 'SCREENSHOT_SELECTION_UPDATED') {
+      const { screenshotId, isSelected } = lastScreenshotEvent.data;
+      setScreenshots(prev => prev.map(s =>
+        s.id === screenshotId ? { ...s, is_selected_for_ai: isSelected } : s
+      ));
+    } else if (lastScreenshotEvent.type === 'SCREENSHOT_ERROR') {
+      const errorMsg = (lastScreenshotEvent as any).error || 'Unknown error';
+      console.error('[LiveConsolePage] Screenshot failed:', errorMsg);
+      setIsCapturing(false);
+      // Optional: Show error toast/alert here
+      alert(`Snapshot failed: ${errorMsg}`);
     }
   }, [lastScreenshotEvent]);
 
@@ -176,6 +216,13 @@ export function LiveConsolePage() {
     ));
 
     try {
+      // 1. Send Command to Extension for Overlay Sync
+      await sendCommand('TOGGLE_SCREENSHOT_SELECTION', {
+        screenshotId: id,
+        isSelected: !currentValue
+      });
+
+      // 2. Persist to DB
       await supabase.rpc('update_screenshot_metadata', {
         p_screenshot_id: id,
         p_is_selected_for_ai: !currentValue
@@ -327,6 +374,9 @@ export function LiveConsolePage() {
         >
           <button
             onClick={() => {
+              if (isCapturing) return;
+              setIsCapturing(true);
+
               // Optimistic UI feedback
               const btn = document.activeElement as HTMLButtonElement;
               if (btn) {
@@ -335,12 +385,17 @@ export function LiveConsolePage() {
               }
               sendCommand('TAKE_SCREENSHOT', { trigger: 'console' });
             }}
-            disabled={!connected || loading}
-            className="w-14 h-14 rounded-xl bg-[#ff6b35] hover:bg-[#ff8c42] flex flex-col items-center justify-center gap-1 transition-all active:scale-95 disabled:opacity-50 relative shadow-lg shadow-[#ff6b35]/20"
+            disabled={!connected || loading || isCapturing}
+            className={`w-14 h-14 rounded-xl flex flex-col items-center justify-center gap-1 transition-all active:scale-95 disabled:opacity-50 relative shadow-lg ${isCapturing ? 'bg-gray-600 cursor-wait' : 'bg-[#ff6b35] hover:bg-[#ff8c42] shadow-[#ff6b35]/20'
+              }`}
           >
-            <Camera className="w-5 h-5 text-white" />
-            <span className="text-[10px] text-white/80">Snap</span>
-            {screenshots.length > 0 && (
+            {isCapturing ? (
+              <Loader2 className="w-5 h-5 text-white animate-spin" />
+            ) : (
+              <Camera className="w-5 h-5 text-white" />
+            )}
+            <span className="text-[10px] text-white/80">{isCapturing ? 'Snapping' : 'Snap'}</span>
+            {!isCapturing && screenshots.length > 0 && (
               <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center border-2 border-[#242424]">
                 {screenshots.length}
               </span>
@@ -563,75 +618,63 @@ export function LiveConsolePage() {
                         </div>
                       )}
 
-                      {!loading && hints.map((h, i) => (
-                        <div key={i} className="bg-white/5 border border-white/10 rounded-lg p-5 mb-4">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">Insight</span>
-                            <span className="text-xs text-gray-500">{h.timestamp}</span>
+                      {!loading && Array.isArray(hints) && hints.map((h, i) => {
+                        if (!h) return null;
+                        const hintText = h.hint || h.text || '';
+                        const modelName = h.model || h.provider || 'AI';
+                        const modeColors: Record<string, string> = {
+                          code: 'bg-blue-500/20 text-blue-400',
+                          explain: 'bg-purple-500/20 text-purple-400',
+                          help: 'bg-amber-500/20 text-amber-400',
+                          answer: 'bg-emerald-500/20 text-emerald-400',
+                          custom: 'bg-gray-500/20 text-gray-400'
+                        };
+                        const modeColor = modeColors[h.type] || modeColors.help;
+
+                        return (
+                          <div key={h.id || i} className="bg-white/5 border border-white/10 rounded-lg overflow-hidden mb-4">
+                            {/* Header */}
+                            <div className="flex items-center justify-between px-4 py-2.5 bg-white/5 border-b border-white/10">
+                              <div className="flex items-center gap-2">
+                                <span className={`text-[10px] px-2 py-0.5 rounded font-medium uppercase ${modeColor}`}>
+                                  {h.type || 'help'}
+                                </span>
+                                <span className="text-xs text-gray-500">{modelName}</span>
+                              </div>
+                              <span className="text-[10px] text-gray-500">{h.timestamp}</span>
+                            </div>
+
+                            {/* Content with Markdown */}
+                            <div className="p-4 prose prose-invert prose-sm max-w-none 
+                              prose-headings:text-white prose-headings:font-semibold
+                              prose-p:text-gray-300 prose-p:leading-relaxed
+                              prose-code:bg-white/10 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-amber-400 prose-code:font-mono prose-code:text-sm
+                              prose-pre:bg-black/40 prose-pre:border prose-pre:border-white/10 prose-pre:rounded-lg
+                              prose-ul:text-gray-300 prose-li:text-gray-300
+                              prose-strong:text-white">
+                              <ReactMarkdown>{hintText}</ReactMarkdown>
+                            </div>
+
+                            {/* Action Footer */}
+                            <div className="flex items-center gap-2 px-4 py-2.5 border-t border-white/10 bg-white/[0.02]">
+                              <button
+                                onClick={() => navigator.clipboard.writeText(hintText)}
+                                className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white transition-colors px-2 py-1 rounded hover:bg-white/10"
+                              >
+                                <Copy className="w-3 h-3" /> Copy
+                              </button>
+                              <button
+                                onClick={() => requestHint(h.type || 'help')}
+                                className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white transition-colors px-2 py-1 rounded hover:bg-white/10"
+                              >
+                                <RotateCcw className="w-3 h-3" /> Retry
+                              </button>
+                            </div>
                           </div>
-                          <div className="text-white whitespace-pre-wrap leading-relaxed">
-                            {h.hint || h.text}
-                          </div>
-                        </div>
-                      ))}
+                        )
+                      })}
                     </>
                   )}
-
-                  {!loading && Array.isArray(hints) && hints.map((h, i) => {
-                    if (!h) return null;
-                    const hintText = h.hint || h.text || '';
-                    const modelName = h.model || h.provider || 'AI';
-                    const modeColors: Record<string, string> = {
-                      code: 'bg-blue-500/20 text-blue-400',
-                      explain: 'bg-purple-500/20 text-purple-400',
-                      help: 'bg-amber-500/20 text-amber-400',
-                      answer: 'bg-emerald-500/20 text-emerald-400',
-                      custom: 'bg-gray-500/20 text-gray-400'
-                    };
-                    const modeColor = modeColors[h.type] || modeColors.help;
-
-                    return (
-                      <div key={i} className="bg-white/5 border border-white/10 rounded-lg overflow-hidden mb-4">
-                        {/* Header */}
-                        <div className="flex items-center justify-between px-4 py-2.5 bg-white/5 border-b border-white/10">
-                          <div className="flex items-center gap-2">
-                            <span className={`text-[10px] px-2 py-0.5 rounded font-medium uppercase ${modeColor}`}>
-                              {h.type || 'help'}
-                            </span>
-                            <span className="text-xs text-gray-500">{modelName}</span>
-                          </div>
-                          <span className="text-[10px] text-gray-500">{h.timestamp}</span>
-                        </div>
-
-                        {/* Content with Markdown */}
-                        <div className="p-4 prose prose-invert prose-sm max-w-none 
-                          prose-headings:text-white prose-headings:font-semibold
-                          prose-p:text-gray-300 prose-p:leading-relaxed
-                          prose-code:bg-white/10 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-amber-400 prose-code:font-mono prose-code:text-sm
-                          prose-pre:bg-black/40 prose-pre:border prose-pre:border-white/10 prose-pre:rounded-lg
-                          prose-ul:text-gray-300 prose-li:text-gray-300
-                          prose-strong:text-white">
-                          <ReactMarkdown>{hintText}</ReactMarkdown>
-                        </div>
-
-                        {/* Action Footer */}
-                        <div className="flex items-center gap-2 px-4 py-2.5 border-t border-white/10 bg-white/[0.02]">
-                          <button
-                            onClick={() => navigator.clipboard.writeText(hintText)}
-                            className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white transition-colors px-2 py-1 rounded hover:bg-white/10"
-                          >
-                            <Copy className="w-3 h-3" /> Copy
-                          </button>
-                          <button
-                            onClick={() => requestHint(h.type || 'help')}
-                            className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white transition-colors px-2 py-1 rounded hover:bg-white/10"
-                          >
-                            <RotateCcw className="w-3 h-3" /> Retry
-                          </button>
-                        </div>
-                      </div>
-                    )
-                  })}
                 </div>
 
                 {/* Thumbnail Strip */}

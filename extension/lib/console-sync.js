@@ -124,7 +124,7 @@ export class ConsoleSync {
                     }
                 }
 
-                lastChecked = queryTime;
+                // Removed incorrect assignment of ISO string to number variable
             } catch (error) {
                 console.error('[ConsoleSync] Polling error:', error);
             }

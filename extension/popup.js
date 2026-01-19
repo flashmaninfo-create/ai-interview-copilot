@@ -39,8 +39,6 @@ const elements = {
     emptyStateView: null,
     formView: null,
     cardsListView: null,
-    cardsListView: null,
-    cardsListView: null,
     inMeetingView: null,
     feedbackView: null,
     stealthConsoleSetupView: null,
@@ -81,7 +79,6 @@ const elements = {
     activeMeetingTitle: null,
     activeMeetingSubtitle: null,
     activeMeetingPlatform: null,
-    activeMeetingLanguage: null,
     activeMeetingLanguage: null,
     sessionTimer: null,
 
@@ -190,7 +187,6 @@ function initializeElements() {
     elements.assessmentPlatformInput = document.getElementById('assessmentPlatformInput');
     elements.assessmentLanguageInput = document.getElementById('assessmentLanguageInput');
     elements.assessmentTypeInput = document.getElementById('assessmentTypeInput');
-    elements.assessmentLiveCodingInput = document.getElementById('assessmentLiveCodingInput');
     elements.assessmentResumeInput = document.getElementById('assessmentResumeInput');
     elements.assessmentJdInput = document.getElementById('assessmentJdInput');
 
@@ -259,7 +255,7 @@ function attachEventListeners() {
     elements.finishMeetingBtn?.addEventListener('click', handleFinishMeeting);
     elements.disconnectMeetingBtn?.addEventListener('click', handleDisconnectMeeting);
     elements.openConsoleLinkInMeeting?.addEventListener('click', handleDashboard);
-    
+
     // Stealth Console Setup Buttons
     elements.setupBackBtn?.addEventListener('click', handleSetupBack);
     elements.setupConnectBtn?.addEventListener('click', handleStealthConnect);
@@ -357,7 +353,7 @@ function attachEventListeners() {
     if (elements.submitFeedbackBtn) {
         elements.submitFeedbackBtn.addEventListener('click', handleSubmitFeedback);
     }
-    
+
     // Rating selection logic
     if (elements.meetingRatingGroup) {
         elements.meetingRatingGroup.addEventListener('click', (e) => {
@@ -402,6 +398,8 @@ function setState(newState) {
     if (elements.formView) elements.formView.style.display = 'none';
     if (elements.cardsListView) elements.cardsListView.style.display = 'none';
     if (elements.inMeetingView) elements.inMeetingView.style.display = 'none';
+    if (elements.feedbackView) elements.feedbackView.style.display = 'none';
+    if (elements.stealthConsoleSetupView) elements.stealthConsoleSetupView.style.display = 'none';
 
     // Show appropriate view
     switch (newState) {
@@ -423,6 +421,14 @@ function setState(newState) {
         case STATE.IN_MEETING:
             if (elements.inMeetingView) elements.inMeetingView.style.display = 'block';
             setActivePhase('during');
+            // Show screen share status for live coding meetings
+            const activeMeeting = savedMeetings.find(m => m.id === activeMeetingId);
+            const isLiveCodingSession = activeMeeting?.interviewContext?.isLiveCoding === true ||
+                activeMeeting?.scenario === 'online-assessment';
+            const screenShareStatus = document.getElementById('inMeetingScreenShareStatus');
+            if (screenShareStatus) {
+                screenShareStatus.style.display = isLiveCodingSession ? 'block' : 'none';
+            }
             break;
         case STATE.FEEDBACK:
             if (elements.feedbackView) {
@@ -609,8 +615,6 @@ async function handleSave(e) {
 
         // Backward compatibility
         additionalInfo: JSON.stringify(interviewContext),
-        // Backward compatibility
-        additionalInfo: JSON.stringify(interviewContext),
         keywords: currentKeywords,
 
         createdAt: editingId ? savedMeetings.find(m => m.id === editingId)?.createdAt : new Date().toISOString(),
@@ -656,9 +660,7 @@ async function handleSave(e) {
     // Clear draft
     chrome.storage.local.remove('meetingDraft');
 
-    // Render all cards
-    renderMeetingCards();
-    setState(STATE.CARDS_LIST);
+    // Render all cards and switch to cards list view
     renderMeetingCards();
     setState(STATE.CARDS_LIST);
 }
@@ -667,13 +669,13 @@ async function handleSave(e) {
 function handleStartAttempt(meetingId) {
     const meeting = savedMeetings.find(m => m.id === meetingId);
     if (!meeting) return;
-    
+
     // Set as current meeting for session
     window.currentMeeting = meeting;
-    
+
     // Check if live coding mode is enabled (for job-interview or online-assessment)
-    const isLiveCodingEnabled = meeting.interviewContext?.liveCoding === true;
-    
+    const isLiveCodingEnabled = meeting.interviewContext?.isLiveCoding === true;
+
     if (meeting.scenario === 'online-assessment' || (meeting.scenario === 'job-interview' && isLiveCodingEnabled)) {
         // Go to Stealth Console Setup flow for screen capture assistance
         setupStealthConsoleView(meeting);
@@ -687,12 +689,12 @@ function handleStartAttempt(meetingId) {
 function setupStealthConsoleView(meeting) {
     // Generate the console URL
     const consoleUrl = `${getDashboardUrl()}/dashboard/console`;
-    
+
     if (elements.stealthConsoleLink) {
         elements.stealthConsoleLink.textContent = consoleUrl;
         elements.stealthConsoleLink.href = consoleUrl;
     }
-    
+
     // Show current tab URL
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
         if (tabs[0] && elements.setupCurrentUrl) {
@@ -703,6 +705,15 @@ function setupStealthConsoleView(meeting) {
     // TODO: Generate QR Code
     if (elements.consoleQrCode) {
         elements.consoleQrCode.textContent = "QR Code coming soon";
+    }
+
+    // Enable "I'm Ready" immediately if Live Coding is enabled (Screen Share optional)
+    if (elements.setupReadyBtn) {
+        if (meeting.interviewContext?.isLiveCoding) {
+            elements.setupReadyBtn.disabled = false;
+        } else {
+            elements.setupReadyBtn.disabled = true;
+        }
     }
 }
 
@@ -730,14 +741,14 @@ function handleUsePageInSetup() {
             // Update current meeting URL in memory
             window.currentMeeting.meetingUrl = tab.url;
             window.currentMeeting.title = tab.title || window.currentMeeting.title; // Optional: update title? Maybe not.
-            
+
             // Save to storage
             const index = savedMeetings.findIndex(m => m.id === window.currentMeeting.id);
             if (index !== -1) {
                 savedMeetings[index] = window.currentMeeting;
                 saveMeetingsData();
             }
-            
+
             if (elements.setupCurrentUrl) {
                 elements.setupCurrentUrl.textContent = tab.url;
                 elements.setupCurrentUrl.style.color = '#4CAF50'; // Green to indicate success
@@ -772,17 +783,17 @@ async function handleShareScreen() {
 
         if (response && response.success) {
             console.log('[Popup] Screen capture started successfully');
-            
+
             // Show success status
             if (elements.screenShareStatus) {
                 elements.screenShareStatus.style.display = 'flex';
             }
-            
+
             // Hide the share button
             if (elements.setupShareScreenBtn) {
                 elements.setupShareScreenBtn.style.display = 'none';
             }
-            
+
             // Enable "I'm Ready" button
             if (elements.setupReadyBtn) {
                 elements.setupReadyBtn.disabled = false;
@@ -793,7 +804,7 @@ async function handleShareScreen() {
     } catch (error) {
         console.error('[Popup] Screen capture error:', error);
         alert('Failed to start screen sharing: ' + error.message);
-        
+
         // Re-enable button on failure
         if (elements.setupShareScreenBtn) {
             elements.setupShareScreenBtn.disabled = false;
@@ -821,7 +832,6 @@ function handleBack(e) {
     e.preventDefault();
 
     // Clear editing mode if active
-    // Clear editing mode if active
     if (elements.saveBtn.dataset.editingId) {
         delete elements.saveBtn.dataset.editingId;
     }
@@ -843,7 +853,7 @@ function startSession(meeting) {
 
     // Update global currentMeeting if not set
     window.currentMeeting = meeting;
-    
+
     // Update In Meeting view with meeting data
     if (elements.activeMeetingTitle) {
         elements.activeMeetingTitle.textContent = meeting.title || 'Meeting';
@@ -940,7 +950,7 @@ function endMeetingSession() {
 
     // Show Feedback View instead of CARDS_LIST directly
     setState(STATE.FEEDBACK);
-    
+
     // We don't clear activeMeetingId yet because we need it for feedback  
     // Clear session storage but keep activeSessionId for a bit? 
     // Actually, background handles the session logic. We just need the ID for the API call.
@@ -996,7 +1006,7 @@ async function handleSubmitFeedback() {
 
     // Collect data
     const feedbackText = elements.feedbackText ? elements.feedbackText.value : '';
-    
+
     // Get ratings
     let meetingRating = 0;
     if (elements.meetingRatingGroup) {
@@ -1022,13 +1032,13 @@ async function handleSubmitFeedback() {
                 feedback: feedbackText
             }
         });
-        
+
     } catch (error) {
         console.error('Feedback save error:', error);
     } finally {
         elements.submitFeedbackBtn.innerHTML = 'Done';
         elements.submitFeedbackBtn.disabled = false;
-        
+
         activeMeetingId = null;
         chrome.storage.local.remove(['activeSessionId', 'consoleToken']);
         renderSavedMeetings();
@@ -1415,7 +1425,7 @@ async function handleLogout(e) {
             activeMeetingId = null;
 
             console.log('Logged out successfully');
-            
+
             // Reload the popup to show logged-out state
             window.location.reload();
         });
@@ -2031,7 +2041,7 @@ function handleKeywordInput(e) {
             currentKeywords.push(value);
             renderKeywords();
             e.target.value = '';
-            
+
             // Save draft
             saveDraft();
         } else if (currentKeywords.includes(value)) {
@@ -2048,7 +2058,7 @@ function handleKeywordDelete(e) {
             const keyword = tag.dataset.keyword;
             currentKeywords = currentKeywords.filter(k => k !== keyword);
             renderKeywords();
-            
+
             // Save draft
             saveDraft();
         }
@@ -2059,7 +2069,7 @@ function renderKeywords() {
     if (!elements.keywordsTags) return;
 
     elements.keywordsTags.innerHTML = '';
-    
+
     currentKeywords.forEach(keyword => {
         const tag = document.createElement('div');
         tag.className = 'keyword-tag';

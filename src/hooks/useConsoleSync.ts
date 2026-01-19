@@ -391,6 +391,10 @@ export function useConsoleSync() {
                         setScreenshots([]);
                         setLastScreenshotEvent({ type: 'CLEARED', data });
                     }
+                    if (type === 'SCREENSHOT_ERROR') {
+                        console.error('[useConsoleSync] Screenshot error received:', data);
+                        setLastScreenshotEvent({ type: 'SCREENSHOT_ERROR', ...data });
+                    }
                 }
             )
             .subscribe((status) => {
@@ -407,6 +411,115 @@ export function useConsoleSync() {
             supabase.removeChannel(channel);
         };
     }, [sessionId, hasReceivedData]);
+
+    // 5. Polling Backup for Realtime (Critical for large payloads like Screenshots)
+    useEffect(() => {
+        if (!sessionId) return;
+
+        console.log('[useConsoleSync] Starting message polling backup...');
+        let lastChecked = new Date(Date.now() - 5000).toISOString();
+        const handledIds = new Set<string>();
+
+        const pollMessages = async () => {
+            try {
+                // Fetch messages from extension
+                const { data, error } = await supabase
+                    .from('sync_messages')
+                    .select('*')
+                    .eq('session_id', sessionId)
+                    .eq('source', 'extension')
+                    .gt('created_at', lastChecked)
+                    .order('created_at', { ascending: true });
+
+                if (error) {
+                    // silent fail
+                }
+
+                if (data && data.length > 0) {
+                    // Update checkpoint
+                    const lastMsgTime = data[data.length - 1].created_at;
+                    if (lastMsgTime) lastChecked = lastMsgTime;
+
+                    for (const msg of data) {
+                        if (handledIds.has(msg.id)) continue;
+                        handledIds.add(msg.id);
+                        if (handledIds.size > 100) {
+                            const it = handledIds.values();
+                            handledIds.delete(it.next().value);
+                        }
+
+                        // Process message (Logic duplicated from Realtime handler, but safe due to dedupe)
+                        const type = msg.message_type;
+                        const data = msg.payload;
+
+                        console.log('[useConsoleSync] Polled message:', type);
+                        setLastActivity(Date.now());
+                        setHasReceivedData(true);
+                        setConnected(true);
+                        setSessionStatus('active');
+
+                        // --- Handler Logic Start ---
+                        if (type === 'TRANSCRIPTION') {
+                            setTranscripts(prev => {
+                                if (prev.some(t => t.id === (data.id || msg.id))) return prev;
+                                return [...prev, {
+                                    ...data,
+                                    id: data.id || Date.now(),
+                                    timestamp: new Date().toLocaleTimeString()
+                                }];
+                            });
+                        }
+                        if (type === 'SESSION_ACTIVE') {
+                            setHasReceivedData(true);
+                            setConnected(true);
+                        }
+                        if (type === 'TRANSCRIPTION_STATE') {
+                            if (data.finalizedText) setFinalizedText(data.finalizedText);
+                            if (data.isFinal && data.text) {
+                                setTranscripts(prev => [...prev, {
+                                    text: data.text,
+                                    id: Date.now(),
+                                    timestamp: new Date().toLocaleTimeString(),
+                                    confidence: data.confidence
+                                }]);
+                            }
+                        }
+                        if (type === 'HINT_RECEIVED' || type === 'EXTENSION_HINT') {
+                            setHints(prev => {
+                                const id = data.id || msg.id;
+                                if (prev.some(h => h.id === id)) return prev;
+                                return [{
+                                    ...data,
+                                    id: id,
+                                    text: data.text || data.hint || data.message || 'No hint text',
+                                    hint: data.hint || data.text || data.message,
+                                    timestamp: data.timestamp || new Date().toLocaleTimeString()
+                                }, ...prev];
+                            });
+                        }
+                        if (type === 'SCREENSHOT_ADDED' || type === 'EXTENSION_SCREENSHOT') {
+                            // Deduplicate is handled by LiveConsolePage logic mostly, but nice to have here
+                            setScreenshots(prev => {
+                                // Basic dedupe against ID if exists
+                                if (data.id && prev.some(s => s.id === data.id)) return prev;
+                                return [data, ...prev];
+                            });
+                            setLastScreenshotEvent({ type: 'ADDED', data });
+                        }
+                        if (type === 'SCREENSHOT_ERROR') {
+                            setLastScreenshotEvent({ type: 'SCREENSHOT_ERROR', ...data });
+                        }
+                        // --- Handler Logic End ---
+                    }
+                }
+            } catch (err) {
+                console.error('[useConsoleSync] Polling error:', err);
+            }
+        };
+
+        const interval = setInterval(pollMessages, 2000); // Check every 2s
+        return () => clearInterval(interval);
+    }, [sessionId]);
 
     const sendCommand = useCallback(async (type: string, data: any) => {
         console.log('[useConsoleSync] sendCommand called:', type, 'sessionId:', sessionId);

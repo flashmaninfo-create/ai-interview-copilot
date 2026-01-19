@@ -370,8 +370,9 @@ async function captureScreenFrame() {
             video.load();
         });
 
-        // Small buffer to ensure frame is rendered
-        await new Promise(resolve => setTimeout(resolve, 100));
+        // Larger buffer to ensure stream reflects current DOM state (after overlay hide)
+        // Screen share streams have encoding/decoding latency
+        await new Promise(resolve => setTimeout(resolve, 500));
 
         const canvas = document.createElement('canvas');
         canvas.width = settings.width || video.videoWidth;

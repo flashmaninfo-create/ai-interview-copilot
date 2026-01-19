@@ -23,7 +23,7 @@ class BackgroundService {
     // Rolling interview context for instant AI responses
     this.interviewContext = new InterviewContextManager();
     this.aiService.setContextManager(this.interviewContext);
-    
+
     this.reportGenerator = new ReportGenerator();
 
     this.sessionActive = false;
@@ -89,7 +89,7 @@ class BackgroundService {
           this.requestHint({ ...msg.data, trigger: msg.data?.trigger || 'manual' });
           break;
         case 'TAKE_SCREENSHOT':
-          this.takeScreenshot({ trigger: 'manual' });
+          this.takeScreenshot({ trigger: msg.data?.trigger || 'console' });
           break;
         case 'CLEAR_SCREENSHOTS':
           // Clear screenshots and notify overlay (triggered from console)
@@ -132,6 +132,16 @@ class BackgroundService {
 
       case 'LOGOUT':
         await this.handleLogout(sendResponse);
+        break;
+
+      case 'REGISTER_MEETING_TAB':
+        if (sender.tab && sender.tab.id) {
+          this.meetingTabId = sender.tab.id;
+          // Also update generic tabId if not set or if we trust this more
+          if (!this.tabId) this.tabId = sender.tab.id;
+          console.log('[Background] Registered meeting tab:', this.meetingTabId);
+        }
+        sendResponse({ success: true });
         break;
 
       case 'START_MEETING':
@@ -191,6 +201,15 @@ class BackgroundService {
         await this.requestHint(msg.data, sendResponse);
         break;
 
+      case 'REGISTER_MEETING_TAB':
+        if (sender.tab && sender.tab.id) {
+          this.meetingTabId = sender.tab.id;
+          if (!this.tabId) this.tabId = sender.tab.id;
+          console.log('[Background] Registered meeting tab:', this.meetingTabId);
+        }
+        sendResponse({ success: true });
+        break;
+
       case 'TAKE_SCREENSHOT':
         await this.takeScreenshot(msg.data, sendResponse);
         break;
@@ -206,6 +225,21 @@ class BackgroundService {
 
       case 'CLEAR_SCREENSHOTS':
         await this.clearScreenshots(sendResponse);
+        break;
+
+      case 'TOGGLE_SCREENSHOT_SELECTION':
+        // Broadcast selection change to console and active tab
+        await this.consoleSync.send({
+          type: 'SCREENSHOT_SELECTION_UPDATED',
+          data: msg.data
+        });
+        if (this.tabId) {
+          chrome.tabs.sendMessage(this.tabId, {
+            type: 'SCREENSHOT_SELECTION_UPDATED',
+            data: msg.data
+          }).catch(() => { });
+        }
+        sendResponse({ success: true });
         break;
 
       case 'TOGGLE_MODE':
@@ -475,7 +509,7 @@ class BackgroundService {
   async handleLogout(sendResponse) {
     try {
       console.log('[Background] Handling logout');
-      
+
       // Stop any active session
       if (this.sessionActive) {
         await this.stopSession(() => { });
@@ -488,10 +522,10 @@ class BackgroundService {
       // Send CLEAR_AUTH message to all dashboard tabs to clear localStorage
       const tabs = await chrome.tabs.query({});
       for (const tab of tabs) {
-        if (tab.url && (tab.url.includes('localhost:5173') || 
-                        tab.url.includes('127.0.0.1:5173') ||
-                        tab.url.includes('xtroone.com') || 
-                        tab.url.includes('vercel.app'))) {
+        if (tab.url && (tab.url.includes('localhost:5173') ||
+          tab.url.includes('127.0.0.1:5173') ||
+          tab.url.includes('xtroone.com') ||
+          tab.url.includes('vercel.app'))) {
           try {
             await chrome.tabs.sendMessage(tab.id, { type: 'CLEAR_AUTH' });
             console.log('[Background] Sent CLEAR_AUTH to tab:', tab.id);
@@ -861,17 +895,63 @@ class BackgroundService {
   }
 
   // Start screen capture for Online Assessment flow
+  // Uses chrome.desktopCapture to show the dialog in the meeting tab
   async startScreenCapture(data, sendResponse) {
     try {
       console.log('[Background] Starting screen capture for Online Assessment');
 
+      // Get the meeting tab for showing the dialog
+      let targetTab = null;
+
+      // Try to get the meeting tab from stored tabId
+      if (this.tabId) {
+        try {
+          targetTab = await chrome.tabs.get(this.tabId);
+        } catch (e) {
+          console.log('[Background] Stored tab not found, using active tab');
+        }
+      }
+
+      // Fallback to active tab
+      if (!targetTab) {
+        const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (activeTab) {
+          targetTab = activeTab;
+          this.tabId = activeTab.id; // Store for later use
+        }
+      }
+
+      if (!targetTab) {
+        throw new Error('No tab available for screen capture dialog');
+      }
+
+      console.log('[Background] Showing screen share dialog in tab:', targetTab.id, targetTab.url?.substring(0, 50));
+
+      // Use chrome.desktopCapture to show dialog in the meeting tab
+      // This will open the "Choose what to share" dialog in that tab
+      const streamId = await new Promise((resolve, reject) => {
+        chrome.desktopCapture.chooseDesktopMedia(
+          ['screen', 'window', 'tab'],
+          targetTab,
+          (streamId) => {
+            if (streamId) {
+              resolve(streamId);
+            } else {
+              reject(new Error('Screen share was cancelled or denied'));
+            }
+          }
+        );
+      });
+
+      console.log('[Background] Got streamId:', streamId?.substring(0, 20) + '...');
+
       // Create offscreen document if not exists
       await this.createOffscreenDocument();
 
-      // Send to offscreen document to start screen capture
-      // The offscreen document will use getDisplayMedia to prompt the user
+      // Send streamId to offscreen document to start capture
       const response = await chrome.runtime.sendMessage({
-        type: 'START_SCREEN_CAPTURE'
+        type: 'START_SCREEN_CAPTURE',
+        streamId: streamId
       });
 
       if (!response?.success) {
@@ -879,6 +959,7 @@ class BackgroundService {
       }
 
       // Store the screen sharing state
+      this.isScreenSharing = true;
       this.screenSharingActive = true;
       await chrome.storage.local.set({ screenSharingActive: true });
 
@@ -1220,46 +1301,62 @@ class BackgroundService {
 
   // Resume a paused session - restores state and reconnects
   async resumeSession(data, sendResponse) {
+    const sessionId = data.sessionId || this.state.data.activeSession?.id;
+
+    if (!sessionId) {
+      if (sendResponse) sendResponse({ success: false, error: 'No session ID provided' });
+      return;
+    }
+
     try {
-      const sessionId = data?.sessionId;
-
-      if (!sessionId) {
-        if (sendResponse) sendResponse({ success: false, error: 'No session ID provided' });
-        return;
-      }
-
       console.log('[Background] Resuming session:', sessionId);
 
-      // Get active tab
-      const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      if (!activeTab) {
-        if (sendResponse) sendResponse({ success: false, error: 'No active tab found' });
-        return;
+      // RESTORE TAB ID: Critical for screen capture
+      // 1. Try from existing state
+      if (!this.tabId && this.state.data.activeSession?.tabId) {
+        try {
+          await chrome.tabs.get(this.state.data.activeSession.tabId);
+          this.tabId = this.state.data.activeSession.tabId;
+          console.log('[Background] Restored tabId from valid state:', this.tabId);
+        } catch (e) {
+          console.log('[Background] Stored tabId invalid or closed');
+        }
       }
 
-      this.tabId = activeTab.id;
-
-      // CRITICAL: Check if we are on a restricted page (like chrome://extensions)
-      if (activeTab.url.startsWith('chrome:') || activeTab.url.startsWith('edge:') || activeTab.url.startsWith('about:') || activeTab.url.startsWith('file:') || activeTab.url.startsWith('chrome-extension:')) {
-        console.warn('[Background] Resume attempted on restricted URL:', activeTab.url);
-
-        // Try to find the original meeting tab if we know the URL
-        const savedUrl = this.state.data.activeSession?.url || data?.meetingUrl;
-        if (savedUrl && savedUrl !== 'unknown') {
-          console.log('[Background] Searching for original meeting tab:', savedUrl);
-          const matchedTabs = await chrome.tabs.query({});
-          // Simple fuzzy match or exact match
-          const found = matchedTabs.find(t => t.url.includes(savedUrl) || (savedUrl.includes(t.url) && t.url.length > 20));
-
-          if (found) {
-            console.log('[Background] Found original tab:', found.id);
-            this.tabId = found.id;
-            // Ideally we shouldn't switch focus, just attach to it
-          } else {
-            console.warn('[Background] Original tab not found. Aborting capture resume (Session stays active in background)');
-            // We resume state but NOT capture/overlay
-            // But valid resume means setting this.sessionActive = true
+      // 2. If still missing, try to find by meeting URL/Platform
+      if (!this.tabId) {
+        console.log('[Background] Searching for meeting tab...');
+        // Implementation note: activeSession might be updated below, but we need tabId now
+        const knownUrl = this.state.data.activeSession?.url || data?.meetingUrl;
+        if (knownUrl) {
+          const tabs = await chrome.tabs.query({ url: knownUrl });
+          if (tabs && tabs.length > 0) {
+            this.tabId = tabs[0].id;
+            console.log('[Background] Found meeting tab by URL:', this.tabId);
           }
+        }
+
+        // Fallback: Query active tab in current window if user triggered this manually
+        if (!this.tabId) {
+          const [active] = await chrome.tabs.query({ active: true, currentWindow: true });
+          // Basic heuristic: is it a meeting?
+          if (active && (active.url.includes('meet.google') || active.url.includes('teams.live') || active.url.includes('zoom.us'))) {
+            this.tabId = active.id;
+            console.log('[Background] Assumed active tab is meeting:', this.tabId);
+          }
+        }
+      }
+
+      // 3. If tabId is still valid/found, verify it's not restricted
+      if (this.tabId) {
+        try {
+          const tab = await chrome.tabs.get(this.tabId);
+          // Check for restricted URLs
+          if (tab && (tab.url.startsWith('chrome:') || tab.url.startsWith('edge:') || tab.url.startsWith('about:') || tab.url.startsWith('file:') || tab.url.startsWith('chrome-extension:'))) {
+            console.warn('[Background] Resume attempted on restricted URL:', tab.url);
+          }
+        } catch (e) {
+          console.warn('[Background] Tab validation failed:', e);
         }
       }
 
@@ -1273,28 +1370,25 @@ class BackgroundService {
           p_session_id: sessionId
         });
 
-        if (result.success) {
+        if (result && result.success) {
+          sessionData = result.session_data;
           pausedState = result.paused_state;
           consoleToken = result.console_token;
-          console.log('[Background] Session resumed via RPC, paused_state:', pausedState);
+          console.log('[Background] Session resumed via RPC');
         } else {
-          // If RPC fails, try fetching directly
+          // Fallback to direct select
           const sessions = await supabaseREST.select('interview_sessions', `id=eq.${sessionId}`);
           if (sessions && sessions.length > 0) {
             sessionData = sessions[0];
             pausedState = sessionData.paused_state;
             consoleToken = sessionData.console_token;
-
-            // Update status to active
-            await supabaseREST.update('interview_sessions',
-              { status: 'active', updated_at: new Date().toISOString() },
-              { id: sessionId }
-            );
+            // Update status
+            await supabaseREST.update('interview_sessions', { status: 'active', updated_at: new Date().toISOString() }, { id: sessionId });
           }
         }
       } catch (dbError) {
         console.error('[Background] Failed to resume from DB:', dbError);
-        // Try to get from local storage
+        // Try local storage
         const stored = await chrome.storage.local.get(['pausedSession']);
         if (stored.pausedSession && stored.pausedSession.id === sessionId) {
           pausedState = {
@@ -1314,10 +1408,10 @@ class BackgroundService {
       this.state.data.activeSession = {
         id: sessionId,
         tabId: this.tabId,
-        startTime: adjustedStartTime, // Adjusted so timer continues from where it was
-        url: pausedState?.meeting_data?.url || data?.meetingUrl || activeTab.url,
-        platform: pausedState?.meeting_data?.platform || this.detectPlatform(activeTab.url),
-        interviewContext: pausedState?.interview_context || data?.interviewContext || {},
+        startTime: adjustedStartTime,
+        url: this.state.data.activeSession?.url || 'unknown', // Use existing or unknown
+        platform: this.state.data.activeSession?.platform || 'google-meet',
+        interviewContext: pausedState?.interview_context || {},
         resumed: true,
         resumedAt: Date.now()
       };
@@ -1337,7 +1431,6 @@ class BackgroundService {
       if (consoleToken) {
         await this.consoleSync.connect(consoleToken, sessionId);
 
-        // Send heartbeat
         await this.consoleSync.send({
           type: 'SESSION_ACTIVE',
           data: {
@@ -1349,31 +1442,24 @@ class BackgroundService {
         });
       }
 
-      // Start audio capture
-      // Start audio capture ONLY if we have a valid, non-restricted tabId
-      const isRestricted = (url) => url && (url.startsWith('chrome:') || url.startsWith('edge:') || url.startsWith('about:') || url.startsWith('file:') || url.startsWith('chrome-extension:'));
-
-      let targetTab = null;
-      try {
-        targetTab = await chrome.tabs.get(this.tabId);
-      } catch (e) { /* ignore */ }
-
-      if (targetTab && !isRestricted(targetTab.url)) {
+      // Start audio capture if possible
+      if (this.tabId) {
         try {
-          await this.startRealAudioCapture(this.tabId);
-          console.log('[Background] Real audio capture resumed');
-        } catch (error) {
-          console.error('[Background] Audio capture failed on resume:', error.message);
-        }
+          const tab = await chrome.tabs.get(this.tabId);
+          const isRestricted = (url) => url && (url.startsWith('chrome:') || url.startsWith('edge:') || url.startsWith('about:') || url.startsWith('file:') || url.startsWith('chrome-extension:'));
 
-        // Notify content script to show overlay with resumed state
-        await this.notifyContentScriptResume(this.tabId, {
-          sessionId: sessionId,
-          elapsedTime: elapsedTime,
-          transcriptionText: pausedState?.transcription_text || ''
-        });
-      } else {
-        console.log('[Background] Skipping capture/overlay resume - Target tab is restricted or missing');
+          if (tab && !isRestricted(tab.url)) {
+            await this.startRealAudioCapture(this.tabId);
+            // Notify content script
+            await this.notifyContentScriptResume(this.tabId, {
+              sessionId: sessionId,
+              elapsedTime: elapsedTime,
+              transcriptionText: pausedState?.transcription_text || ''
+            });
+          }
+        } catch (e) {
+          console.log('[Background] Could not restart audio/overlay:', e.message);
+        }
       }
 
       // Clear paused session from storage
@@ -1394,14 +1480,12 @@ class BackgroundService {
       if (sendResponse) sendResponse({ success: false, error: error.message });
     }
   }
-
   // Helper to notify content script about resumed session
   async notifyContentScriptResume(tabId, data) {
     // Try to send message first
     let contentScriptReady = false;
     try {
       await chrome.tabs.sendMessage(tabId, { type: 'PING' });
-      contentScriptReady = true;
     } catch (err) {
       console.log('[Background] Content script not loaded for resume, will inject');
     }
@@ -1680,98 +1764,205 @@ class BackgroundService {
       return;
     }
 
-    // Rate limiting: Prevent rapid successive calls (Chrome limits to ~1 call/second)
+    // Rate limiting
     const now = Date.now();
-    if (this.lastScreenshotTime && now - this.lastScreenshotTime < 1000) {
-      console.log('[Background] Screenshot debounced - too soon after last request');
-      if (sendResponse) sendResponse({ success: false, error: 'Please wait before taking another screenshot' });
+    if (this.lastScreenshotTime && now - this.lastScreenshotTime < 500) {
+      console.log('[Background] Screenshot debounced');
+      if (sendResponse) sendResponse({ success: false, error: 'Please wait...' });
       return;
     }
     this.lastScreenshotTime = now;
 
     try {
+      const { trigger } = data || {};
       let dataUrl;
       let captureMethod = 'native';
 
-      // Check if Live Coding mode is enabled or if existing screen share
+      // 1. LIVE CODING: Priority is the Screen Share Stream
+      // If we are in Live Coding mode and have an active screen share, use it.
+      // This ensures we capture the code editor or whatever the user is sharing, not just the meeting tab.
+      // EXCEPTION: If triggered from Console, user likely wants the Meeting Window (what interviewer sees)
+      // and not the Screen Share (which might show the Console itself, causing "clicking itself").
       const sessionContext = this.state.data.activeSession?.interviewContext || {};
-      const isLiveCodingMode = sessionContext.isLiveCoding === true;
+      const isLiveCoding = sessionContext.isLiveCoding === true;
 
-      // UNIFIED LOGIC: Always try to capture the meeting tab first (most reliable)
-      // Screen share is only used as fallback if meeting tab capture fails
-      if (this.tabId) {
-        console.log('[Background] Taking screenshot via captureVisibleTab on meeting tab:', this.tabId);
+      if (isLiveCoding && this.isScreenSharing && trigger !== 'console') {
+        console.log('[Background] Live Coding: Capturing from screen share stream');
+
+        // Hide overlay before capturing stream frame
+        // Use this.meetingTabId or this.tabId (consistent with standard mode)
+        const overlayTabId = this.meetingTabId || this.tabId;
+        console.log('[Background] Live Coding HIDE to tab:', overlayTabId);
+        try {
+          const hideMsg = { type: 'HIDE_OVERLAY_FOR_CAPTURE' };
+          if (overlayTabId) {
+            await chrome.tabs.sendMessage(overlayTabId, hideMsg);
+          }
+        } catch (e) {
+          console.warn('[Background] HIDE message failed:', e.message);
+        }
+
+        // Wait for hide to render (detach from DOM) + Video Stream Latency
+        // 1000ms total to ensure stream buffer is flushed
+        await new Promise(resolve => setTimeout(resolve, 1000));
 
         try {
-          // Get meeting tab info
-          const meetingTab = await chrome.tabs.get(this.tabId);
-          const meetingWindowId = meetingTab.windowId;
-
-          // HIDE OVERLAY on meeting tab before capture
-          try {
-            await chrome.tabs.sendMessage(this.tabId, { type: 'HIDE_OVERLAY_FOR_CAPTURE' });
-            await new Promise(resolve => setTimeout(resolve, 150));
-          } catch (e) {
-            console.log('[Background] Could not hide overlay on meeting tab');
+          const frameResult = await chrome.runtime.sendMessage({ type: 'CAPTURE_SCREEN_FRAME' });
+          if (frameResult?.success && frameResult.data) {
+            dataUrl = frameResult.data;
+            captureMethod = 'screen-share';
           }
+        } catch (e) {
+          console.warn('[Background] Screen share capture failed:', e);
+        }
 
-          // Capture the meeting tab's window
+        // Show overlay again immediately
+        try {
+          const showMsg = { type: 'SHOW_OVERLAY_AFTER_CAPTURE' };
+          if (overlayTabId) {
+            chrome.tabs.sendMessage(overlayTabId, showMsg).catch(() => { });
+          }
+        } catch (e) { }
+      }
+
+      // 2. STANDARD MODE (or Live Coding fallback)
+      // Capture the meeting window/tab.
+      if (!dataUrl) {
+        const meetingTabId = this.meetingTabId || this.tabId;
+
+        if (!meetingTabId) {
+          throw new Error('No meeting tab identified');
+        }
+
+        const meetingTab = await chrome.tabs.get(meetingTabId).catch(() => null);
+        if (!meetingTab) throw new Error('Meeting tab not found');
+
+        // Check if meeting window is the currently focused one
+        const currentWindow = await chrome.windows.getLastFocused();
+        const meetingWindowId = meetingTab.windowId;
+        const isMeetingWindowFocused = currentWindow.id === meetingWindowId;
+
+        // Smart Logic:
+        // If the meeting window is NOT focused (user is on Console in another window),
+        // we can safely use captureVisibleTab on the meeting window.
+        if (!isMeetingWindowFocused) {
+          console.log('[Background] Native capture: Meeting window is background/separate');
+
+          // Still hide overlay before capture
+          await chrome.tabs.sendMessage(meetingTabId, { type: 'HIDE_OVERLAY_FOR_CAPTURE' }).catch(() => { });
+          await new Promise(r => setTimeout(r, 300));
+
           dataUrl = await chrome.tabs.captureVisibleTab(meetingWindowId, { format: 'png' });
-          captureMethod = 'native';
+          captureMethod = 'native-window';
 
-          // SHOW OVERLAY after capture
-          try {
-            await chrome.tabs.sendMessage(this.tabId, { type: 'SHOW_OVERLAY_AFTER_CAPTURE' });
-          } catch (e) {
-            console.log('[Background] Could not show overlay on meeting tab');
-          }
+          // Restore overlay
+          chrome.tabs.sendMessage(meetingTabId, { type: 'SHOW_OVERLAY_AFTER_CAPTURE' }).catch(() => { });
+        } else {
+          // If meeting window IS focused...
+          // Check if meeting TAB is active.
+          if (meetingTab.active) {
+            // User is looking at meeting tab - Native Capture is safe & fast
+            console.log('[Background] Native capture: Meeting tab is active');
 
-          console.log('[Background] Meeting tab captured successfully');
-        } catch (tabErr) {
-          console.error('[Background] Failed to capture meeting tab:', tabErr.message);
+            // Temporary hide overlay
+            await chrome.tabs.sendMessage(meetingTabId, { type: 'HIDE_OVERLAY_FOR_CAPTURE' }).catch(() => { });
+            await new Promise(r => setTimeout(r, 500)); // Ensure overlay is fully detached
 
-          // Fallback to screen share if available
-          if (this.isScreenSharing) {
-            console.log('[Background] Falling back to screen frame capture...');
-            try {
-              const frameResult = await chrome.runtime.sendMessage({ type: 'CAPTURE_SCREEN_FRAME' });
-              if (frameResult?.success && frameResult.data) {
-                dataUrl = frameResult.data;
-                captureMethod = 'screen';
-                console.log('[Background] Screen frame captured as fallback:', frameResult.width, 'x', frameResult.height);
+            dataUrl = await chrome.tabs.captureVisibleTab(meetingWindowId, { format: 'png' });
+            captureMethod = 'native-current';
+
+            // Restore overlay
+            chrome.tabs.sendMessage(meetingTabId, { type: 'SHOW_OVERLAY_AFTER_CAPTURE' }).catch(() => { });
+
+          } else {
+            // Meeting tab is NOT active (User is in same window but on different tab)
+            // We need to decide: Do we capture THIS tab (e.g. Docs) or force switch to Meeting?
+
+            // Get the actual active tab in this window
+            const [activeTab] = await chrome.tabs.query({ windowId: meetingWindowId, active: true });
+
+            // Heuristic: Is this the Console?
+            const isConsole = activeTab?.url?.includes('/console') || activeTab?.title?.includes('Console');
+
+            if (!isConsole) {
+              // User is looking at Docs/StackOverflow/etc. - Capture what they see!
+              console.log('[Background] Native capture: Capturing active non-meeting tab (Docs/etc)');
+
+              try {
+                // Temporary hide overlay if present on this tab
+                chrome.tabs.sendMessage(activeTab.id, { type: 'HIDE_OVERLAY_FOR_CAPTURE' }).catch(() => { });
+                await new Promise(r => setTimeout(r, 250));
+
+                dataUrl = await chrome.tabs.captureVisibleTab(meetingWindowId, { format: 'png' });
+                captureMethod = 'native-active-tab';
+
+                chrome.tabs.sendMessage(activeTab.id, { type: 'SHOW_OVERLAY_AFTER_CAPTURE' }).catch(() => { });
+              } catch (capErr) {
+                console.warn('[Background] Native capture failed (likely permission), falling back to DOM:', capErr);
+                // Fallback to DOM capture for this active tab
+                const domResult = await this.executeDomCapture(activeTab.id);
+                if (domResult?.success) {
+                  dataUrl = domResult.dataUrl;
+                  captureMethod = 'fallback-dom-active';
+                } else {
+                  throw capErr;
+                }
               }
-            } catch (screenErr) {
-              console.error('[Background] Screen frame fallback also failed:', screenErr.message);
+
+            } else {
+              // User is on Console - clicking "Snap" here means they want the MEETING, not the Console UI.
+              // Force switch to meeting tab.
+              console.log('[Background] User is on Console - forcing switch to Meeting Tab');
+
+              // Try DOM first (less intrusive), then Flash Switch
+              try {
+                const domResult = await this.executeDomCapture(meetingTabId);
+                if (domResult?.success) {
+                  dataUrl = domResult.dataUrl;
+                  captureMethod = 'forced-dom';
+                } else {
+                  throw new Error('DOM capture failed');
+                }
+              } catch (err) {
+                console.error('[Background] DOM capture error:', err.message);
+                console.log('[Background] Attempting Flash Switch Fallback...');
+
+                // Fallback: fast switch-snap-switch
+                try {
+                  const [activeWindowTab] = await chrome.tabs.query({ active: true, windowId: meetingWindowId });
+                  const returnTabId = activeWindowTab?.id;
+
+                  if (returnTabId && returnTabId !== meetingTabId) {
+                    await chrome.tabs.update(meetingTabId, { active: true });
+                    // Hide overlay explicitly
+                    chrome.tabs.sendMessage(meetingTabId, { type: 'HIDE_OVERLAY_FOR_CAPTURE' }).catch(() => { });
+
+                    // Give overlay a moment to hide
+                    await new Promise(r => setTimeout(r, 300));
+
+                    dataUrl = await chrome.tabs.captureVisibleTab(meetingWindowId, { format: 'png' });
+                    captureMethod = 'flash-switch';
+
+                    chrome.tabs.sendMessage(meetingTabId, { type: 'SHOW_OVERLAY_AFTER_CAPTURE' }).catch(() => { });
+                    await chrome.tabs.update(returnTabId, { active: true });
+                  } else {
+                    // Already on meeting tab? Then normal capture should have worked or we are stuck
+                    dataUrl = await chrome.tabs.captureVisibleTab(meetingWindowId, { format: 'png' });
+                  }
+                } catch (switchErr) {
+                  console.error('[Background] Flash switch failed:', switchErr);
+                  throw err;
+                }
+              }
             }
           }
         }
       }
-      // No meeting tab available - try screen share only
-      else if (this.isScreenSharing) {
-        console.log('[Background] No meeting tab, using screen frame capture...');
 
-        const frameResult = await chrome.runtime.sendMessage({ type: 'CAPTURE_SCREEN_FRAME' });
+      if (!dataUrl) throw new Error('All capture methods failed');
 
-        if (frameResult && frameResult.success && frameResult.data) {
-          dataUrl = frameResult.data;
-          captureMethod = 'screen';
-          console.log('[Background] Screen frame captured:', frameResult.width, 'x', frameResult.height);
-        } else {
-          throw new Error('Screen frame capture failed: ' + (frameResult?.error || 'Unknown error'));
-        }
-      } else {
-        // No tab and no screen share
-        if (sendResponse) sendResponse({ success: false, error: 'No tab or screen share available for capture.' });
-        return;
-      }
-
-      if (!dataUrl) {
-        throw new Error('Screenshot capture returned empty result');
-      }
-
-      console.log('[Background] Screenshot captured (' + captureMethod + '), size:', dataUrl.length);
-
-      // Get tab info for metadata (may not exist if using screen capture without tab)
+      // Save logic (shared)
+      // Get tab info for metadata if available
       let tabUrl = '';
       let tabTitle = '';
       try {
@@ -1780,11 +1971,8 @@ class BackgroundService {
           tabUrl = tab.url;
           tabTitle = tab.title;
         }
-      } catch (e) {
-        // Tab may not exist
-      }
+      } catch (e) { }
 
-      // Save to Supabase
       const sessionId = this.state.data.activeSession?.id;
       if (sessionId) {
         const result = await supabaseREST.rpc('add_session_screenshot', {
@@ -1796,43 +1984,45 @@ class BackgroundService {
           p_width: null,
           p_height: null,
           p_size_bytes: Math.round((dataUrl.length * 3) / 4),
-          p_extracted_text: data?.extractedText || '',
+          p_extracted_text: '',
           p_code_text: '',
           p_metadata: {
-            url: data?.url || tabUrl,
-            title: data?.title || tabTitle
+            url: tabUrl,
+            title: tabTitle
           }
         });
 
-        if (result?.error) {
-          console.error('[Background] Failed to save screenshot:', result.error);
-        } else {
-          console.log('[Background] Screenshot saved to DB:', result?.screenshot_id);
-
+        if (!result?.error) {
           const screenshotData = {
-            id: result?.screenshot_id,
+            id: result?.screenshot_id || `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
             image_url: dataUrl,
             display_order: result?.display_order,
             capture_method: captureMethod
           };
 
-          // Notify console
+          // Notify console & overlay
           await this.consoleSync.send({ type: 'SCREENSHOT_ADDED', data: screenshotData });
 
-          // Notify overlay
+          // Notify overlay on tabId
           if (this.tabId) {
-            try {
-              await chrome.tabs.sendMessage(this.tabId, { type: 'SCREENSHOT_ADDED', data: screenshotData });
-            } catch (e) {
-              console.log('[Background] Content script not available for screenshot notification');
-            }
+            chrome.tabs.sendMessage(this.tabId, { type: 'SCREENSHOT_ADDED', data: screenshotData }).catch(() => { });
+          }
+
+          // CRITICAL FIX: Also notify meetingTabId if different, to ensure overlay gets it
+          if (this.meetingTabId && this.meetingTabId !== this.tabId) {
+            chrome.tabs.sendMessage(this.meetingTabId, { type: 'SCREENSHOT_ADDED', data: screenshotData }).catch(() => { });
           }
         }
       }
 
       if (sendResponse) sendResponse({ success: true, dataUrl });
+
     } catch (err) {
-      console.error('[Background] Native screenshot failed:', err.message);
+      console.error('[Background] Capture failed:', err);
+
+      // Notify console about failure so it stops spinning
+      this.consoleSync.send({ type: 'SCREENSHOT_ERROR', data: { error: err.message } });
+
       if (sendResponse) sendResponse({ success: false, error: err.message });
     }
   }
@@ -2473,6 +2663,31 @@ class BackgroundService {
     } catch (error) {
       console.error('[Background] Delete screenshot error:', error);
       if (sendResponse) sendResponse({ success: false, error: error.message });
+    }
+  }
+
+  async executeDomCapture(tabId) {
+    if (!tabId) return { success: false, error: 'No tab ID provided' };
+
+    console.log('[Background] Executing DOM capture for tab:', tabId);
+
+    const domCapturePromise = chrome.tabs.sendMessage(tabId, {
+      type: 'TAKE_DOM_SCREENSHOT'
+    });
+
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('DOM capture timed out')), 8000);
+    });
+
+    try {
+      const result = await Promise.race([domCapturePromise, timeoutPromise]);
+      if (result && result.success && result.dataUrl) {
+        return result;
+      }
+      return { success: false, error: result?.error || 'DOM capture failed (unknown)' };
+    } catch (err) {
+      console.error('[Background] DOM capture exception:', err);
+      return { success: false, error: err.message };
     }
   }
 }

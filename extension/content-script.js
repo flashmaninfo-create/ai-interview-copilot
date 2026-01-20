@@ -455,8 +455,12 @@
             // Since popover is a child of snapButton in DOM (via appendChild), 
             // hovering the popover counts as hovering the button.
             snapButton.addEventListener('mouseenter', () => {
+                console.log('[Content] Snap button mouseenter - showing popover');
                 clearTimeout(popoverTimeout);
-                if (!screenshotPopover) createScreenshotPopover();
+                if (!screenshotPopover) {
+                    console.log('[Content] Creating popover...');
+                    createScreenshotPopover();
+                }
                 showScreenshotPopover();
                 popoverOpen = true;
             });
@@ -829,15 +833,20 @@
     }
 
     async function takeScreenshot() {
+        console.log('[Content] takeScreenshot() called - button was clicked');
+
         // Try to update UI state
         const btn = document.getElementById('ic-screenshot-btn');
         let originalContent = '';
 
         if (btn) {
+            console.log('[Content] Button found, disabling and adding loading class');
             btn.disabled = true;
             btn.classList.add('loading');
             // Save original icon/text if needed, or just overlay a spinner
             // For now, simpler is better - just opacity/cursor change via loading class
+        } else {
+            console.warn('[Content] Button not found!');
         }
 
         try {
@@ -852,15 +861,27 @@
 
             if (preferNative) {
                 console.log('[Content] Requesting native capture via background (fast mode)...');
-                await chrome.runtime.sendMessage({
-                    type: 'TAKE_SCREENSHOT',
-                    data: {
-                        trigger: 'overlay',
-                        extractedText: domText.pageText,
-                        url: domText.url,
-                        title: domText.title
+                try {
+                    const response = await chrome.runtime.sendMessage({
+                        type: 'TAKE_SCREENSHOT',
+                        data: {
+                            trigger: 'overlay',
+                            extractedText: domText.pageText,
+                            url: domText.url,
+                            title: domText.title
+                        }
+                    });
+                    console.log('[Content] TAKE_SCREENSHOT response:', response);
+                    if (response?.error) {
+                        console.error('[Content] Screenshot failed:', response.error);
+                        showScreenshotFeedback(false);
+                        return;
                     }
-                });
+                } catch (msgError) {
+                    console.error('[Content] Error sending TAKE_SCREENSHOT message:', msgError);
+                    showScreenshotFeedback(false);
+                    return;
+                }
 
                 // Visual feedback is handled by the 'SCREENSHOT_ADDED' message listener
                 // But we show a quick flash here just in case

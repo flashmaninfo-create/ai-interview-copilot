@@ -682,18 +682,22 @@ class BackgroundService {
       };
       await this.state.save();
 
-      // ONLY send sync messages if DB session was created successfully
-      if (dbSessionCreated) {
-        try {
-          await this.consoleSync.connect(consoleToken, sessionId);
-          // Send heartbeat
+      // ALWAYS connect ConsoleSync to receive commands from Console (regardless of DB success)
+      try {
+        await this.consoleSync.connect(consoleToken, sessionId);
+        console.log('[Background] ConsoleSync connected for session:', sessionId);
+
+        // Only send heartbeat/sync messages if DB session was created successfully
+        if (dbSessionCreated) {
           await this.consoleSync.send({
             type: 'SESSION_ACTIVE',
             data: { sessionId, timestamp: Date.now(), interviewContext: data?.interviewContext || {} }
           });
-        } catch (syncErr) { console.error('[Background] Console Sync Connect Error:', syncErr); }
-      } else {
-        console.log('[Background] Skipping sync - DB session not created');
+        } else {
+          console.log('[Background] Skipping sync messages - DB session not created');
+        }
+      } catch (syncErr) {
+        console.error('[Background] Console Sync Connect Error:', syncErr);
       }
 
       // Notify content script (Overlay)
@@ -2000,18 +2004,24 @@ class BackgroundService {
             capture_method: captureMethod
           };
 
-          // Notify console & overlay
-          await this.consoleSync.send({ type: 'SCREENSHOT_ADDED', data: screenshotData });
-
-          // Notify overlay on tabId
+          // Notify overlay FIRST (instant direct message) - before slower console sync
+          console.log('[Background] Sending SCREENSHOT_ADDED to overlay. tabId:', this.tabId, 'meetingTabId:', this.meetingTabId);
           if (this.tabId) {
-            chrome.tabs.sendMessage(this.tabId, { type: 'SCREENSHOT_ADDED', data: screenshotData }).catch(() => { });
+            chrome.tabs.sendMessage(this.tabId, { type: 'SCREENSHOT_ADDED', data: screenshotData })
+              .then(() => console.log('[Background] SCREENSHOT_ADDED sent to tabId:', this.tabId))
+              .catch((err) => console.warn('[Background] Failed to send SCREENSHOT_ADDED to tabId:', err.message));
           }
 
-          // CRITICAL FIX: Also notify meetingTabId if different, to ensure overlay gets it
+          // Also notify meetingTabId if different, to ensure overlay gets it
           if (this.meetingTabId && this.meetingTabId !== this.tabId) {
-            chrome.tabs.sendMessage(this.meetingTabId, { type: 'SCREENSHOT_ADDED', data: screenshotData }).catch(() => { });
+            chrome.tabs.sendMessage(this.meetingTabId, { type: 'SCREENSHOT_ADDED', data: screenshotData })
+              .then(() => console.log('[Background] SCREENSHOT_ADDED sent to meetingTabId:', this.meetingTabId))
+              .catch((err) => console.warn('[Background] Failed to send SCREENSHOT_ADDED to meetingTabId:', err.message));
           }
+
+          // Notify console via sync (slower - goes through Supabase DB)
+          console.log('[Background] Sending SCREENSHOT_ADDED to console via sync...');
+          this.consoleSync.send({ type: 'SCREENSHOT_ADDED', data: screenshotData }).catch(() => { });
         }
       }
 

@@ -77,13 +77,7 @@
             </span>
             <span class="ic-sidebar-label">Explain</span>
           </button>
-          <button class="ic-sidebar-btn" id="ic-screenshot-btn" title="Screenshot (Ctrl+Shift+S)">
-            <span class="ic-sidebar-icon">
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
-            </span>
-            <span class="ic-sidebar-label">Snap</span>
-            <span class="ic-screenshot-count" id="ic-screenshot-count" style="display: none;">0</span>
-          </button>
+
         </div>
 
         <!-- Main Content Area -->
@@ -164,15 +158,32 @@
         transcriptContainer = document.getElementById('ic-transcript');
         hintContainer = document.getElementById('ic-hints');
 
-        // Event Listeners - Controls
-        document.getElementById('ic-minimize').addEventListener('click', (e) => {
-            e.stopPropagation();
-            toggleMinimize();
-        });
-        document.getElementById('ic-hide').addEventListener('click', (e) => {
-            e.stopPropagation();
-            toggleHide();
-        });
+        // Event Listeners - Controls (using mousedown to bypass potential click blocking)
+        const minimizeBtn = document.getElementById('ic-minimize');
+        const hideBtn = document.getElementById('ic-hide');
+        
+        console.log('[Content] Setting up button listeners, minimize:', minimizeBtn, 'hide:', hideBtn);
+        
+        if (minimizeBtn) {
+            minimizeBtn.addEventListener('mousedown', (e) => {
+                console.log('[Content] Minimize button mousedown');
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+                toggleMinimize();
+            }, true); // capture phase
+        }
+        
+        if (hideBtn) {
+            hideBtn.addEventListener('mousedown', (e) => {
+                console.log('[Content] Hide button mousedown');
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+                toggleHide();
+            }, true); // capture phase
+        }
+        
         document.getElementById('ic-open-console').addEventListener('click', openConsole);
 
         // Event Listeners - Action Buttons
@@ -192,10 +203,7 @@
             e.stopPropagation();
             requestAI('explain');
         });
-        document.getElementById('ic-screenshot-btn').addEventListener('click', (e) => {
-            e.stopPropagation();
-            takeScreenshot();
-        });
+
 
         // ----------------------------------------------------
         /* Loading State */
@@ -230,264 +238,10 @@
         // ----------------------------------------------------
 
         // Create screenshot popover (horizontal layout, positioned to the RIGHT of Snap button)
-        function createScreenshotPopover() {
-            if (screenshotPopover) return;
 
-            screenshotPopover = document.createElement('div');
-            screenshotPopover.className = 'ic-screenshot-popover';
-            // Use wrapper structure like console page for proper hover handling
-            screenshotPopover.style.cssText = `
-                position: absolute;
-                left: 100%;
-                top: 50%;
-                transform: translateY(-50%);
-                display: none;
-                z-index: 10001;
-                flex-direction: row;
-                align-items: center;
-                margin-left: -10px; /* Overlap button to prevent gaps */
-            `;
-
-            // Wrapper contains: bridge + content (like console page)
-            screenshotPopover.innerHTML = `
-                <!-- Invisible bridge to maintain hover -->
-                <div class="ic-popover-bridge" style="width:40px;height:60px;background:rgba(0,0,0,0.01);flex-shrink:0;cursor:default;"></div>
-                <!-- Actual popover content -->
-                <div class="ic-popover-content" style="
-                    background: rgba(15, 23, 42, 0.98);
-                    border: 1px solid rgba(255, 91, 34, 0.3);
-                    border-radius: 12px;
-                    padding: 12px;
-                    min-width: 180px;
-                    max-width: 450px;
-                    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
-                    backdrop-filter: blur(12px);
-                    cursor: default;
-                ">
-                    <div class="ic-popover-header" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.1);cursor:default;">
-                        <span style="color:#fff;font-size:11px;font-weight:600;white-space:nowrap;cursor:default;">
-                            <span id="ic-popover-count">0</span> Screenshots
-                        </span>
-                        <button id="ic-popover-clear" style="background:rgba(239,68,68,0.2);border:1px solid rgba(239,68,68,0.3);color:#ef4444;font-size:10px;cursor:pointer;padding:4px 10px;border-radius:6px;transition:all 0.2s;white-space:nowrap;" title="Clear all">
-                            Clear
-                        </button>
-                    </div>
-                    <div id="ic-popover-thumbs" style="display:flex;flex-direction:row;flex-wrap:nowrap;gap:6px;overflow-x:auto;overflow-y:hidden;max-width:380px;padding-bottom:4px;cursor:default;"></div>
-                    <div id="ic-popover-empty" style="color:rgba(255,255,255,0.5);font-size:10px;text-align:center;padding:12px 8px;white-space:nowrap;cursor:default;">
-                        No screenshots yet. Click <strong>Snap</strong> to capture.
-                    </div>
-                    <div id="ic-popover-hint" style="margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.5);font-size:9px;display:none;white-space:nowrap;cursor:default;">
-                        💡 Select screenshots for AI context
-                    </div>
-                </div>
-            `;
-
-            // Attach to the Snap button's parent (sidebar button) for positioning
-            const snapBtn = document.getElementById('ic-screenshot-btn');
-            if (snapBtn) {
-                snapBtn.style.position = 'relative';
-                snapBtn.appendChild(screenshotPopover);
-            }
-
-            // Clear all button
-            document.getElementById('ic-popover-clear').addEventListener('click', (e) => {
-                e.stopPropagation();
-                chrome.runtime.sendMessage({ type: 'CLEAR_SCREENSHOTS' });
-                screenshots = [];
-                selectedScreenshots.clear();
-                renderScreenshotPopover();
-            });
-
-            // Keep popover open while interacting - attach to entire wrapper
-            screenshotPopover.addEventListener('mouseenter', () => {
-                clearTimeout(popoverTimeout);
-            });
-            screenshotPopover.addEventListener('mouseleave', () => {
-                popoverTimeout = setTimeout(() => hideScreenshotPopover(), 300);
-            });
-        }
-
-        function showScreenshotPopover() {
-            console.log('[Content] Showing screenshot popover');
-            if (!screenshotPopover) createScreenshotPopover();
-            clearTimeout(popoverTimeout);
-            screenshotPopover.style.display = 'flex';
-            renderScreenshotPopover();
-        }
-
-        function hideScreenshotPopover() {
-            if (screenshotPopover) {
-                console.log('[Content] Hiding screenshot popover');
-                screenshotPopover.style.display = 'none';
-            }
-        }
-
-        function renderScreenshotPopover() {
-            if (!screenshotPopover) createScreenshotPopover();
-
-            const thumbsContainer = document.getElementById('ic-popover-thumbs');
-            const countSpan = document.getElementById('ic-popover-count');
-            const emptyDiv = document.getElementById('ic-popover-empty');
-            const hintDiv = document.getElementById('ic-popover-hint');
-
-            thumbsContainer.innerHTML = '';
-            countSpan.textContent = screenshots.length;
-
-            // Update counter badge on Snap button
-            const counterBadge = document.getElementById('ic-screenshot-count');
-            if (counterBadge) {
-                if (screenshots.length > 0) {
-                    counterBadge.style.display = 'inline-flex';
-                    counterBadge.textContent = screenshots.length;
-                } else {
-                    counterBadge.style.display = 'none';
-                }
-            }
-
-            // Toggle empty state
-            if (screenshots.length > 0) {
-                emptyDiv.style.display = 'none';
-                hintDiv.style.display = 'block';
-            } else {
-                emptyDiv.style.display = 'block';
-                hintDiv.style.display = 'none';
-            }
-
-            // Update count with selection info
-            const selCount = selectedScreenshots.size;
-            if (selCount > 0) {
-                countSpan.textContent = `${screenshots.length} (${selCount} selected)`;
-            }
-
-            // Render thumbnails
-            screenshots.forEach(s => {
-                const thumb = document.createElement('div');
-                thumb.className = 'ic-popover-thumb';
-                thumb.style.cssText = `
-                    position: relative;
-                    width: 72px;
-                    height: 54px;
-                    border-radius: 8px;
-                    overflow: visible;
-                    flex-shrink: 0;
-                    cursor: pointer;
-                    border: 2px solid ${selectedScreenshots.has(s.id) ? '#FF5B22' : 'rgba(255,255,255,0.1)'};
-                    background: #1e293b;
-                    transition: border-color 0.2s, transform 0.2s;
-                `;
-                thumb.innerHTML = `
-                    <img src="${s.image_url}" alt="Screenshot" style="width:100%;height:100%;object-fit:cover;border-radius:6px;cursor:pointer;" />
-                    <div class="ic-thumb-check" style="position:absolute;top:2px;left:2px;width:18px;height:18px;background:#FF5B22;border-radius:50%;display:${selectedScreenshots.has(s.id) ? 'flex' : 'none'};align-items:center;justify-content:center;cursor:pointer;">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" style="width:11px;height:11px;">
-                            <polyline points="20 6 9 17 4 12"></polyline>
-                        </svg>
-                    </div>
-                    <div class="ic-thumb-delete" style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;background:#ef4444;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 4px rgba(0,0,0,0.3);border:2px solid rgba(15,23,42,0.95);">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" style="width:10px;height:10px;">
-                            <line x1="18" y1="6" x2="6" y2="18"></line>
-                            <line x1="6" y1="6" x2="18" y2="18"></line>
-                        </svg>
-                    </div>
-                `;
-
-                // Hover effects - just scale, delete button is always visible now
-                thumb.addEventListener('mouseenter', () => {
-                    thumb.style.transform = 'scale(1.05)';
-                });
-                thumb.addEventListener('mouseleave', () => {
-                    thumb.style.transform = 'scale(1)';
-                });
-
-                // Click to select/deselect
-                thumb.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    // Send toggle request to background (to sync with console)
-                    // Local state will be updated when confirmation message comes back
-                    chrome.runtime.sendMessage({
-                        type: 'TOGGLE_SCREENSHOT_SELECTION',
-                        data: {
-                            screenshotId: s.id,
-                            isSelected: !selectedScreenshots.has(s.id)
-                        }
-                    });
-
-                    // Optimistic update for responsiveness
-                    if (selectedScreenshots.has(s.id)) {
-                        selectedScreenshots.delete(s.id);
-                    } else {
-                        selectedScreenshots.add(s.id);
-                    }
-                    renderScreenshotPopover();
-                });
-
-                // Delete button
-                thumb.querySelector('.ic-thumb-delete').addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    chrome.runtime.sendMessage({ type: 'DELETE_SCREENSHOT', data: { screenshotId: s.id } });
-                    screenshots = screenshots.filter(x => x.id !== s.id);
-                    selectedScreenshots.delete(s.id);
-                    renderScreenshotPopover();
-                });
-
-                thumbsContainer.appendChild(thumb);
-            });
-        }
-
-        // Popover interaction - use hover with proper delay and hover detection
-        const snapButton = document.getElementById('ic-screenshot-btn');
-        let popoverOpen = false;
-        let mouseIsOverPopover = false; // Track popover hover state explicitly
-
-        if (snapButton) {
-            // Track mouse over popover explicitly (more reliable than :hover pseudo-selector)
-            if (screenshotPopover) {
-                screenshotPopover.addEventListener('mouseenter', () => {
-                    mouseIsOverPopover = true;
-                    console.log('[Content] Popover mouseenter');
-                    clearTimeout(popoverTimeout);
-                });
-                // REMOVED: Redundant mouseleave on popover. 
-                // Since popover is a child of snapButton, snapButton.mouseleave handles the entire tree.
-            }
-
-
-            // Simplified Hover Logic: Rely on CSS :hover state of parent button
-            // Since popover is a child of snapButton in DOM (via appendChild), 
-            // hovering the popover counts as hovering the button.
-            snapButton.addEventListener('mouseenter', () => {
-                console.log('[Content] Snap button mouseenter - showing popover');
-                clearTimeout(popoverTimeout);
-                if (!screenshotPopover) {
-                    console.log('[Content] Creating popover...');
-                    createScreenshotPopover();
-                }
-                showScreenshotPopover();
-                popoverOpen = true;
-            });
-
-            snapButton.addEventListener('mouseleave', () => {
-                clearTimeout(popoverTimeout);
-                popoverTimeout = setTimeout(() => {
-                    // Check if mouse is still over the button (or its children, like popover)
-                    // .matches(':hover') is the most robust way to check this state
-                    if (!snapButton.matches(':hover')) {
-                        console.log('[Content] Mouse left button & popover - closing');
-                        hideScreenshotPopover();
-                        popoverOpen = false;
-                    } else {
-                        console.log('[Content] Timeout fired but still hovering - keeping open');
-                    }
-                }, 800);
-            });
-        }
 
         // Close popover when clicking outside (but not on snap button which takes screenshot)
-        document.addEventListener('click', (e) => {
-            if (popoverOpen && screenshotPopover && !screenshotPopover.contains(e.target) && e.target !== snapButton && !snapButton?.contains(e.target)) {
-                hideScreenshotPopover();
-                popoverOpen = false;
-            }
-        });
+
 
         // Initialize popover
 
@@ -787,18 +541,7 @@
     }
 
     // Update screenshot count badge
-    function updateScreenshotCount(count) {
-        screenshotCount = count;
-        const badge = document.getElementById('ic-screenshot-count');
-        if (badge) {
-            if (count > 0) {
-                badge.textContent = count;
-                badge.style.display = 'flex';
-            } else {
-                badge.style.display = 'none';
-            }
-        }
-    }
+
 
     // Show visual feedback for screenshot capture
     function showScreenshotFeedback(success) {
@@ -833,21 +576,7 @@
     }
 
     async function takeScreenshot() {
-        console.log('[Content] takeScreenshot() called - button was clicked');
-
-        // Try to update UI state
-        const btn = document.getElementById('ic-screenshot-btn');
-        let originalContent = '';
-
-        if (btn) {
-            console.log('[Content] Button found, disabling and adding loading class');
-            btn.disabled = true;
-            btn.classList.add('loading');
-            // Save original icon/text if needed, or just overlay a spinner
-            // For now, simpler is better - just opacity/cursor change via loading class
-        } else {
-            console.warn('[Content] Button not found!');
-        }
+        console.log('[Content] takeScreenshot() called');
 
         try {
             console.log('[Content] Taking screenshot...');
@@ -912,7 +641,6 @@
                 });
 
                 if (response?.success) {
-                    updateScreenshotCount(response.count || screenshotCount + 1);
                     showScreenshotFeedback(true);
                 } else {
                     console.error('[Content] Upload failed:', response?.error);
@@ -938,13 +666,9 @@
         } catch (error) {
             console.error('[Content] Error taking screenshot:', error);
             showScreenshotFeedback(false);
-        } finally {
-            if (btn) {
-                btn.disabled = false;
-                btn.classList.remove('loading');
-            }
         }
     }
+
 
     function openConsole(e) {
         e.preventDefault();
@@ -964,7 +688,8 @@
         let offsetX, offsetY;
 
         header.addEventListener('mousedown', (e) => {
-            if (e.target.tagName === 'BUTTON') return;
+            // Use closest() to properly detect clicks on button or its children (like SVG icons)
+            if (e.target.closest('button')) return;
             e.preventDefault();
             e.stopPropagation();
             isDragging = true;
@@ -1382,7 +1107,7 @@
                     screenshots.unshift(newScreenshot);
                     // Auto-select for AI assistance by default
                     selectedScreenshots.add(newScreenshot.id);
-                    renderScreenshotPopover();
+
                     showScreenshotFeedback(true);
 
                     // Show capture flash feedback
@@ -1391,23 +1116,21 @@
                     document.body.appendChild(flash);
                     setTimeout(() => flash.remove(), 300);
                 }
-                updateScreenshotCount(screenshots.length);
+
                 sendResponse({ success: true });
                 break;
 
             case 'SCREENSHOT_DELETED':
                 screenshots = screenshots.filter(s => s.id !== message.data.screenshotId);
                 selectedScreenshots.delete(message.data.screenshotId);
-                renderScreenshotPopover();
-                updateScreenshotCount(screenshots.length);
+
                 sendResponse({ success: true });
                 break;
 
             case 'SCREENSHOTS_CLEARED':
                 screenshots = [];
                 selectedScreenshots.clear();
-                renderScreenshotPopover();
-                updateScreenshotCount(0);
+
                 sendResponse({ success: true });
                 break;
 
@@ -1418,7 +1141,7 @@
                     } else {
                         selectedScreenshots.delete(message.data.screenshotId);
                     }
-                    renderScreenshotPopover();
+
                 }
                 sendResponse({ success: true });
                 break;

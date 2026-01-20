@@ -765,33 +765,10 @@
 }
 
 /* Updated Snap Button - ntro.io blue */
-#ic-screenshot-btn {
-    background: var(--ic-blue) !important;
-    border-color: var(--ic-blue) !important;
-}
 
-#ic-screenshot-btn:hover {
-    background: var(--ic-blue-hover) !important;
-    border-color: var(--ic-blue-hover) !important;
-}
 
 /* Screenshot Count Badge */
-.ic-screenshot-count {
-    position: absolute;
-    top: -4px;
-    right: -4px;
-    min-width: 16px;
-    height: 16px;
-    background: var(--ic-orange);
-    color: white;
-    font-size: 10px;
-    font-weight: 600;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0 4px;
-}
+
 
 /* Capture Flash Animation */
 @keyframes ic-capture-flash {

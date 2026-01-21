@@ -14,115 +14,107 @@ STYLE RULES (ALWAYS FOLLOW):
 - No emojis, no markdown headers
 - No "Step 1, Step 2" robotic formatting`;
 
-    // Mode configurations - strict contracts per mode
+    // Universal "Expert Candidate" System Prompt
+    // Enforces: Internal Reasoning, Stealth, and Confidence
+    static EXPERT_PROMPT_TEMPLATE = `You are an expert human candidate participating in a real-time technical interview.
+
+You are NOT an assistant.
+You are NOT an AI.
+You are the interviewee.
+
+Your goal is to produce correct, concise, human-like responses under interview pressure.
+
+────────────────────────────────────────
+CRITICAL BEHAVIOR RULES (NON-NEGOTIABLE)
+────────────────────────────────────────
+
+1. INTERNAL REASONING (HIDDEN)
+   - You MUST reason privately before answering.
+   - Use <thinking> tags to plan:
+     • Problem identification
+     • Constraints & Edge cases
+     • Time/Space Complexity
+     • Solution Draft
+   - Verification: Check your draft against constraints.
+   - This reasoning MUST NEVER appear in the final output outside the tags.
+
+2. CONFIDENCE AWARENESS
+   - If the problem statement, constraints, or inputs are unclear/ambiguous:
+     → DO NOT guess.
+     → Switch to CLARIFY or HINT mode.
+   - Never hallucinate missing details.
+
+3. OUTPUT MODES (STRICT)
+   - CODE:
+     • Output ONLY valid executable code.
+     • No markdown fences (unless multi-file).
+     • No explanations.
+     • No comments unless necessary.
+     • Match function names, variables, and indentation exactly as seen.
+   - HINT:
+     • 2–4 concise bullets.
+     • No code blocks.
+     • No generic advice.
+   - EXPLAIN:
+     • Clear structured explanation.
+     • Human tone, no robotic sequencing.
+   - ANSWER:
+     • Direct, concise answer.
+     • No filler ("I think...", "Maybe...").
+   - CLARIFY:
+     • Ask ONE precise clarifying question.
+
+4. STEALTH & HUMANNESS
+   - NEVER say: "As an AI", "Here is the solution", "Sure!".
+   - Sound like a strong candidate thinking aloud briefly if needed, but mostly direct.
+
+5. SYNTAX & VALIDITY GUARANTEE
+   - Code MUST compile.
+   - No placeholders.
+   - If unsure, downgrade output instead of risking invalid code.`;
+
+    // Mode configurations - Now focuses on temperature/tokens, logic handled by unified prompt
     static MODE_CONFIG = {
         help: {
             name: 'help',
-            systemPrompt: `You are helping a real person in a live coding interview. Give HINTS ONLY.
-
-STRICT RULES:
-- Provide guiding hints, NOT full solutions
-- Use Socratic style: "Consider...", "What if you..."
-- Never reveal algorithm names directly
-- 2-3 bullet points maximum
-- No code blocks at all
-- Sound like a helpful peer, not an instructor
-- Total: under 80 words`,
-            temperature: 0.5,
-            maxTokens: 200
+            temperature: 0.6,
+            maxTokens: 300
         },
 
         explain: {
             name: 'explain',
-            systemPrompt: `You are explaining a problem to help someone understand what's being tested.
-
-STRICT RULES:
-- 3-5 bullet points ONLY
-- Intuition first, complexity last
-- NO code at all (not even one-liners)
-- NO markdown headers (no #, ##)
-- Mention 1-2 traps/edge cases
-- State time/space complexity expected
-- Total: under 100 words`,
-            temperature: 0.4,
-            maxTokens: 250
+            temperature: 0.5,
+            maxTokens: 400
         },
 
         code: {
             name: 'code',
-            systemPrompt: `You are a competitive programmer solving a live interview problem.
-
-STRICT RULES:
-- Output ONLY working code - nothing before it
-- NO prose, NO explanations before code
-- Match the exact function signature from the problem
-- Use variable names that match the problem
-- Include edge case handling in the code
-- Add ONE comment at end: "# Time: O(?) Space: O(?)"
-- NO markdown code fences unless specified
-- Code should be immediately copy-pasteable`,
-            temperature: 0.2,
-            maxTokens: 800
+            temperature: 0.1, // Strict for code
+            maxTokens: 1500
         },
 
         answer: {
             name: 'answer',
-            systemPrompt: `You are answering an interview question directly and completely.
-
-STRICT RULES:
-- Start with the actual answer immediately
-- NO lead-in phrases ("Sure", "Great question", etc.)
-- Technical questions: be accurate and specific
-- Behavioral questions: use STAR format, 3-4 sentences
-- Include concrete examples when relevant
-- Sound natural, like a confident candidate
-- Total: under 150 words`,
-            temperature: 0.5,
-            maxTokens: 400
+            temperature: 0.6,
+            maxTokens: 500
         },
 
         custom: {
             name: 'custom',
-            systemPrompt: `Answer exactly what was asked, nothing more.
-
-STRICT RULES:
-- Direct answer only
-- NO filler phrases
-- Be specific and actionable
-- Match the context and tone of the question
-- Under 100 words unless code is needed`,
-            temperature: 0.5,
-            maxTokens: 300
+            temperature: 0.6,
+            maxTokens: 400
         },
 
         sql: {
             name: 'sql',
-            systemPrompt: `You are writing SQL for a database interview question.
-
-STRICT RULES:
-- Valid, executable SQL only
-- Prefer standard SQL syntax (MySQL compatible)
-- NO destructive queries (no DROP, DELETE without WHERE)
-- Include table aliases for clarity
-- Add brief comment for complex joins
-- Mention indexes that would help (one line at end)`,
             temperature: 0.2,
-            maxTokens: 400
+            maxTokens: 600
         },
 
         system_design: {
             name: 'system_design',
-            systemPrompt: `You are answering a system design interview question.
-
-STRICT RULES:
-- Use 4-part structure: Requirements, High-Level, Deep Dive, Trade-offs
-- Include concrete numbers (QPS, storage, latency)
-- NO diagrams (text only)
-- Mention scaling strategies
-- Keep each section to 2-3 bullet points
-- Total: under 300 words`,
-            temperature: 0.5,
-            maxTokens: 500
+            temperature: 0.7,
+            maxTokens: 800
         }
     };
 
@@ -135,137 +127,215 @@ STRICT RULES:
     static buildPrompt(mode, context, customPrompt = null) {
         const config = this.MODE_CONFIG[mode] || this.MODE_CONFIG.help;
 
-        // Build rich context string from all interview metadata
-        const contextParts = [];
+        // 1. Prepare Metadata Context
+        const meta = {
+            role: context.role || 'Software Engineer',
+            level: context.experienceLevel || 'Mid-Level',
+            type: context.interviewType || 'Technical',
+            stack: context.techStack || 'General',
+            company: context.companyType || 'Tech Company'
+        };
 
-        // Role and experience
-        if (context.role && context.role.trim()) {
-            contextParts.push(`Role: ${context.role}`);
-        }
-        if (context.experienceLevel) {
-            const levelLabels = {
-                'junior': 'Junior (0-2 years)',
-                'mid': 'Mid-level (2-5 years)',
-                'senior': 'Senior (5+ years)'
-            };
-            contextParts.push(`Level: ${levelLabels[context.experienceLevel] || context.experienceLevel}`);
-        }
+        // 2. Build Trusted Input Context
+        let trustedContext = `────────────────────────────────────────\nINPUT CONTEXT (TRUSTED)\n────────────────────────────────────────\n`;
+        trustedContext += `- Role: ${meta.role} (${meta.level})\n`;
+        trustedContext += `- Type: ${meta.type} | Stack: ${meta.stack}\n`;
 
-        // Technical details
-        if (context.techStack && context.techStack !== 'general' && context.techStack.trim()) {
-            contextParts.push(`Tech Stack: ${context.techStack}`);
-        }
-        if (context.interviewType) {
-            const typeLabels = {
-                'technical': 'Technical Interview',
-                'behavioral': 'Behavioral Interview',
-                'system-design': 'System Design Interview',
-                'hr': 'HR/Culture Fit'
-            };
-            contextParts.push(`Type: ${typeLabels[context.interviewType] || context.interviewType}`);
-        }
-
-        // Company context
-        if (context.companyType) {
-            const companyLabels = {
-                'startup': 'Startup',
-                'mid-size': 'Mid-size Company',
-                'enterprise': 'Enterprise',
-                'faang': 'FAANG/Big Tech'
-            };
-            contextParts.push(`Company: ${companyLabels[context.companyType] || context.companyType}`);
-        }
-
-        // Build the system prompt with interview context
-        let enrichedSystemPrompt = config.systemPrompt;
-
-        // Add context-aware tailoring
-        if (context.experienceLevel === 'senior') {
-            enrichedSystemPrompt += '\n\nNote: This is a senior-level candidate. Expect and provide depth, architectural thinking, and leadership examples.';
-        } else if (context.experienceLevel === 'junior') {
-            enrichedSystemPrompt += '\n\nNote: This is a junior-level candidate. Focus on fundamentals and learning potential rather than extensive experience.';
-        }
-
-        if (context.companyType === 'faang') {
-            enrichedSystemPrompt += '\n\nNote: This is for a FAANG/Big Tech interview. Include time/space complexity analysis and scalability considerations.';
-        }
-
-        if (context.weakAreas && context.weakAreas.trim()) {
-            enrichedSystemPrompt += `\n\nNote: The candidate mentioned weak areas in: ${context.weakAreas}. Be especially helpful in these topics.`;
-        }
-
-        // Apply response style preference
-        if (context.responseStyle === 'short') {
-            enrichedSystemPrompt += '\n\nIMPORTANT: Keep responses very concise - bullet points preferred, maximum 2-3 sentences per point.';
-        } else if (context.responseStyle === 'detailed') {
-            enrichedSystemPrompt += '\n\nIMPORTANT: Provide thorough, detailed responses with examples and explanations.';
-        }
-
-        // Build the user prompt - emphasize real-time listening
-        let userPrompt = '';
-
-        // Add context header if we have interview metadata
-        if (contextParts.length > 0) {
-            userPrompt += `[Interview: ${contextParts.join(' | ')}]\n\n`;
-        }
-
-        // Add visual context from screen sharing (LIVE CONTEXT)
+        // 3. Add Visual Context (Grounding)
         if (context.visualContext) {
             const vc = context.visualContext;
-            userPrompt += `🖥️ [LIVE SCREEN CONTEXT - The candidate is looking at this right now]:\n`;
-
-            if (vc.problemStatement) {
-                userPrompt += `> Problem Description:\n"${vc.problemStatement.trim()}"\n\n`;
-            }
-
-            if (vc.code) {
-                userPrompt += `> Code Editor State:\n\`\`\`\n${vc.code.trim()}\n\`\`\`\n\n`;
-            }
-
-            // Fallback: If no structured code/problem found but we have text
-            if (!vc.problemStatement && !vc.code && vc.extractedTexts && vc.extractedTexts.length > 0) {
-                const text = vc.extractedTexts.join('\n');
-                userPrompt += `> Visible Screen Text:\n"${text.substring(0, 800)}${text.length > 800 ? '...' : ''}"\n\n`;
-            }
-
-            userPrompt += `(End of screen context)\n\n`;
+            trustedContext += `\n- Visual Context (Screen):\n`;
+            if (vc.problemStatement) trustedContext += `  • Problem: "${vc.problemStatement.slice(0, 300)}..."\n`;
+            if (vc.code) trustedContext += `  • Existing Code:\n${vc.code.slice(0, 500)}\n`;
+            if (vc.extractedTexts?.length) trustedContext += `  • Visible Text: "${vc.extractedTexts.join(' ').slice(0, 300)}..."\n`;
         }
 
-        // Add latest question prominently if detected
-        if (context.latestQuestion) {
-            userPrompt += `🎯 THE INTERVIEWER JUST ASKED: "${context.latestQuestion}"\n\n`;
-        }
-
-        // Add rolling context (what you've been hearing)
+        // 4. Add Transcript Context
         if (context.recentTranscript) {
-            // Truncate if too long (keep last ~1000 chars for more context)
-            const transcript = context.recentTranscript.length > 1000
-                ? '...' + context.recentTranscript.slice(-1000)
-                : context.recentTranscript;
-            userPrompt += `📝 What you've been hearing (last 90 seconds):\n"${transcript}"\n\n`;
-        } else {
-            userPrompt += `(No recent conversation captured yet)\n\n`;
+            trustedContext += `\n- Transcript Context (Last 90s):\n  "${context.recentTranscript.slice(-1000)}"\n`;
         }
 
-        // Add the actual request - more urgent and contextual
+        // 5. Define User Intent
+        const modeMap = {
+            'help': 'HINT',
+            'explain': 'EXPLAIN',
+            'code': 'CODE',
+            'answer': 'ANSWER',
+            'custom': 'CLARIFY/CUSTOM',
+            'sql': 'CODE (SQL)',
+            'system_design': 'ANSWER (SYSTEM DESIGN)'
+        };
+        const intent = modeMap[mode] || 'HINT';
+
+        // 6. Construct Final System Prompt
+        // Inject strictly into the system prompt to enforce behavior
+        const systemMessage = this.EXPERT_PROMPT_TEMPLATE;
+
+        // 7. Construct User Prompt
+        // The actual trigger that pushes the LLM to start reasoning
+        let userPrompt = `${trustedContext}\n\n────────────────────────────────────────\nTASK TRIGGER\n────────────────────────────────────────\n`;
+
         if (mode === 'custom' && customPrompt) {
-            userPrompt += `The candidate asks you: "${customPrompt}"`;
+            userPrompt += `User Question: "${customPrompt}"\n\n`;
+            userPrompt += `ACTION: Read the context above. Reason about the user's question. Output response in CLARIFY or ANSWER mode.`;
         } else {
-            const actions = {
-                help: 'Quick - give me the key talking points to nail this question!',
-                explain: 'Help me understand what they\'re really testing here.',
-                code: 'Give me the code solution for this problem.',
-                answer: 'Give me a complete answer I can deliver right now.'
-            };
-            userPrompt += actions[mode] || 'Help me with this!';
+            userPrompt += `ACTION: The user requested mode '${intent}'.\n`;
+            userPrompt += `1. Analyze the Visual and Transcript context in <thinking>.\n`;
+            userPrompt += `2. Formulate the optimal response.\n`;
+            userPrompt += `3. Output ONLY the final '${intent}' content.`;
         }
 
         return {
-            systemMessage: enrichedSystemPrompt,
-            userPrompt,
+            systemMessage: systemMessage,
+            userPrompt: userPrompt,
             temperature: config.temperature,
             maxTokens: config.maxTokens,
             mode: config.name
+        };
+    }
+
+    // Verifier System Prompt
+    static VERIFIER_PROMPT_TEMPLATE = `You are a strict response verifier for a real-time technical interview assistant.
+
+You DO NOT generate new solutions.
+You ONLY evaluate whether the provided response is safe, correct, stealthy, and ntro.io-grade.
+
+Your job is to decide whether the response should:
+- PASS (render as-is)
+- RETRY (regenerate with correction)
+- DOWNGRADE (convert to hint or clarification)
+
+────────────────────────────────────────
+VERIFICATION CHECKLIST (MANDATORY)
+────────────────────────────────────────
+
+You MUST evaluate the response against ALL rules below.
+
+### 1. MODE COMPLIANCE
+- SOLVE:
+  - Output contains ONLY executable code
+  - No prose, no markdown, no explanations
+- HINT:
+  - No full solution
+  - No code blocks
+  - Actionable but incomplete
+- EXPLAIN:
+  - Structured, human, non-robotic
+- CLARIFY:
+  - Exactly ONE clear question
+
+FAIL if violated.
+
+---
+
+### 2. SYNTAX & EXECUTABILITY (for SOLVE)
+- No syntax errors
+- No missing imports
+- No undefined variables
+- No placeholder comments
+- Code would compile/run in isolation
+
+FAIL if violated.
+
+---
+
+### 3. GROUNDING & CONSISTENCY
+- Function names match grounded visual context
+- Variable names align with screen
+- No invented constraints or inputs
+- No hallucinated APIs or libraries
+
+FAIL if violated.
+
+---
+
+### 4. STEALTH & HUMANNESS
+- Does NOT include:
+  - “As an AI…”
+  - “Here is the solution…”
+  - Apologies or system language
+- Does NOT over-structure (Step 1, Step 2…)
+- Sounds like a confident human candidate
+
+FAIL if violated.
+
+---
+
+### 5. CONFIDENCE ALIGNMENT
+- If Confidence Score < 0.8:
+  - SOLVE output is NOT allowed
+- If Confidence Score < 0.5:
+  - Only CLARIFY is allowed
+
+FAIL if violated.
+
+---
+
+### 6. RISK ASSESSMENT
+Evaluate:
+- Likelihood of being wrong
+- Likelihood of interviewer suspicion
+- Likelihood of syntax/runtime failure
+
+Classify risk as: LOW | MEDIUM | HIGH
+
+---
+
+────────────────────────────────────────
+DECISION LOGIC (STRICT)
+────────────────────────────────────────
+
+- If ANY mandatory check fails → DECISION = RETRY
+- If checks pass BUT risk = HIGH → DECISION = DOWNGRADE
+- If all checks pass AND risk = LOW/MEDIUM → DECISION = PASS
+
+────────────────────────────────────────
+OUTPUT FORMAT (STRICT JSON)
+────────────────────────────────────────
+
+{
+  "decision": "PASS | RETRY | DOWNGRADE",
+  "failed_checks": [list of violated rules, if any],
+  "risk_level": "LOW | MEDIUM | HIGH",
+  "action": "render_response" | "retry_with_error_feedback" | "downgrade_to_hint" | "downgrade_to_clarification",
+  "feedback": "Concisely explain what to fix if RETRY"
+}`;
+
+    /**
+     * Build prompt for the Verification Step
+     */
+    static buildVerifierPrompt(originalContext, generatedResponse) {
+        let userPrompt = `────────────────────────────────────────\nINPUTS\n────────────────────────────────────────\n\n`;
+
+        // 1. User Context
+        const meta = {
+            mode: originalContext.requestType?.toUpperCase() || 'HINT',
+            level: originalContext.experienceLevel || 'Mid-Level',
+            stack: originalContext.techStack || 'General'
+        };
+        userPrompt += `1. USER CONTEXT\n   - Interview Mode: ${meta.mode}\n   - Role Level: ${meta.level}\n   - Tech Stack: ${meta.stack}\n\n`;
+
+        // 2. Problem Context
+        userPrompt += `2. PROBLEM CONTEXT\n`;
+        if (originalContext.visualContext) {
+            const vc = originalContext.visualContext;
+            if (vc.extractedTexts) userPrompt += `   - Grounded Text: "${vc.extractedTexts.join(' ').slice(0, 300)}..."\n`;
+            if (vc.code) userPrompt += `   - Existing Code Signature: "${vc.code.slice(0, 200)}..."\n`;
+        }
+        // Heuristic confidence score (placeholder logic, real implementation in AI service)
+        userPrompt += `   - Confidence Score: ${originalContext.calculatedConfidence || 0.9}\n\n`;
+
+        // 3. Generated Response
+        userPrompt += `3. GENERATED RESPONSE\n   <<<BEGIN RESPONSE>>>\n${generatedResponse}\n   <<<END RESPONSE>>>\n\n`;
+
+        userPrompt += `ACTION: Verify the response above. Output strictly JSON.`;
+
+        return {
+            systemMessage: this.VERIFIER_PROMPT_TEMPLATE,
+            userPrompt: userPrompt,
+            temperature: 0.1, // Strict determinism
+            maxTokens: 500,
+            mode: 'verifier'
         };
     }
 

@@ -10,6 +10,7 @@ import { ResponseValidator } from './response-validator.js';
 import { LanguageResolver } from './language-resolver.js';
 import { IntentClassifier } from './intent-classifier.js';
 import { getMetricsLogger } from './metrics-logger.js';
+import { VerificationService } from './verification-service.js';
 
 export class AIService {
     constructor() {
@@ -109,20 +110,70 @@ export class AIService {
                 }
             }
 
-            // Build the prompt using PromptEngine
-            const prompt = this.buildPrompt(context);
+            // --- REASONING LOOP START ---
+
+            // 1. Build Initial Prompt
+            let prompt = this.buildPrompt(context);
+            let responseText = '';
+            let attempts = 0;
+            let verified = false;
+            let finalIssues = [];
 
             // Track timing for metrics
             const startTime = Date.now();
 
-            // Call the appropriate LLM API with mode-specific settings
-            const response = await this.callLLM(config, prompt, context);
+            // 2. Draft Generation
+            console.log(`[AIService] Generating draft for mode: ${context.requestType || 'help'}`);
+            responseText = await this.callLLM(config, prompt, context);
+
+            // 3. Verification Step (if applicable)
+            if (VerificationService.needsVerification(context.requestType || 'help')) {
+                console.log('[AIService] Verifying response...');
+
+                // Build verifier prompt
+                const verifyPrompt = PromptEngine.buildVerifierPrompt(context, responseText);
+
+                // Call LLM for verification (using same config for now)
+                // Ideally use a faster model here, but we use what we have
+                const verifyJsonRaw = await this.callLLM(config, verifyPrompt, context);
+                const verification = VerificationService.parseDecision(verifyJsonRaw);
+
+                console.log(`[AIService] Verification Decision: ${verification.decision}`, verification);
+
+                if (verification.decision === 'RETRY') {
+                    // RETRY LOGIC (Max 1 retry for latency)
+                    console.log('[AIService] Triggering Retry...');
+                    const retryPrompt = VerificationService.buildRetryPrompt(verification, prompt);
+
+                    // Regenerate
+                    responseText = await this.callLLM(config, retryPrompt, context);
+                    verified = true; // We accept the retry without double-verification to save time
+
+                } else if (verification.decision === 'DOWNGRADE') {
+                    // DOWNGRADE LOGIC
+                    console.log('[AIService] Downgrading to HINT...');
+                    // Re-build prompt for HINT mode
+                    const hintContext = { ...context, requestType: 'help' };
+                    const hintPrompt = this.buildPrompt(hintContext);
+                    hintPrompt.userPrompt += `\n\n(Note: previous code attempt was risky. Providing hint instead.)`;
+
+                    responseText = await this.callLLM(config, hintPrompt, hintContext);
+                    context.requestType = 'help'; // Update context to reflect change
+                    verified = true;
+
+                } else {
+                    // PASS
+                    verified = true;
+                }
+            }
 
             const responseTime = Date.now() - startTime;
 
-            // Apply quality validation and stealth formatting
+            // --- REASONING LOOP END ---
+
+            // Apply old regex validation/stealth as a final safety net
             const validated = ResponseValidator.validate(
-                response,
+                responseText,
                 context.requestType || 'help',
                 { ocrText: context.visualContext?.extractedTexts?.join(' ') || '' }
             );
@@ -134,7 +185,7 @@ export class AIService {
                 provider: config.provider.slug,
                 model: config.model.model_id,
                 responseTime,
-                languageMatch: true, // TODO: implement language match check
+                languageMatch: true,
                 bannedPhraseHits: validated.metrics?.bannedPhraseHits || 0,
                 success: validated.valid
             });
@@ -354,7 +405,7 @@ export class AIService {
 
         // Check if we have a screenshot for vision
         const hasScreenshot = context.currentScreenshot && context.currentScreenshot.startsWith('data:image');
-        
+
         // Build messages - include image if present
         let userContent;
         if (hasScreenshot) {
@@ -362,12 +413,12 @@ export class AIService {
             // For vision models, use array content with image
             userContent = [
                 { type: 'text', text: prompt.userPrompt + '\n\nAnalyze the screenshot above and provide the answer to the coding question shown.' },
-                { 
-                    type: 'image_url', 
-                    image_url: { 
+                {
+                    type: 'image_url',
+                    image_url: {
                         url: context.currentScreenshot,
-                        detail: 'high' 
-                    } 
+                        detail: 'high'
+                    }
                 }
             ];
             // Use a vision-capable model
@@ -415,7 +466,7 @@ export class AIService {
 
         // Check if we have a screenshot for vision
         const hasScreenshot = context.currentScreenshot && context.currentScreenshot.startsWith('data:image');
-        
+
         // Build content - include image if present
         let userContent;
         if (hasScreenshot) {
@@ -423,7 +474,7 @@ export class AIService {
             // Extract base64 data from data URL
             const base64Data = context.currentScreenshot.split(',')[1];
             const mimeType = context.currentScreenshot.split(';')[0].split(':')[1];
-            
+
             userContent = [
                 {
                     type: 'image',
@@ -479,7 +530,7 @@ export class AIService {
 
         // Check if we have a screenshot for vision
         const hasScreenshot = context.currentScreenshot && context.currentScreenshot.startsWith('data:image');
-        
+
         // Build parts - include image if present
         let parts = [];
         if (hasScreenshot) {
@@ -487,10 +538,10 @@ export class AIService {
             // Extract base64 data from data URL
             const base64Data = context.currentScreenshot.split(',')[1];
             const mimeType = context.currentScreenshot.split(';')[0].split(':')[1];
-            
+
             parts = [
                 { text: `${prompt.systemMessage}\n\n${prompt.userPrompt}\n\nAnalyze the screenshot and provide the answer to the coding question shown.` },
-                { 
+                {
                     inline_data: {
                         mime_type: mimeType,
                         data: base64Data

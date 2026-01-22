@@ -23,8 +23,9 @@
     // Screenshot state - module level for accessibility by message handlers
     let screenshots = [];
     let selectedScreenshots = new Set();
-    let screenshotPopover = null;
-    let popoverTimeout = null;
+
+
+
 
     // Create the overlay matching console dashboard
     function createOverlay() {
@@ -470,11 +471,7 @@
                 overlay.remove();
             }
 
-            // Also check for separate popover
-            const popoverWasInDom = screenshotPopover && screenshotPopover.parentNode;
-            if (popoverWasInDom && (!overlay || !overlay.contains(screenshotPopover.parentNode))) {
-                screenshotPopover.remove();
-            }
+
 
             const strip = document.querySelector('.ic-screenshot-strip');
             if (strip) strip.style.visibility = 'hidden';
@@ -509,13 +506,7 @@
                 overlay.style.visibility = 'visible';
             }
 
-            if (popoverWasInDom && screenshotPopover && !document.contains(screenshotPopover)) {
-                // If it wasn't part of overlay, put it back?? 
-                // Mostly it will be in overlay. If separate, we might lose parent.
-                // Just assuming it's fine for now or attached to body?
-                // Actually screenshotPopover is usually attached to snapBtn. 
-                // If snapBtn came back with overlay, this is fine.
-            }
+
 
             if (strip) strip.style.visibility = 'visible';
 
@@ -576,7 +567,7 @@
     }
 
     async function takeScreenshot() {
-        console.log('[Content] takeScreenshot() called');
+        console.log('[Content] takeScreenshot() called - button was clicked');
 
         try {
             console.log('[Content] Taking screenshot...');
@@ -641,6 +632,7 @@
                 });
 
                 if (response?.success) {
+                    // updateScreenshotCount(response.count || screenshotCount + 1); // Removed
                     showScreenshotFeedback(true);
                 } else {
                     console.error('[Content] Upload failed:', response?.error);
@@ -666,6 +658,8 @@
         } catch (error) {
             console.error('[Content] Error taking screenshot:', error);
             showScreenshotFeedback(false);
+        } finally {
+            // Button UI update removed
         }
     }
 
@@ -783,24 +777,42 @@
         if (!text) return '';
         let html = escapeHtml(text);
 
-        // Code blocks: ```lang\ncode\n``` or ```\ncode\n```
+        // 1. Code blocks: ```lang\ncode\n```
         html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (match, lang, code) => {
             const langClass = lang ? ` data-lang="${lang}"` : '';
             return `<pre class="ic-code-block"${langClass}><code>${code.trim()}</code></pre>`;
         });
 
-        // Inline code: `code`
+        // 2. Inline code: `code`
         html = html.replace(/`([^`]+)`/g, '<code class="ic-inline-code">$1</code>');
 
-        // Bold: **text**
-        html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+        // 3. Bold: **text** or __text__
+        html = html.replace(/(\*\*|__)(.*?)\1/g, '<strong>$2</strong>');
 
-        // Bullet lists: - item (at line start)
-        html = html.replace(/^[\-\*]\s+(.+)$/gm, '<li>$1</li>');
-        html = html.replace(/(<li>.*<\/li>\n?)+/g, '<ul class="ic-list">$&</ul>');
+        // 4. Italic: *text* or _text_
+        html = html.replace(/(\*|_)(.*?)\1/g, '<em>$2</em>');
 
-        // Line breaks
-        html = html.replace(/\n(?![^<]*<\/pre>)/g, '<br>');
+        // 5. Lists: - item or * item
+        // Split by lines to handle list logic better
+        html = html.replace(/^[\-\*]\s+(.+)$/gm, '<li class="ic-list-item">$1</li>');
+        // Wrap adjacent <li> in <ul>
+        html = html.replace(/(<li class="ic-list-item">.*<\/li>\n?)+/g, '<ul class="ic-list">$&</ul>');
+
+        // 6. Headers (for Explain mode structure)
+        html = html.replace(/^###\s+(.+)$/gm, '<h3>$1</h3>');
+        html = html.replace(/^##\s+(.+)$/gm, '<h2>$1</h2>');
+
+        // 7. Line breaks - convert newlines to <br> ONLY if not inside pre/ul/h tags
+        // This is a bit tricky with regex, so we used a simplified approach:
+        // formatting is applied, now replace remaining newlines that are strictly text
+        // (This logic is simplified for the content script environment)
+        html = html.replace(/\n/g, '<br>');
+
+        // Cleanup: Remove <br> after block elements to prevent huge gaps
+        html = html.replace(/<\/pre><br>/g, '</pre>');
+        html = html.replace(/<\/ul><br>/g, '</ul>');
+        html = html.replace(/<\/h2><br>/g, '</h2>');
+        html = html.replace(/<\/h3><br>/g, '</h3>');
 
         return html;
     }
@@ -1107,7 +1119,11 @@
                     screenshots.unshift(newScreenshot);
                     // Auto-select for AI assistance by default
                     selectedScreenshots.add(newScreenshot.id);
+<<<<<<< HEAD
 
+=======
+                    // renderScreenshotPopover(); // Removed
+>>>>>>> main
                     showScreenshotFeedback(true);
 
                     // Show capture flash feedback
@@ -1116,21 +1132,35 @@
                     document.body.appendChild(flash);
                     setTimeout(() => flash.remove(), 300);
                 }
+<<<<<<< HEAD
 
+=======
+                // updateScreenshotCount(screenshots.length); // Removed
+>>>>>>> main
                 sendResponse({ success: true });
                 break;
 
             case 'SCREENSHOT_DELETED':
                 screenshots = screenshots.filter(s => s.id !== message.data.screenshotId);
                 selectedScreenshots.delete(message.data.screenshotId);
+<<<<<<< HEAD
 
+=======
+                // renderScreenshotPopover(); // Removed
+                // updateScreenshotCount(screenshots.length); // Removed
+>>>>>>> main
                 sendResponse({ success: true });
                 break;
 
             case 'SCREENSHOTS_CLEARED':
                 screenshots = [];
                 selectedScreenshots.clear();
+<<<<<<< HEAD
 
+=======
+                // renderScreenshotPopover(); // Removed
+                // updateScreenshotCount(0); // Removed
+>>>>>>> main
                 sendResponse({ success: true });
                 break;
 
@@ -1141,7 +1171,11 @@
                     } else {
                         selectedScreenshots.delete(message.data.screenshotId);
                     }
+<<<<<<< HEAD
 
+=======
+                    // renderScreenshotPopover(); // Removed
+>>>>>>> main
                 }
                 sendResponse({ success: true });
                 break;
@@ -1175,9 +1209,9 @@
 
                 // Screenshot popover is a child of overlay (in sidebar), so it's removed automatically.
                 // But just in case it's separate:
-                if (screenshotPopover && screenshotPopover.parentNode && (!overlay || !overlay.contains(screenshotPopover.parentNode))) {
-                    screenshotPopover.remove();
-                }
+                // if (screenshotPopover && screenshotPopover.parentNode && (!overlay || !overlay.contains(screenshotPopover.parentNode))) {
+                //    screenshotPopover.remove();
+                // }
 
                 // Force layout recalc just in case (though remove() is usually immediate)
                 const _ = document.body.offsetHeight;
@@ -1191,20 +1225,16 @@
                 if (!document.getElementById('interview-copilot-overlay')) {
                     if (overlay) {
                         document.body.appendChild(overlay);
-                        // Ensure it's visible style-wise just in case
-                        overlay.style.display = 'flex';
+                        // Restore correct display state based on isHidden flag
+                        overlay.style.display = isHidden ? 'none' : 'flex';
                         overlay.style.removeProperty('visibility');
                     } else {
-                        createOverlay(); // Fallback if reference lost
+                        // If logic requires recreation, ensure it respects isHidden if tracked globally
+                        createOverlay();
+                        if (overlay && isHidden) {
+                            overlay.style.display = 'none';
+                        }
                     }
-                }
-
-                // Restore popover if it was separate
-                if (screenshotPopover && !document.contains(screenshotPopover)) {
-                    // Reset styles
-                    screenshotPopover.style.removeProperty('display');
-                    screenshotPopover.style.removeProperty('visibility');
-                    screenshotPopover.style.display = 'none';
                 }
 
                 sendResponse({ success: true });

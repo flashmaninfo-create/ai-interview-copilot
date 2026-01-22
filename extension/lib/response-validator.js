@@ -52,7 +52,15 @@ export class ResponseValidator {
             languageMatch: true
         };
 
-        // 1. Strip banned phrases
+        // 1. Strip internal reasoning (<thinking> blocks) - STEALTH ENFORCEMENT
+        const thinkingMatch = text.match(/<thinking>[\s\S]*?<\/thinking>/);
+        if (thinkingMatch) {
+            // Log reasoning for debug but remove from user output
+            // console.log('[Validator] Internal Reasoning:', thinkingMatch[0]);
+            text = text.replace(/<thinking>[\s\S]*?<\/thinking>/g, '').trim();
+        }
+
+        // 1b. Strip banned phrases
         for (const pattern of this.BANNED_PHRASES) {
             if (pattern.test(text)) {
                 metrics.bannedPhraseHits++;
@@ -171,6 +179,20 @@ export class ResponseValidator {
 
         // Remove markdown fences if present
         text = text.replace(/```\w*\n?/g, '').trim();
+
+        // Basic Syntax Logic Check (Brace/Paren Matching)
+        // This is a heuristic to detect cut-off code
+        const openBraces = (text.match(/{/g) || []).length;
+        const closeBraces = (text.match(/}/g) || []).length;
+        const openParens = (text.match(/\(/g) || []).length;
+        const closeParens = (text.match(/\)/g) || []).length;
+
+        if (openBraces !== closeBraces || openParens !== closeParens) {
+            // Heuristic detection of incomplete code
+            // We append a warning if it looks broken, or we could trigger a retry logic
+            // For now, we append a stealth comment
+            text += '\n\n// Warning: Output may be truncated. Check syntax.';
+        }
 
         return text;
     }

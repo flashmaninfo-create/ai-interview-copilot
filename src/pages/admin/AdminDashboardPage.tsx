@@ -101,7 +101,7 @@ export function AdminDashboardPage() {
         }
     ];
 
-    const navCards = [
+    const navCards: NavCard[] = [
         {
             title: 'User Management',
             description: 'View and manage all registered users',

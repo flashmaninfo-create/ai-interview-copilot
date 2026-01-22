@@ -159,15 +159,32 @@
         transcriptContainer = document.getElementById('ic-transcript');
         hintContainer = document.getElementById('ic-hints');
 
-        // Event Listeners - Controls
-        document.getElementById('ic-minimize').addEventListener('click', (e) => {
-            e.stopPropagation();
-            toggleMinimize();
-        });
-        document.getElementById('ic-hide').addEventListener('click', (e) => {
-            e.stopPropagation();
-            toggleHide();
-        });
+        // Event Listeners - Controls (using mousedown to bypass potential click blocking)
+        const minimizeBtn = document.getElementById('ic-minimize');
+        const hideBtn = document.getElementById('ic-hide');
+        
+        console.log('[Content] Setting up button listeners, minimize:', minimizeBtn, 'hide:', hideBtn);
+        
+        if (minimizeBtn) {
+            minimizeBtn.addEventListener('mousedown', (e) => {
+                console.log('[Content] Minimize button mousedown');
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+                toggleMinimize();
+            }, true); // capture phase
+        }
+        
+        if (hideBtn) {
+            hideBtn.addEventListener('mousedown', (e) => {
+                console.log('[Content] Hide button mousedown');
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+                toggleHide();
+            }, true); // capture phase
+        }
+        
         document.getElementById('ic-open-console').addEventListener('click', openConsole);
 
         // Event Listeners - Action Buttons
@@ -221,6 +238,10 @@
         // --- State Variables ---are at module level for accessibility by message handlers
         // ----------------------------------------------------
 
+        // Create screenshot popover (horizontal layout, positioned to the RIGHT of Snap button)
+
+
+        // Close popover when clicking outside (but not on snap button which takes screenshot)
 
 
         // Initialize popover
@@ -510,6 +531,7 @@
         }
     }
 
+    // Update screenshot count badge
 
 
     // Show visual feedback for screenshot capture
@@ -546,8 +568,6 @@
 
     async function takeScreenshot() {
         console.log('[Content] takeScreenshot() called - button was clicked');
-
-
 
         try {
             console.log('[Content] Taking screenshot...');
@@ -643,6 +663,7 @@
         }
     }
 
+
     function openConsole(e) {
         e.preventDefault();
         // Use production URL by default, can be made configurable
@@ -661,7 +682,8 @@
         let offsetX, offsetY;
 
         header.addEventListener('mousedown', (e) => {
-            if (e.target.tagName === 'BUTTON') return;
+            // Use closest() to properly detect clicks on button or its children (like SVG icons)
+            if (e.target.closest('button')) return;
             e.preventDefault();
             e.stopPropagation();
             isDragging = true;
@@ -1097,7 +1119,11 @@
                     screenshots.unshift(newScreenshot);
                     // Auto-select for AI assistance by default
                     selectedScreenshots.add(newScreenshot.id);
+<<<<<<< HEAD
+
+=======
                     // renderScreenshotPopover(); // Removed
+>>>>>>> main
                     showScreenshotFeedback(true);
 
                     // Show capture flash feedback
@@ -1106,23 +1132,35 @@
                     document.body.appendChild(flash);
                     setTimeout(() => flash.remove(), 300);
                 }
+<<<<<<< HEAD
+
+=======
                 // updateScreenshotCount(screenshots.length); // Removed
+>>>>>>> main
                 sendResponse({ success: true });
                 break;
 
             case 'SCREENSHOT_DELETED':
                 screenshots = screenshots.filter(s => s.id !== message.data.screenshotId);
                 selectedScreenshots.delete(message.data.screenshotId);
+<<<<<<< HEAD
+
+=======
                 // renderScreenshotPopover(); // Removed
                 // updateScreenshotCount(screenshots.length); // Removed
+>>>>>>> main
                 sendResponse({ success: true });
                 break;
 
             case 'SCREENSHOTS_CLEARED':
                 screenshots = [];
                 selectedScreenshots.clear();
+<<<<<<< HEAD
+
+=======
                 // renderScreenshotPopover(); // Removed
                 // updateScreenshotCount(0); // Removed
+>>>>>>> main
                 sendResponse({ success: true });
                 break;
 
@@ -1133,7 +1171,11 @@
                     } else {
                         selectedScreenshots.delete(message.data.screenshotId);
                     }
+<<<<<<< HEAD
+
+=======
                     // renderScreenshotPopover(); // Removed
+>>>>>>> main
                 }
                 sendResponse({ success: true });
                 break;

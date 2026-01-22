@@ -59,7 +59,7 @@ export function LiveConsolePage() {
   const [screenshots, setScreenshots] = useState<Screenshot[]>([]);
   const [snapPopoverOpen, setSnapPopoverOpen] = useState(false);
   const popoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [activeTab, setActiveTab] = useState('hints');
+  const [activeTab] = useState('hints');
 
   // Screenshot capture state
   const [isCapturing, setIsCapturing] = useState(false);

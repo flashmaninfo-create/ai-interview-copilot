@@ -54,7 +54,6 @@ export function useConsoleSync() {
     const [finalizedText, setFinalizedText] = useState('');
 
     // Track if we've received any real data from extension
-    const activityTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const previousSessionIdRef = useRef<string | null>(null);
 
     useEffect(() => {
@@ -289,9 +288,6 @@ export function useConsoleSync() {
             console.log('[useConsoleSync] Cleaning up session channel');
             clearInterval(pollInterval);
             supabase.removeChannel(sessionChannel);
-            if (activityTimeoutRef.current) {
-                clearTimeout(activityTimeoutRef.current);
-            }
         };
 
     }, [sessionId]);
@@ -445,7 +441,8 @@ export function useConsoleSync() {
                         handledIds.add(msg.id);
                         if (handledIds.size > 100) {
                             const it = handledIds.values();
-                            handledIds.delete(it.next().value);
+                            const val = it.next().value;
+                            if (val) handledIds.delete(val);
                         }
 
                         // Process message (Logic duplicated from Realtime handler, but safe due to dedupe)

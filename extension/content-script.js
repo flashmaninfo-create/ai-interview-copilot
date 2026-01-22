@@ -1119,11 +1119,7 @@
                     screenshots.unshift(newScreenshot);
                     // Auto-select for AI assistance by default
                     selectedScreenshots.add(newScreenshot.id);
-<<<<<<< HEAD
 
-=======
-                    // renderScreenshotPopover(); // Removed
->>>>>>> main
                     showScreenshotFeedback(true);
 
                     // Show capture flash feedback
@@ -1132,35 +1128,21 @@
                     document.body.appendChild(flash);
                     setTimeout(() => flash.remove(), 300);
                 }
-<<<<<<< HEAD
 
-=======
-                // updateScreenshotCount(screenshots.length); // Removed
->>>>>>> main
                 sendResponse({ success: true });
                 break;
 
             case 'SCREENSHOT_DELETED':
                 screenshots = screenshots.filter(s => s.id !== message.data.screenshotId);
                 selectedScreenshots.delete(message.data.screenshotId);
-<<<<<<< HEAD
 
-=======
-                // renderScreenshotPopover(); // Removed
-                // updateScreenshotCount(screenshots.length); // Removed
->>>>>>> main
                 sendResponse({ success: true });
                 break;
 
             case 'SCREENSHOTS_CLEARED':
                 screenshots = [];
                 selectedScreenshots.clear();
-<<<<<<< HEAD
 
-=======
-                // renderScreenshotPopover(); // Removed
-                // updateScreenshotCount(0); // Removed
->>>>>>> main
                 sendResponse({ success: true });
                 break;
 
@@ -1171,11 +1153,7 @@
                     } else {
                         selectedScreenshots.delete(message.data.screenshotId);
                     }
-<<<<<<< HEAD
 
-=======
-                    // renderScreenshotPopover(); // Removed
->>>>>>> main
                 }
                 sendResponse({ success: true });
                 break;
@@ -1398,6 +1376,19 @@
         // Poll every 2 seconds to catch login/signup completion
         authPollInterval = setInterval(checkForAuthToken, 2000);
         checkForAuthToken();
+
+        // Handle REQUEST_AUTH_SYNC from popup - forces a fresh auth check
+        chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+            if (msg.type === 'REQUEST_AUTH_SYNC') {
+                console.log('[Content] Received REQUEST_AUTH_SYNC from popup');
+                // Reset the sync flag to allow re-syncing
+                authSynced = false;
+                // Perform fresh auth check
+                checkForAuthToken();
+                sendResponse({ received: true });
+            }
+            return true; // Keep channel open for async response
+        });
 
         // ALSO listen for AUTH_STATE_CHANGE messages from web app (extensionAuthBridge)
         // This provides real-time auth sync when the web app broadcasts auth changes

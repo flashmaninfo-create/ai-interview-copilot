@@ -1125,19 +1125,6 @@ function createMeetingCard(meeting) {
     return card;
 }
 
-
-// Set active phase in navigation
-function setActivePhase(phaseName) {
-    const phaseItems = document.querySelectorAll('.phase-item');
-    phaseItems.forEach(item => {
-        if (item.dataset.phase === phaseName) {
-            item.classList.add('active');
-        } else {
-            item.classList.remove('active');
-        }
-    });
-}
-
 // Start meeting by ID
 function startMeetingById(meetingId) {
     const meeting = savedMeetings.find(m => m.id === meetingId);
@@ -1511,12 +1498,6 @@ async function handleDisconnectMeeting(e) {
 
 // Duplicate handleLogout removed
 
-function handleDashboard(e) {
-    if (e) e.preventDefault();
-    // Redirect to console page
-    chrome.tabs.create({ url: 'http://localhost:5173/dashboard/console' });
-}
-
 // ===== AUTHENTICATION HANDLERS =====
 let isLoginMode = true;
 
@@ -1712,25 +1693,52 @@ function handleAuthSubmit(e) {
     });
 }
 
-// ===== DATA MANAGEMENT =====
-function saveMeetingsData() {
-    chrome.storage.local.set({ savedMeetings }, () => {
-        console.log('Meetings saved:', savedMeetings);
-    });
+// Request auth sync from any open dashboard tabs
+async function requestAuthFromDashboard() {
+    try {
+        const tabs = await chrome.tabs.query({});
+        const dashboardTabs = tabs.filter(tab => 
+            tab.url && (tab.url.includes('localhost:5173') ||
+                tab.url.includes('127.0.0.1:5173') ||
+                tab.url.includes('xtroone.com') ||
+                tab.url.includes('vercel.app'))
+        );
+        
+        console.log('[Popup] Found dashboard tabs:', dashboardTabs.length);
+        
+        for (const tab of dashboardTabs) {
+            try {
+                await chrome.tabs.sendMessage(tab.id, { type: 'REQUEST_AUTH_SYNC' });
+                console.log('[Popup] Sent REQUEST_AUTH_SYNC to tab:', tab.id);
+            } catch (e) {
+                // Tab may not have content script ready, ignore
+                console.log('[Popup] Could not send to tab:', tab.id, e.message);
+            }
+        }
+        
+        // Wait briefly for auth sync to complete
+        if (dashboardTabs.length > 0) {
+            await new Promise(resolve => setTimeout(resolve, 300));
+        }
+    } catch (e) {
+        console.error('[Popup] Error requesting auth from dashboard:', e);
+    }
 }
 
 function loadMeetingsData() {
-    chrome.storage.local.get(['savedMeetings', 'user'], (result) => {
-        // Check if user is logged in
-        if (!result.user) {
-            setState(STATE.LOGIN);
-            return;
-        }
+    // First request auth sync from dashboard tabs, then check storage
+    requestAuthFromDashboard().then(() => {
+        chrome.storage.local.get(['savedMeetings', 'user'], (result) => {
+            // Check if user is logged in
+            if (!result.user) {
+                setState(STATE.LOGIN);
+                return;
+            }
 
-        savedMeetings = result.savedMeetings || [];
+            savedMeetings = result.savedMeetings || [];
 
-        // Check if there's an active session in background
-        chrome.runtime.sendMessage({ type: 'GET_SESSION_STATUS' }, (response) => {
+            // Check if there's an active session in background
+            chrome.runtime.sendMessage({ type: 'GET_SESSION_STATUS' }, (response) => {
             if (chrome.runtime.lastError) {
                 console.log('Could not get session status:', chrome.runtime.lastError.message);
             }
@@ -1803,6 +1811,14 @@ function loadMeetingsData() {
                 setState(STATE.EMPTY);
             }
         });
+    });
+    });
+}
+
+// ===== DATA MANAGEMENT =====
+function saveMeetingsData() {
+    chrome.storage.local.set({ savedMeetings }, () => {
+        console.log('Meetings saved:', savedMeetings);
     });
 }
 

@@ -722,7 +722,7 @@
         let displayHTML = '';
 
         if (data.finalizedText) {
-            displayHTML += `<span class="ic-final">${escapeHtml(data.finalizedText)}</span>`;
+            displayHTML += `<span class="ic-final">${renderMarkdown(data.finalizedText)}</span>`;
         }
 
         if (data.interimText) {
@@ -771,26 +771,27 @@
         html = html.replace(/(\*|_)(.*?)\1/g, '<em>$2</em>');
 
         // 5. Lists: - item or * item
-        // Split by lines to handle list logic better
         html = html.replace(/^[\-\*]\s+(.+)$/gm, '<li class="ic-list-item">$1</li>');
-        // Wrap adjacent <li> in <ul>
         html = html.replace(/(<li class="ic-list-item">.*<\/li>\n?)+/g, '<ul class="ic-list">$&</ul>');
 
-        // 6. Headers (for Explain mode structure)
+        // 6. Headers
         html = html.replace(/^###\s+(.+)$/gm, '<h3>$1</h3>');
         html = html.replace(/^##\s+(.+)$/gm, '<h2>$1</h2>');
 
-        // 7. Line breaks - convert newlines to <br> ONLY if not inside pre/ul/h tags
-        // This is a bit tricky with regex, so we used a simplified approach:
-        // formatting is applied, now replace remaining newlines that are strictly text
-        // (This logic is simplified for the content script environment)
-        html = html.replace(/\n/g, '<br>');
+        // NEW: Speaker labeling (applied before general line breaks)
+        // Wraps LINES starting with **You:** or **Interviewer:** in distinct containers
+        // Using a regex that matches the start of the line (or start of string)
 
-        // Cleanup: Remove <br> after block elements to prevent huge gaps
-        html = html.replace(/<\/pre><br>/g, '</pre>');
-        html = html.replace(/<\/ul><br>/g, '</ul>');
-        html = html.replace(/<\/h2><br>/g, '</h2>');
-        html = html.replace(/<\/h3><br>/g, '</h3>');
+        // You: (Green/Blue)
+        html = html.replace(/(?:^|<br>)\s*\*\*You:\*\*(.*?)(?=<br>|$)/g,
+            '<div class="ic-transcript-line ic-speaker-user"><span class="ic-label">You</span><span class="ic-text">$1</span></div>');
+
+        // Interviewer: (Gray/Default)
+        html = html.replace(/(?:^|<br>)\s*\*\*Interviewer:\*\*(.*?)(?=<br>|$)/g,
+            '<div class="ic-transcript-line ic-speaker-interviewer"><span class="ic-label">Interviewer</span><span class="ic-text">$1</span></div>');
+
+        // 7. Line breaks
+        html = html.replace(/\n/g, '<br>');
 
         return html;
     }

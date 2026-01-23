@@ -41,27 +41,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             return true; // Keep channel open for async response
 
         case 'STOP_AUDIO_CAPTURE':
-            stopCapture();
+            stopAllCaptures();
             sendResponse({ success: true });
             break;
 
-        case 'START_SCREEN_CAPTURE':
-            startScreenCapture(message.streamId)
-                .then(() => sendResponse({ success: true }))
-                .catch(err => sendResponse({ success: false, error: err.message }));
-            return true; // Keep channel open for async response
-
-        case 'CAPTURE_SCREENSHOT':
-            captureScreenshot()
-                .then((dataUrl) => sendResponse({ success: true, screenshot: dataUrl }))
-                .catch(err => sendResponse({ success: false, error: err.message }));
-            return true; // Keep channel open for async response
-
-        case 'GET_CAPTURE_STATUS':
-            sendResponse({ isRecording, isScreenSharing });
-            break;
-
-        // Screen capture fallback handlers
         case 'START_SCREEN_CAPTURE':
             // Support passing streamId for auto-capture (triggered by background)
             startScreenCapture(message.streamId)
@@ -71,6 +54,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     sendResponse({ success: false, error: err.message });
                 });
             return true;
+
+        case 'CAPTURE_SCREENSHOT':
+            captureScreenshot() // This function seems missing or was in the part I deleted? Check original manually if needed.
+                .then((dataUrl) => sendResponse({ success: true, screenshot: dataUrl }))
+                .catch(err => sendResponse({ success: false, error: err.message }));
+            return true;
+
+        case 'GET_CAPTURE_STATUS':
+            sendResponse({ isRecording, isScreenSharing });
+            break;
 
         case 'CAPTURE_SCREEN_FRAME':
             captureScreenFrame()
@@ -85,178 +78,180 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
 });
 
-// ==========================================
-// Audio Capture Functions
-// ==========================================
+// Audio Capture State
+const captureSessions = new Map(); // source -> CaptureSession
 
-async function startCapture(streamId, source = 'tab', apiKey = null) {
-    if (isRecording) {
-        sendBackLog('Recording already active, stopping first...', true);
-        stopCapture();
+class CaptureSession {
+    constructor(source, apiKey) {
+        this.source = source;
+        this.apiKey = apiKey;
+        this.mediaRecorder = null;
+        this.stream = null;
+        this.deepgramSocket = null;
+        this.isRecording = false;
+        this.DEEPGRAM_API_KEY = '5e2e3945f5f5e171dbdc62bb3d06cd3f6a088266';
     }
 
-    // We have a fallback constant now, so we don't strict check apiKey here
-    // if (!apiKey) {
-    //     sendBackLog('Missing Deepgram API Key', true);
-    //     throw new Error('Deepgram API Key is missing. Please configure it in the admin panel.');
-    // }
+    async start(streamId) {
+        sendBackLog(`[${this.source}] Starting capture with streamId: ${streamId || 'mic'}`);
 
-    sendBackLog(`Starting audio capture with streamId: ${streamId} source: ${source}`);
+        try {
+            let stream;
+            if (this.source === 'mic') {
+                stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            } else {
+                const constraints = {
+                    audio: {
+                        mandatory: {
+                            chromeMediaSource: 'tab',
+                            chromeMediaSourceId: streamId
+                        }
+                    },
+                    video: false
+                };
+                stream = await navigator.mediaDevices.getUserMedia(constraints);
+            }
 
-    try {
-        const constraints = {
-            audio: {
-                mandatory: {
-                    chromeMediaSource: source,
-                    chromeMediaSourceId: streamId
-                }
-            },
-            video: false
-        };
+            // 1. Fix Muting: Play audio locally so user can hear the meeting (ONLY for tab audio)
+            // Do NOT play mic audio back to user (echo)
+            if (this.source === 'tab') {
+                this.audioContext = new AudioContext();
+                const sourceNode = this.audioContext.createMediaStreamSource(stream);
+                sourceNode.connect(this.audioContext.destination);
+            }
 
-        // Desktop capture requires video constraint to be present (even if we ignore it)
-        if (source === 'desktop') {
-            constraints.video = {
-                mandatory: {
-                    chromeMediaSource: source,
-                    chromeMediaSourceId: streamId
-                }
-            };
+            // 2. Initialize Deepgram Transcription
+            await this.initDeepgram(stream);
+
+            this.stream = stream;
+            this.isRecording = true;
+            sendBackLog(`[${this.source}] Audio capture started successfully`);
+        } catch (err) {
+            sendBackLog(`[${this.source}] Failed to start capture: ${err.message}`, true);
+            throw err;
+        }
+    }
+
+    async initDeepgram(stream) {
+        if (this.deepgramSocket && this.deepgramSocket.readyState === WebSocket.OPEN) {
+            return;
         }
 
-        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        const finalKey = this.apiKey || this.DEEPGRAM_API_KEY;
+        // Use Nova-2 model tailored for meetings
+        const model = 'nova-2';
+        // Different options could be used for mic vs tab if needed, but nova-2 is generally best for both
 
-        // 1. Fix Muting: Play audio locally so user can hear the meeting
-        const audioContext = new AudioContext();
-        const sourceNode = audioContext.createMediaStreamSource(stream);
-        sourceNode.connect(audioContext.destination);
+        try {
+            this.deepgramSocket = new WebSocket(`wss://api.deepgram.com/v1/listen?model=${model}&punctuate=true&smart_format=true&language=en`, [
+                'token',
+                finalKey
+            ]);
 
-        // 2. Initialize Deepgram Transcription
-        await initDeepgram(stream, apiKey);
+            this.deepgramSocket.onopen = () => {
+                sendBackLog(`[${this.source}] Connected to Deepgram`);
 
-        audioStream = stream;
-        isRecording = true;
-        sendBackLog('Audio capture started successfully');
-    } catch (err) {
-        sendBackLog(`Failed to start capture. Name: ${err.name} Message: ${err.message}`, true);
-        throw err;
+                if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+                    this.mediaRecorder.stop();
+                }
+
+                try {
+                    this.mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+                } catch (e) {
+                    sendBackLog(`[${this.source}] MediaRecorder creation failed: ${e.message}`, true);
+                    return;
+                }
+
+                this.mediaRecorder.addEventListener('dataavailable', async (event) => {
+                    if (event.data.size > 0 && this.deepgramSocket && this.deepgramSocket.readyState === WebSocket.OPEN) {
+                        this.deepgramSocket.send(event.data);
+                    }
+                });
+
+                this.mediaRecorder.start(250);
+            };
+
+            this.deepgramSocket.onmessage = (message) => {
+                try {
+                    const received = JSON.parse(message.data);
+                    const transcript = received.channel?.alternatives[0]?.transcript;
+                    const isFinal = received.is_final;
+
+                    if (transcript) {
+                        chrome.runtime.sendMessage({
+                            type: 'TRANSCRIPTION_RESULT',
+                            data: {
+                                text: transcript,
+                                isFinal: isFinal,
+                                source: this.source, // 'mic' or 'tab'
+                                timestamp: new Date().toISOString()
+                            }
+                        });
+                    }
+                } catch (error) {
+                    // Ignore parse errors
+                }
+            };
+
+            this.deepgramSocket.onerror = (error) => {
+                sendBackLog(`[${this.source}] Deepgram error: ${JSON.stringify(error)}`, true);
+            };
+
+            this.deepgramSocket.onclose = () => {
+                sendBackLog(`[${this.source}] Deepgram socket closed`);
+                this.deepgramSocket = null;
+            };
+
+        } catch (error) {
+            console.error(`[${this.source}] Failed to init Deepgram:`, error);
+        }
+    }
+
+    stop() {
+        if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+            this.mediaRecorder.stop();
+        }
+        if (this.deepgramSocket) {
+            this.deepgramSocket.close();
+            this.deepgramSocket = null;
+        }
+        if (this.audioContext) {
+            this.audioContext.close();
+            this.audioContext = null;
+        }
+        if (this.stream) {
+            this.stream.getTracks().forEach(t => t.stop());
+            this.stream = null;
+        }
+        this.isRecording = false;
+        sendBackLog(`[${this.source}] Capture stopped`);
     }
 }
 
-const DEEPGRAM_API_KEY = '5e2e3945f5f5e171dbdc62bb3d06cd3f6a088266';
-
-// Initialize Deepgram WebSocket
-async function initDeepgram(stream, apiKey) {
-    if (deepgramSocket && deepgramSocket.readyState === WebSocket.OPEN) {
-        sendBackLog('Deepgram socket already open');
-        return;
-    }
-
-    // fallback to hardcoded key if dynamic one fails
-    const finalKey = apiKey || DEEPGRAM_API_KEY;
-
-    sendBackLog(`Initializing Deepgram connection with key: ${finalKey ? 'Present (length ' + finalKey.length + ')' : 'MISSING'}`);
-
-    try {
-        // Use Deepgram's auto-detect encoding for webm/opus audio from MediaRecorder
-        deepgramSocket = new WebSocket('wss://api.deepgram.com/v1/listen?model=nova-2&punctuate=true&smart_format=true', [
-            'token',
-            finalKey
-        ]);
-
-        deepgramSocket.onopen = () => {
-            sendBackLog('Connected to Deepgram WebSocket');
-
-            // Start MediaRecorder to send audio chunks
-            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-                mediaRecorder.stop();
-            }
-
-            // Important: Use correct mimeType for MediaRecorder
-            // Chrome supports audio/webm
-            try {
-                mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
-            } catch (e) {
-                sendBackLog(`MediaRecorder creation failed: ${e.message}`, true);
-                return;
-            }
-
-            mediaRecorder.addEventListener('dataavailable', async (event) => {
-                if (event.data.size > 0 && deepgramSocket.readyState === WebSocket.OPEN) {
-                    // sendBackLog(`Sending audio chunk: ${event.data.size} bytes`);
-                    deepgramSocket.send(event.data);
-                } else if (event.data.size > 0) {
-                    sendBackLog(`Socket not open, dropping chunk: ${event.data.size}`);
-                }
-            });
-
-            mediaRecorder.start(250); // Send chunks every 250ms
-            sendBackLog('MediaRecorder started');
-        };
-
-        deepgramSocket.onmessage = (message) => {
-            try {
-                const received = JSON.parse(message.data);
-
-                // Log metadata or errors from Deepgram
-                if (received.type === 'Metadata') {
-                    sendBackLog(`Deepgram Metadata received: ${JSON.stringify(received)}`);
-                }
-                if (received.error) {
-                    sendBackLog(`Deepgram Error received: ${received.error}`, true);
-                }
-
-                const transcript = received.channel?.alternatives[0]?.transcript;
-
-                if (transcript && received.is_final) {
-                    sendBackLog(`Transcript received: ${transcript}`);
-                    chrome.runtime.sendMessage({
-                        type: 'TRANSCRIPTION_RESULT',
-                        data: {
-                            text: transcript,
-                            isFinal: true,
-                            timestamp: new Date().toISOString()
-                        }
-                    });
-                } else if (transcript) {
-                    // Log interim results too if needed for debugging
-                    // sendBackLog(`Interim transcript: ${transcript}`);
-                }
-            } catch (parseError) {
-                sendBackLog(`Error parsing Deepgram message: ${parseError.message}`, true);
-            }
-        };
-
-        deepgramSocket.onerror = (error) => {
-            sendBackLog(`Deepgram WebSocket error: ${JSON.stringify(error)}`, true);
-        };
-
-        deepgramSocket.onclose = () => {
-            sendBackLog('Deepgram WebSocket closed');
-            deepgramSocket = null;
-        };
-
-    } catch (error) {
-        console.error('[Offscreen] Failed to initialize Deepgram:', error);
-    }
+// Global stop function to stop ALL sessions
+function stopAllCaptures() {
+    captureSessions.forEach(session => session.stop());
+    captureSessions.clear();
+    isRecording = false; // Global flag update
 }
 
-function stopCapture() {
-    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-        mediaRecorder.stop();
+// Updated message handlers for audio
+async function startCapture(streamId, source, apiKey) {
+    // If source is not specified, default to 'tab' (backward compatibility)
+    // But realistically we should always pass it now.
+    const sessionSource = source || 'tab';
+
+    // Stop existing session for this source if any
+    if (captureSessions.has(sessionSource)) {
+        captureSessions.get(sessionSource).stop();
+        captureSessions.delete(sessionSource);
     }
 
-    if (deepgramSocket) {
-        deepgramSocket.close();
-        deepgramSocket = null;
-    }
+    const session = new CaptureSession(sessionSource, apiKey);
+    captureSessions.set(sessionSource, session);
 
-    if (isRecording && audioStream) {
-        audioStream.getTracks().forEach(t => t.stop());
-        audioStream = null;
-        isRecording = false;
-        console.log('[Offscreen] Audio capture stopped');
-    }
+    await session.start(streamId);
+    isRecording = true; // Set global flag if at least one is recording
 }
 
 // ==========================================

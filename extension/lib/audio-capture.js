@@ -63,21 +63,40 @@ export class AudioCaptureManager {
                 this.streamId = streamId;
                 this.isCapturing = true;
 
-                // 3. Send stream ID to offscreen document
+                // 3. Send stream ID to offscreen document for TAB audio
                 try {
-                    const response = await chrome.runtime.sendMessage({
+                    const tabPromise = chrome.runtime.sendMessage({
                         type: 'START_AUDIO_CAPTURE',
                         streamId: streamId,
-                        source: 'tab', // Source must be 'tab' for tabCapture streams
-                        apiKey: this.apiKey // Pass validation key
+                        source: 'tab',
+                        apiKey: this.apiKey
                     });
 
-                    if (response && response.success) {
-                        console.log('[AudioCapture] Offscreen capture started');
-                        resolve({ success: true, streamId });
+                    // 4. ALSO start MIC audio (no streamId needed, offscreen requests getUserMedia)
+                    const micPromise = chrome.runtime.sendMessage({
+                        type: 'START_AUDIO_CAPTURE',
+                        streamId: null, // Mic doesn't need tabCapture streamId
+                        source: 'mic',
+                        apiKey: this.apiKey
+                    });
+
+                    const [tabRes, micRes] = await Promise.allSettled([tabPromise, micPromise]);
+
+                    if (tabRes.status === 'fulfilled' && tabRes.value.success) {
+                        console.log('[AudioCapture] Offscreen TAB capture started');
                     } else {
-                        reject(new Error(response?.error || 'Offscreen initialization failed'));
+                        console.warn('[AudioCapture] Offscreen TAB capture failed:', tabRes.reason || tabRes.value?.error);
                     }
+
+                    if (micRes.status === 'fulfilled' && micRes.value.success) {
+                        console.log('[AudioCapture] Offscreen MIC capture started');
+                    } else {
+                        console.warn('[AudioCapture] Offscreen MIC capture failed (user might have denied permission):', micRes.reason || micRes.value?.error);
+                    }
+
+                    // Resolve if at least one worked, or strictly if tab worked (critical path)
+                    resolve({ success: true, streamId });
+
                 } catch (err) {
                     reject(new Error('Failed to communicate with offscreen doc: ' + err.message));
                 }

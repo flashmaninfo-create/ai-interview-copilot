@@ -9,6 +9,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { creditService } from '../../lib/services/creditService';
 import { sessionService, type SessionSummary } from '../../lib/services/sessionService';
+import { HelpCircle, X, Download, Monitor, CheckCircle2 } from 'lucide-react';
 
 export function DashboardPage() {
     const { profile } = useAuth();
@@ -18,6 +19,7 @@ export function DashboardPage() {
     const [activeSession, setActiveSession] = useState<SessionSummary | null>(null);
     const [completedCount, setCompletedCount] = useState<number | null>(null);
     const [loading, setLoading] = useState(true);
+    const [showInstallGuide, setShowInstallGuide] = useState(false);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -157,24 +159,33 @@ export function DashboardPage() {
                     <p className="text-muted-foreground text-sm">Review past sessions and scores</p>
                 </Link>
 
-                <a
-                    href="/extension.zip"
-                    download="Xtroone.zip"
-                    className="bg-surface border border-white/5 p-6 rounded-xl shadow-sm hover:border-purple-500/30 transition-all group"
-                >
+                <div className="bg-surface border border-white/5 p-6 rounded-xl shadow-sm hover:border-purple-500/30 transition-all group relative flex flex-col">
                     <div className="flex items-center justify-between mb-4">
                         <div className="w-12 h-12 bg-purple-500/10 rounded-lg flex items-center justify-center">
-                            <svg className="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                            </svg>
+                            <Download className="w-6 h-6 text-purple-400" />
                         </div>
-                        <svg className="w-5 h-5 text-slate-500 group-hover:translate-y-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-                        </svg>
+                        <Monitor className="w-5 h-5 text-slate-500 group-hover:translate-y-1 transition-transform" />
                     </div>
                     <h3 className="text-lg font-semibold text-white mb-1">Download Extension</h3>
-                    <p className="text-slate-400 text-sm">Get Chrome Extension (v4.7.4)</p>
-                </a>
+                    <p className="text-slate-400 text-sm mb-4">Get Chrome Extension (ZIP)</p>
+                    
+                    <div className="mt-auto flex gap-3">
+                        <a
+                            href="/extension.zip"
+                            download="Xtroone.zip"
+                            className="flex-1 bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 hover:text-purple-200 text-center py-2 rounded-lg text-sm font-medium transition-colors border border-purple-500/20"
+                        >
+                            Download
+                        </a>
+                        <button
+                            onClick={() => setShowInstallGuide(true)}
+                            className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition-colors border border-white/5"
+                            title="How to install"
+                        >
+                            <HelpCircle className="w-5 h-5" />
+                        </button>
+                    </div>
+                </div>
             </div>
 
             {/* Recent Sessions */}
@@ -235,6 +246,78 @@ export function DashboardPage() {
                     </div>
                 )
             }
+            {/* Installation Guide Modal */}
+            {showInstallGuide && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-card w-full max-w-lg border border-border rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="flex items-center justify-between p-6 border-b border-border bg-muted/20">
+                            <h3 className="text-xl font-semibold text-foreground">How to Install Extension</h3>
+                            <button 
+                                onClick={() => setShowInstallGuide(false)} 
+                                className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded-full hover:bg-muted"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <div className="p-6 space-y-6 overflow-y-auto max-h-[70vh]">
+                            <div className="space-y-5">
+                                <div className="flex gap-4">
+                                    <div className="flex-none w-8 h-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-bold shadow-sm">1</div>
+                                    <div>
+                                        <h4 className="font-medium text-foreground mb-1">Download & Extract</h4>
+                                        <p className="text-sm text-muted-foreground">Download the zip file and extract it to a folder on your computer.</p>
+                                    </div>
+                                </div>
+                                
+                                <div className="flex gap-4">
+                                    <div className="flex-none w-8 h-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-bold shadow-sm">2</div>
+                                    <div>
+                                        <h4 className="font-medium text-foreground mb-1">Open Extensions Page</h4>
+                                        <p className="text-sm text-muted-foreground mb-2">In Chrome, go to <span className="px-1.5 py-0.5 bg-muted rounded text-xs font-mono">chrome://extensions</span></p>
+                                        <a href="chrome://extensions" target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline flex items-center gap-1">
+                                            Open now <Monitor className="w-3 h-3" />
+                                        </a>
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-4">
+                                    <div className="flex-none w-8 h-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-bold shadow-sm">3</div>
+                                    <div>
+                                        <h4 className="font-medium text-foreground mb-1">Enable Developer Mode</h4>
+                                        <p className="text-sm text-muted-foreground">Toggle "Developer mode" in the top right corner.</p>
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-4">
+                                    <div className="flex-none w-8 h-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-bold shadow-sm">4</div>
+                                    <div>
+                                        <h4 className="font-medium text-foreground mb-1">Load Unpacked</h4>
+                                        <p className="text-sm text-muted-foreground mb-2">Click "Load unpacked" and select the folder you extracted in Step 1.</p>
+                                        <div className="p-3 bg-muted/30 rounded border border-border text-center">
+                                            <span className="text-xs font-mono text-muted-foreground">Select Folder: "extension"</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 flex gap-3">
+                                <CheckCircle2 className="w-5 h-5 text-blue-500 flex-none" />
+                                <p className="text-sm text-blue-400">
+                                    Once installed, pin the extension to your toolbar for easy access during interviews.
+                                </p>
+                            </div>
+                        </div>
+                        <div className="p-6 border-t border-border bg-muted/10 flex justify-end">
+                            <button 
+                                onClick={() => setShowInstallGuide(false)} 
+                                className="px-6 py-2.5 bg-primary text-primary-foreground font-medium rounded-lg hover:bg-primary/90 transition-all shadow-sm"
+                            >
+                                Got it
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div >
     );
 }

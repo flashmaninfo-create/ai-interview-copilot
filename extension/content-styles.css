@@ -304,6 +304,59 @@
     opacity: 0.8;
 }
 
+/* Speaker Differentiation */
+.ic-transcript-line {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 8px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    align-items: baseline;
+    line-height: 1.5;
+}
+
+.ic-speaker-user {
+    background: rgba(16, 185, 129, 0.1);
+    /* Green tint */
+    border-left: 3px solid #10b981;
+    margin-left: 20px;
+    /* Indent slightly to right */
+}
+
+.ic-speaker-interviewer {
+    background: rgba(59, 130, 246, 0.1);
+    /* Blue tint */
+    border-left: 3px solid #3b82f6;
+    margin-right: 20px;
+    /* Indent slightly to left */
+}
+
+.ic-label {
+    font-weight: 700;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+    width: 85px;
+    /* Fixed width labels */
+    text-align: right;
+    user-select: none;
+    opacity: 0.8;
+}
+
+.ic-speaker-user .ic-label {
+    color: #34d399;
+}
+
+.ic-speaker-interviewer .ic-label {
+    color: #60a5fa;
+}
+
+.ic-text {
+    flex: 1;
+    color: #e2e8f0;
+}
+
 /* Hints Styling */
 .ic-hints-container {
     display: flex;

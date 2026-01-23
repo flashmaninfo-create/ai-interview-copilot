@@ -678,11 +678,42 @@ function handleStartAttempt(meetingId) {
 
     if (meeting.scenario === 'online-assessment' || (meeting.scenario === 'job-interview' && isLiveCodingEnabled)) {
         // Go to Stealth Console Setup flow for screen capture assistance
-        setupStealthConsoleView(meeting);
-        setState(STATE.STEALTH_CONSOLE_SETUP);
+        // But first, request Mic permission if needed (best effort)
+        navigator.mediaDevices.getUserMedia({ audio: true })
+            .then(stream => {
+                stream.getTracks().forEach(t => t.stop()); // Stop immediately, just needed permission
+                console.log('[Popup] Mic permission granted/verified');
+                setupStealthConsoleView(meeting);
+                setState(STATE.STEALTH_CONSOLE_SETUP);
+            })
+            .catch(err => {
+                console.warn('[Popup] Mic permission denied or ignored:', err);
+
+                // If it's a DOMException (likely "Permission dismissed" due to popup closing), 
+                // open the permission page in a new tab
+                if (err.name === 'NotAllowedError' || err.message.includes('dismissed') || err.message.includes('DOMException')) {
+                    chrome.tabs.create({ url: 'permission.html' });
+                    return; // Don't start session yet
+                }
+
+                // For other errors, maybe just proceed? Or safeguard?
+                // Let's force permission page for safety if it failed
+                chrome.tabs.create({ url: 'permission.html' });
+            });
     } else {
         // Direct start for other types (audio only)
-        startSession(meeting);
+        // Request Mic permission first
+        navigator.mediaDevices.getUserMedia({ audio: true })
+            .then(stream => {
+                stream.getTracks().forEach(t => t.stop());
+                console.log('[Popup] Mic permission granted/verified');
+                startSession(meeting);
+            })
+            .catch(err => {
+                console.warn('[Popup] Mic permission denied or ignored:', err);
+                // Same fallback here
+                chrome.tabs.create({ url: 'permission.html' });
+            });
     }
 }
 

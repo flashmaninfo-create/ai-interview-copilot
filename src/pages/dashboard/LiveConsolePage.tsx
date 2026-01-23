@@ -753,14 +753,57 @@ export function LiveConsolePage() {
                       <p className="text-sm font-medium">Listening...</p>
                     </div>
                   ) : (
-                    <p className="text-white leading-7 whitespace-pre-wrap text-base font-mono">
-                      {typeof finalizedText === 'string' ? finalizedText : JSON.stringify(finalizedText)}
+                    <div className="space-y-4">
+                      {/* Render finalized text with speaker splitting */}
+                      {
+                        typeof finalizedText === 'string' && finalizedText.split('\n').map((line, i) => {
+                          if (!line.trim()) return null;
+
+                          const isUser = line.includes('**You:**');
+                          const isInterviewer = line.includes('**Interviewer:**');
+
+                          // Strip the markdown label for cleaner display
+                          const content = line.replace(/\*\*You:\*\*\s*/, '').replace(/\*\*Interviewer:\*\*\s*/, '');
+
+                          // Default class
+                          let containerClass = "p-3 rounded-lg border border-transparent";
+                          let labelClass = "text-xs font-bold uppercase mb-1 block opacity-70";
+                          let labelText = "";
+
+                          if (isUser) {
+                            containerClass = "bg-emerald-500/10 border-emerald-500/20 ml-8";
+                            labelClass += " text-emerald-400";
+                            labelText = "You";
+                          } else if (isInterviewer) {
+                            containerClass = "bg-blue-500/10 border-blue-500/20 mr-8";
+                            labelClass += " text-blue-400";
+                            labelText = "Interviewer";
+                          } else {
+                            // Generic/System or continuation
+                            containerClass = "text-gray-300";
+                          }
+
+                          if (!isUser && !isInterviewer) {
+                            return <p key={i} className="mb-2 text-gray-300">{line}</p>;
+                          }
+
+                          return (
+                            <div key={i} className={containerClass}>
+                              <span className={labelClass}>{labelText}</span>
+                              <p className="text-white text-sm leading-relaxed">{content}</p>
+                            </div>
+                          );
+                        })
+                      }
+
+                      {/* Interim parts */}
                       {!finalizedText && Array.isArray(transcripts) &&
-                        transcripts.map((t, i) => {
-                          if (!t) return null;
-                          return <span key={i} className="mr-1">{t.text || ''}</span>;
-                        })}
-                    </p>
+                        transcripts.map((t, i) => (
+                          <div key={`interim-${i}`} className="text-gray-500 italic text-sm animate-pulse ml-4">
+                            {t.text}
+                          </div>
+                        ))}
+                    </div>
                   )}
                 </div>
                 {userScrolledUp && (
@@ -785,6 +828,6 @@ export function LiveConsolePage() {
       {/* Screenshot Gallery Panel - Slides in from right */}
 
 
-    </div>
+    </div >
   );
 }

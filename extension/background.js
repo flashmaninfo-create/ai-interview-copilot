@@ -317,7 +317,8 @@ class BackgroundService {
           this.onTranscription({
             text: msg.data.text,
             confidence: msg.data.confidence || 0.95,
-            isFinal: msg.data.isFinal
+            isFinal: msg.data.isFinal,
+            source: msg.data.source || 'tab' // 'mic' or 'tab'
           });
         }
         sendResponse({ success: true });
@@ -2159,13 +2160,14 @@ class BackgroundService {
   }
 
   onTranscription(transcript) {
-    console.log('[Background] Transcription:', transcript.text, 'isFinal:', transcript.isFinal);
+    console.log('[Background] Transcription:', transcript.text, 'isFinal:', transcript.isFinal, 'source:', transcript.source);
 
     // Process through TranscriptionManager (single source of truth, append-only)
     const state = this.transcriptionManager.processResult(
       transcript.text,
       transcript.isFinal,
-      transcript.confidence
+      transcript.confidence,
+      transcript.source
     );
 
     // Store entry for buffer (for AI context)

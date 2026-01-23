@@ -7,7 +7,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { adminService } from '../../lib/services/adminService';
-import { Search, Plus, Trash2, Edit2, X, Eye, EyeOff } from 'lucide-react';
+import { ShieldCheck, Search, Plus, Trash2, Edit2, X, Eye, EyeOff, Lock, Unlock } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';

@@ -25,7 +25,7 @@ const DASHBOARD_URLS = {
 };
 
 // Default to local for development, can be changed via settings
-let DASHBOARD_URL = DASHBOARD_URLS.LOCAL;
+let DASHBOARD_URL = DASHBOARD_URLS.PRODUCTION;
 
 // Helper function to get dashboard URL (can be extended to read from storage)
 function getDashboardUrl() {

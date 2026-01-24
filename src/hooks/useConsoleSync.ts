@@ -50,7 +50,6 @@ export function useConsoleSync() {
     const [hasReceivedData, setHasReceivedData] = useState(false);
     const [lastScreenshotEvent, setLastScreenshotEvent] = useState<{ type: string, data: any } | null>(null);
 
-    // Smooth transcription state (append-only)
     const [finalizedText, setFinalizedText] = useState('');
 
     // Track if we've received any real data from extension
@@ -395,6 +394,18 @@ export function useConsoleSync() {
                         console.error('[useConsoleSync] Screenshot error received:', data);
                         setLastScreenshotEvent({ type: 'SCREENSHOT_ERROR', ...data });
                     }
+                    if (type === 'HINT_ERROR') {
+                        console.error('[useConsoleSync] Hint error received:', data);
+                        // Display error as a hint so user sees feedback
+                        const errorHint = {
+                            id: Date.now(),
+                            type: 'error' as const,
+                            text: data?.error || 'An error occurred while processing your request',
+                            hint: data?.error || 'An error occurred',
+                            timestamp: new Date().toLocaleTimeString()
+                        };
+                        setHints(prev => [errorHint, ...prev]);
+                    }
                 }
             )
             .subscribe((status) => {
@@ -510,6 +521,17 @@ export function useConsoleSync() {
                         if (type === 'SCREENSHOT_ERROR') {
                             setLastScreenshotEvent({ type: 'SCREENSHOT_ERROR', ...data });
                         }
+                        if (type === 'HINT_ERROR') {
+                            // Display error as a hint so user sees feedback
+                            const errorHint = {
+                                id: Date.now(),
+                                type: 'error' as const,
+                                text: data?.error || 'An error occurred while processing your request',
+                                hint: data?.error || 'An error occurred',
+                                timestamp: new Date().toLocaleTimeString()
+                            };
+                            setHints(prev => [errorHint, ...prev]);
+                        }
                         // --- Handler Logic End ---
                     }
                 }
@@ -527,15 +549,26 @@ export function useConsoleSync() {
         if (sessionId) {
             try {
                 console.log('[useConsoleSync] Sending command to Supabase:', type);
-                const result = await supabase.from('sync_messages' as any).insert({ // Cast to any to avoid type error if table missing in schema
+                
+                // Explicitly set created_at to avoid potential clock skew issues with extension polling
+                const payload = {
                     session_id: sessionId,
                     message_type: type,
                     payload: data,
-                    source: 'console'
-                });
-                console.log('[useConsoleSync] Command sent successfully:', result);
-            } catch (err) {
-                console.error('[ConsoleSync] Failed to send command to Supabase:', err);
+                    source: 'console',
+                    created_at: new Date().toISOString()
+                };
+
+                const { error } = await supabase.from('sync_messages' as any).insert(payload);
+                
+                if (error) {
+                    console.error('[useConsoleSync] Command insert failed:', error.message, error.details);
+                    return;
+                }
+                
+                console.log('[useConsoleSync] Command sent successfully');
+            } catch (err: any) {
+                console.error('[useConsoleSync] Failed to send command:', err);
             }
         } else {
             console.warn('[useConsoleSync] Cannot send command - no sessionId!');

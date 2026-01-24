@@ -267,7 +267,7 @@ export function LiveConsolePage() {
 
   const requestHint = async (type: string) => {
     console.log('[LiveConsolePage] requestHint called with type:', type);
-    console.log('[LiveConsolePage] sessionStatus:', sessionStatus, 'connected:', connected);
+    console.log('[LiveConsolePage] sessionStatus:', sessionStatus, 'connected:', connected, 'sessionId:', sessionId);
     setLoading(true);
 
     // Get selected screenshots

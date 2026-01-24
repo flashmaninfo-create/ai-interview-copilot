@@ -72,25 +72,37 @@ export class ConsoleSync {
     startPolling() {
         // Poll for console commands every 1 second (faster responsiveness)
         let lastChecked = Date.now();
+        let pollCount = 0;
 
         console.log('[ConsoleSync] Starting polling for session:', this.sessionId);
 
         this.pollInterval = setInterval(async () => {
-            if (!this.connected || !this.sessionId) return;
+            if (!this.connected || !this.sessionId) {
+                console.log('[ConsoleSync] Polling skipped - connected:', this.connected, 'sessionId:', this.sessionId);
+                return;
+            }
 
+            pollCount++;
+            
             try {
-                // Buffer period: query 2 seconds overlap (reduced from 5s to minimize duplicates)
-                const queryTime = new Date(lastChecked - 2000).toISOString();
+                // Buffer period: query 10 seconds overlap (increased from 2s to handle clock skew)
+                const queryTime = new Date(lastChecked - 10000).toISOString();
 
                 // Update local time BEFORE fetch to capture window
                 lastChecked = Date.now();
 
-                const messages = await supabaseREST.select(
-                    'sync_messages',
-                    `session_id=eq.${this.sessionId}&source=eq.console&created_at=gt.${queryTime}`
-                );
+                const filter = `session_id=eq.${this.sessionId}&source=eq.console&created_at=gt.${queryTime}`;
+                
+                // Log every 10th poll to avoid spam
+                if (pollCount % 10 === 0) {
+                    console.log('[ConsoleSync] Poll #', pollCount, 'for session:', this.sessionId);
+                }
+
+                const messages = await supabaseREST.select('sync_messages', filter);
 
                 if (messages && messages.length > 0) {
+                    console.log('[ConsoleSync] Found', messages.length, 'messages from console');
+                    
                     // Sort by time to process in order
                     messages.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
 

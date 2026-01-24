@@ -37,6 +37,12 @@ class BackgroundService {
   async init() {
     // Load saved state
     await this.state.load();
+    console.log('[Background] Service worker initializing. State loaded:', {
+      hasActiveSession: !!this.state.data.activeSession,
+      activeSessionId: this.state.data.activeSession?.id,
+      hasUser: !!this.state.data.user,
+      credits: this.state.data.credits
+    });
 
     // Setup message listeners
     chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
@@ -67,8 +73,11 @@ class BackgroundService {
 
     // Restore active session if any
     if (this.state.data.activeSession) {
-      console.log('[Background] Auto-resuming session from state');
-      this.resumeSession({ sessionId: this.state.data.activeSession.id });
+      console.log('[Background] Auto-resuming session from state:', this.state.data.activeSession.id);
+      await this.resumeSession({ sessionId: this.state.data.activeSession.id });
+      console.log('[Background] After auto-resume: sessionActive =', this.sessionActive);
+    } else {
+      console.log('[Background] No active session to restore');
     }
 
     // Ensure Deepgram key is available
@@ -80,20 +89,60 @@ class BackgroundService {
     });
 
     // Listen for remote console commands (Supabase)
-    this.consoleSync.onMessage((msg) => {
+    this.consoleSync.onMessage(async (msg) => {
       console.log('[Background] Received remote console command:', msg.type, 'Data:', JSON.stringify(msg.data));
+      console.log('[Background] Current state - sessionActive:', this.sessionActive, 'consoleSync.connected:', this.consoleSync.connected);
+
+      // AUTO-RESTORE SESSION: If we receive a console command but sessionActive is false,
+      // try to restore the session from the database. This handles the case where:
+      // 1. The extension's service worker restarted
+      // 2. The console found a session in the database but the extension didn't restore it
+      if (!this.sessionActive && this.consoleSync.sessionId) {
+        console.log('[Background] Session not active, attempting auto-restore for sessionId:', this.consoleSync.sessionId);
+        try {
+          await this.restoreSessionFromConsole(this.consoleSync.sessionId);
+        } catch (err) {
+          console.error('[Background] Failed to auto-restore session:', err.message);
+        }
+      }
 
       switch (msg.type) {
         case 'REQUEST_HINT':
-          console.log('[Background] Processing REQUEST_HINT from console, requestType:', msg.data?.requestType);
+          console.log('[Background] Processing REQUEST_HINT from console, requestType:', msg.data?.requestType, 'sessionActive:', this.sessionActive);
+          if (!this.sessionActive) {
+            console.error('[Background] CRITICAL: Console request received but sessionActive is still false after restore attempt!');
+            // Send error to console so user gets feedback
+            await this.consoleSync.send({
+              type: 'HINT_ERROR',
+              data: { error: 'Session not active. Please refresh the meeting tab or restart the session.' }
+            });
+            return;
+          }
           this.requestHint({ ...msg.data, trigger: msg.data?.trigger || 'manual' });
           break;
         case 'TAKE_SCREENSHOT':
+          if (!this.sessionActive) {
+            console.warn('[Background] TAKE_SCREENSHOT called but no active session');
+            this.consoleSync.send({
+              type: 'SCREENSHOT_ERROR',
+              data: { error: 'No active session in extension. Please reconnect the meeting.' }
+            });
+            return;
+          }
           this.takeScreenshot({ trigger: msg.data?.trigger || 'console' });
           break;
         case 'CLEAR_SCREENSHOTS':
           // Clear screenshots and notify overlay (triggered from console)
           this.clearScreenshots(() => { });
+          break;
+        case 'TOGGLE_SCREENSHOT_SELECTION':
+          // Forward selection change to the overlay content script
+          if (this.tabId && msg.data) {
+            chrome.tabs.sendMessage(this.tabId, {
+              type: 'SCREENSHOT_SELECTION_UPDATED',
+              data: msg.data
+            }).catch(() => { });
+          }
           break;
       }
     });
@@ -648,6 +697,18 @@ class BackgroundService {
         // DATABASE SYNC: Create session in Supabase if user is logged in
         if (this.state.data.user && this.state.data.user.id) {
           console.log('[Background] Creating DB session for user:', this.state.data.user.id);
+
+          // Deactivate any previous active sessions for this user
+          // This prevents the console from finding old sessions while the extension uses a new one
+          try {
+            await supabaseREST.update('interview_sessions', 
+              { status: 'cancelled', ended_at: new Date().toISOString() },
+              { user_id: this.state.data.user.id, status: 'active' }
+            );
+            console.log('[Background] Deactivated any previous active sessions');
+          } catch (deactivateError) {
+            console.warn('[Background] Could not deactivate old sessions:', deactivateError.message);
+          }
 
           const { data: inserted, error } = await supabaseREST.insert('interview_sessions', {
             id: sessionId,
@@ -1485,6 +1546,62 @@ class BackgroundService {
       if (sendResponse) sendResponse({ success: false, error: error.message });
     }
   }
+
+  // Restore session state when console commands arrive but extension lost its session state
+  // This is a lightweight restore that just sets sessionActive = true so hints work
+  async restoreSessionFromConsole(sessionId) {
+    console.log('[Background] Attempting lightweight session restore for:', sessionId);
+
+    try {
+      // Fetch session from database
+      const sessions = await supabaseREST.select('interview_sessions', `id=eq.${sessionId}`);
+
+      if (!sessions || sessions.length === 0) {
+        console.error('[Background] Session not found in database:', sessionId);
+        throw new Error('Session not found');
+      }
+
+      const session = sessions[0];
+
+      // Only restore if session is still active
+      if (session.status !== 'active') {
+        console.warn('[Background] Session is not active in DB, status:', session.status);
+        throw new Error('Session is not active');
+      }
+
+      console.log('[Background] Found active session in DB, restoring state...');
+
+      // Set sessionActive flag - this is the key fix!
+      this.sessionActive = true;
+
+      // Restore minimal activeSession data needed for hints
+      this.state.data.activeSession = {
+        id: sessionId,
+        startTime: new Date(session.started_at).getTime(),
+        url: session.meeting_url || 'unknown',
+        platform: this.detectPlatform(session.meeting_url || ''),
+        interviewContext: session.context || {},
+        restoredFromConsole: true
+      };
+
+      // Restore console token if available
+      if (session.console_token) {
+        this.state.data.consoleToken = session.console_token;
+      }
+
+      await this.state.save();
+
+      console.log('[Background] Session restored successfully from console sync, sessionActive:', this.sessionActive);
+
+      // Pre-warm AI config
+      this.aiService.warmup();
+
+    } catch (error) {
+      console.error('[Background] Failed to restore session from console:', error);
+      throw error;
+    }
+  }
+
   // Helper to notify content script about resumed session
   async notifyContentScriptResume(tabId, data) {
     // Try to send message first
@@ -1527,6 +1644,12 @@ class BackgroundService {
 
   async requestHint(data, sendResponse) {
     if (!this.sessionActive) {
+      console.warn('[Background] requestHint called but no active session. Trigger:', data?.trigger || 'unknown');
+      // Send error back to console so user sees feedback
+      await this.consoleSync.send({
+        type: 'HINT_ERROR',
+        data: { error: 'No active session in extension. Please reconnect the meeting.' }
+      });
       if (sendResponse) sendResponse({ error: 'No active session' });
       return;
     }

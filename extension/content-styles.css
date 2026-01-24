@@ -305,30 +305,35 @@
 }
 
 /* Speaker Differentiation */
+/* Speaker Differentiation */
 .ic-transcript-line {
     display: flex;
-    gap: 12px;
-    margin-bottom: 8px;
-    padding: 6px 10px;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 12px;
+    padding: 10px 12px;
     border-radius: 8px;
-    align-items: baseline;
     line-height: 1.5;
+    border: 1px solid transparent;
 }
 
 .ic-speaker-user {
-    background: rgba(16, 185, 129, 0.1);
-    /* Green tint */
-    border-left: 3px solid #10b981;
-    margin-left: 20px;
-    /* Indent slightly to right */
+    background: rgba(16, 185, 129, 0.1); 
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    margin-left: 32px; /* Indent to right */
+    margin-right: 0;
 }
 
 .ic-speaker-interviewer {
     background: rgba(59, 130, 246, 0.1);
-    /* Blue tint */
-    border-left: 3px solid #3b82f6;
-    margin-right: 20px;
-    /* Indent slightly to left */
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    margin-right: 32px; /* Indent to left */
+    margin-left: 0;
+}
+
+.ic-speaker-generic {
+    color: #e2e8f0;
+    margin-bottom: 8px;
 }
 
 .ic-label {
@@ -336,25 +341,23 @@
     font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    flex-shrink: 0;
-    width: 85px;
-    /* Fixed width labels */
-    text-align: right;
     user-select: none;
-    opacity: 0.8;
+    opacity: 0.9;
+    display: inline-block;
 }
 
 .ic-speaker-user .ic-label {
-    color: #34d399;
+    color: #34d399; /* Emerald-400 */
 }
 
 .ic-speaker-interviewer .ic-label {
-    color: #60a5fa;
+    color: #60a5fa; /* Blue-400 */
 }
 
 .ic-text {
-    flex: 1;
-    color: #e2e8f0;
+    color: #e2e8f0; /* Slate-200 */
+    font-size: 13.5px;
+    line-height: 1.6;
 }
 
 /* Hints Styling */

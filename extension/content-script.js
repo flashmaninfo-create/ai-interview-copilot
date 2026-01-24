@@ -753,47 +753,72 @@
     // Markdown rendering utilities (inline for content script)
     function renderMarkdown(text) {
         if (!text) return '';
-        let html = escapeHtml(text);
+        
+        // Split by lines to handle chat bubbles correctly
+        const lines = text.split(/\r?\n/);
+        let htmlLines = [];
+        let inCodeBlock = false;
+        
+        // Process each line
+        for (let i = 0; i < lines.length; i++) {
+            let line = lines[i];
+            
+            // Handle code blocks (simple toggle)
+            if (line.trim().startsWith('```')) {
+                inCodeBlock = !inCodeBlock;
+                htmlLines.push(line); // Keep code fences for now, render later or simple regex
+                continue;
+            }
+            
+            if (inCodeBlock) {
+                htmlLines.push(escapeHtml(line));
+                continue;
+            }
+            
+            // Check for Speaker labels
+            const userMatch = line.match(/^\*\*You:\*\*\s*(.*)/);
+            const interviewerMatch = line.match(/^\*\*Interviewer:\*\*\s*(.*)/);
+            
+            if (userMatch) {
+                const content = escapeHtml(userMatch[1]);
+                htmlLines.push(`
+                    <div class="ic-transcript-line ic-speaker-user">
+                        <span class="ic-label">You</span>
+                        <span class="ic-text">${formatInlineMarkdown(content)}</span>
+                    </div>
+                `);
+            } else if (interviewerMatch) {
+                const content = escapeHtml(interviewerMatch[1]);
+                htmlLines.push(`
+                    <div class="ic-transcript-line ic-speaker-interviewer">
+                        <span class="ic-label">Interviewer</span>
+                        <span class="ic-text">${formatInlineMarkdown(content)}</span>
+                    </div>
+                `);
+            } else {
+                // Regular text line
+                if (line.trim()) {
+                    htmlLines.push(`<div class="ic-transcript-line ic-speaker-generic">${formatInlineMarkdown(escapeHtml(line))}</div>`);
+                }
+            }
+        }
+        
+        return htmlLines.join('');
+    }
 
-        // 1. Code blocks: ```lang\ncode\n```
-        html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (match, lang, code) => {
-            const langClass = lang ? ` data-lang="${lang}"` : '';
-            return `<pre class="ic-code-block"${langClass}><code>${code.trim()}</code></pre>`;
-        });
+    function formatInlineMarkdown(text) {
+        if (!text) return '';
+        
+        // 1. Inline code: `code`
+        text = text.replace(/`([^`]+)`/g, '<code class="ic-inline-code">$1</code>');
 
-        // 2. Inline code: `code`
-        html = html.replace(/`([^`]+)`/g, '<code class="ic-inline-code">$1</code>');
+        // 2. Bold: **text** or __text__
+        text = text.replace(/(\*\*|__)(.*?)\1/g, '<strong>$2</strong>');
 
-        // 3. Bold: **text** or __text__
-        html = html.replace(/(\*\*|__)(.*?)\1/g, '<strong>$2</strong>');
+        // 3. Italic: *text* or _text_
+        text = text.replace(/(\*|_)(.*?)\1/g, '<em>$2</em>');
 
-        // 4. Italic: *text* or _text_
-        html = html.replace(/(\*|_)(.*?)\1/g, '<em>$2</em>');
-
-        // 5. Lists: - item or * item
-        html = html.replace(/^[\-\*]\s+(.+)$/gm, '<li class="ic-list-item">$1</li>');
-        html = html.replace(/(<li class="ic-list-item">.*<\/li>\n?)+/g, '<ul class="ic-list">$&</ul>');
-
-        // 6. Headers
-        html = html.replace(/^###\s+(.+)$/gm, '<h3>$1</h3>');
-        html = html.replace(/^##\s+(.+)$/gm, '<h2>$1</h2>');
-
-        // NEW: Speaker labeling (applied before general line breaks)
-        // Wraps LINES starting with **You:** or **Interviewer:** in distinct containers
-        // Using a regex that matches the start of the line (or start of string)
-
-        // You: (Green/Blue)
-        html = html.replace(/(?:^|<br>)\s*\*\*You:\*\*(.*?)(?=<br>|$)/g,
-            '<div class="ic-transcript-line ic-speaker-user"><span class="ic-label">You</span><span class="ic-text">$1</span></div>');
-
-        // Interviewer: (Gray/Default)
-        html = html.replace(/(?:^|<br>)\s*\*\*Interviewer:\*\*(.*?)(?=<br>|$)/g,
-            '<div class="ic-transcript-line ic-speaker-interviewer"><span class="ic-label">Interviewer</span><span class="ic-text">$1</span></div>');
-
-        // 7. Line breaks
-        html = html.replace(/\n/g, '<br>');
-
-        return html;
+        return text;
     }
 
     function formatTime(timestamp) {

@@ -445,7 +445,8 @@ export function useConsoleSync() {
                         handledIds.add(msg.id);
                         if (handledIds.size > 100) {
                             const it = handledIds.values();
-                            handledIds.delete(it.next().value);
+                            const val = it.next().value;
+                            if (val) handledIds.delete(val);
                         }
 
                         // Process message (Logic duplicated from Realtime handler, but safe due to dedupe)

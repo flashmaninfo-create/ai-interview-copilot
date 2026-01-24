@@ -25,14 +25,7 @@ interface Stats {
     activeProvider: string | null;
 }
 
-interface NavCard {
-    title: string;
-    description: string;
-    icon: React.ReactNode;
-    path: string;
-    color: string;
-    superAdminOnly?: boolean;
-}
+// NavCard interface removed as it was unused
 
 // Super admin emails - only these accounts can access the Admins features
 const SUPER_ADMIN_EMAILS = ['flashman.info@gmail.com', 'admin@interview-master.com'];

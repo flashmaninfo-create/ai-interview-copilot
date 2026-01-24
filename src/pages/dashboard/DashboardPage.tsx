@@ -167,12 +167,12 @@ export function DashboardPage() {
                         <Monitor className="w-5 h-5 text-slate-500 group-hover:translate-y-1 transition-transform" />
                     </div>
                     <h3 className="text-lg font-semibold text-white mb-1">Download Extension</h3>
-                    <p className="text-slate-400 text-sm mb-4">Get Chrome Extension (ZIP)</p>
+                    <p className="text-slate-400 text-sm mb-4">Get Chrome Extension (RAR)</p>
                     
                     <div className="mt-auto flex gap-3">
                         <a
-                            href="/extension.zip"
-                            download="Xtroone.zip"
+                            href="/extension.rar"
+                            download="Xtroone.rar"
                             className="flex-1 bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 hover:text-purple-200 text-center py-2 rounded-lg text-sm font-medium transition-colors border border-purple-500/20"
                         >
                             Download

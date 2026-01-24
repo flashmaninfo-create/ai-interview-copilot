@@ -19,7 +19,7 @@ let currentKeywords = []; // Keywords for current meeting form
 
 // ===== DASHBOARD URL CONFIGURATION =====
 const DASHBOARD_URLS = {
-    PRODUCTION: 'https://xtroone.com',
+    PRODUCTION: 'https://ai-interview-copilot-kappa.vercel.app',
     DEV: 'https://ai-interview-copilot-kappa.vercel.app',
     LOCAL: 'http://localhost:5173'
 };

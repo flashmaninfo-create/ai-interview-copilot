@@ -3,7 +3,7 @@
 // based on the environment or user preference
 
 const DASHBOARD_URLS = {
-    PRODUCTION: 'https://xtroone.com',
+    PRODUCTION: 'https://ai-interview-copilot-kappa.vercel.app',
     DEV: 'https://ai-interview-copilot-kappa.vercel.app',
     LOCAL: 'http://localhost:5173'
 };

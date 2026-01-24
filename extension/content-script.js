@@ -514,34 +514,10 @@
 
     // Show visual feedback for screenshot capture
     function showScreenshotFeedback(success) {
-        const flash = document.createElement('div');
-        flash.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: ${success ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)'};
-            z-index: 999999;
-            pointer-events: none;
-            animation: ic-flash 0.3s ease-out;
-        `;
-
-        // Add animation keyframes if not exists
-        if (!document.getElementById('ic-flash-style')) {
-            const style = document.createElement('style');
-            style.id = 'ic-flash-style';
-            style.textContent = `
-                @keyframes ic-flash {
-                    from { opacity: 1; }
-                    to { opacity: 0; }
-                }
-            `;
-            document.head.appendChild(style);
+        // Flash removed per user request
+        if (!success) {
+            console.error('[Content] Screenshot failed (feedback suppressed)');
         }
-
-        document.body.appendChild(flash);
-        setTimeout(() => flash.remove(), 300);
     }
 
     async function takeScreenshot() {
@@ -1126,11 +1102,7 @@
                     // renderScreenshotPopover(); // Removed
                     showScreenshotFeedback(true);
 
-                    // Show capture flash feedback
-                    const flash = document.createElement('div');
-                    flash.className = 'ic-capture-flash';
-                    document.body.appendChild(flash);
-                    setTimeout(() => flash.remove(), 300);
+                    // Flash feedback removed per user request
                 }
                 // updateScreenshotCount(screenshots.length); // Removed
                 sendResponse({ success: true });

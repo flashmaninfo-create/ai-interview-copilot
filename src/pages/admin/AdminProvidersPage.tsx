@@ -137,6 +137,17 @@ export function AdminProvidersPage() {
                 if (config) {
                      await adminService.setAppConfig(`${p.provider}_model`, config.selectedModel);
                      await adminService.setAppConfig(`${p.provider}_custom_model`, config.customModel);
+
+                     // Ensure the selected model is ENABLED in the database
+                     // This fixes the issue where "Provider selected but model not selected" if the model row is disabled
+                     if (config.selectedModel) {
+                         const models = allProviderModels[p.id] || [];
+                         const selectedModelObj = models.find(m => m.model_id === config.selectedModel);
+                         if (selectedModelObj) {
+                             // Force enable it
+                             await adminService.toggleModel(selectedModelObj.id, true);
+                         }
+                     }
                 }
             }
             

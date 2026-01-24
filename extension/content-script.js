@@ -722,7 +722,7 @@
         let displayHTML = '';
 
         if (data.finalizedText) {
-            displayHTML += `<span class="ic-final">${renderMarkdown(data.finalizedText)}</span>`;
+            displayHTML += `<div class="ic-final">${renderMarkdown(data.finalizedText)}</div>`;
         }
 
         if (data.interimText) {
@@ -731,7 +731,7 @@
 
         // If we have displayText but not the individual components, use it
         if (!displayHTML && data.displayText) {
-            displayHTML = `<span class="ic-final">${escapeHtml(data.displayText)}</span>`;
+            displayHTML = `<div class="ic-final">${escapeHtml(data.displayText)}</div>`;
         }
 
         if (displayHTML) {

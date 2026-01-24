@@ -22,6 +22,7 @@ export interface ExtensionAuthPayload {
     data: {
         isAuthenticated: boolean;
         userId?: string;
+        email?: string;
         accessToken?: string;
         refreshToken?: string;
         expiresAt?: number;
@@ -48,7 +49,7 @@ export const extensionAuthBridge = {
         // Broadcast auth state on changes
         supabase.auth.onAuthStateChange(async (event, session) => {
             if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-                this.broadcastAuthState(true, session?.user?.id, session);
+                this.broadcastAuthState(true, session?.user?.id, session?.user?.email, session);
             } else if (event === 'SIGNED_OUT') {
                 this.broadcastAuthState(false);
             }
@@ -78,13 +79,15 @@ export const extensionAuthBridge = {
      */
     async sendTokensToExtension() {
         const tokens = await authService.getTokensForExtension();
+        const { data: { user } } = await supabase.auth.getUser();
 
         const payload: ExtensionAuthPayload = {
             type: 'AUTH_STATE_CHANGE',
-            data: tokens
+            data: tokens && user
                 ? {
                     isAuthenticated: true,
-                    userId: (await supabase.auth.getUser()).data.user?.id,
+                    userId: user.id,
+                    email: user.email,
                     accessToken: tokens.accessToken,
                     refreshToken: tokens.refreshToken,
                     expiresAt: tokens.expiresAt,
@@ -111,6 +114,7 @@ export const extensionAuthBridge = {
     broadcastAuthState(
         isAuthenticated: boolean,
         userId?: string,
+        userEmail?: string,
         session?: { access_token: string; refresh_token: string; expires_at?: number } | null
     ) {
         const payload: ExtensionAuthPayload = {
@@ -118,6 +122,7 @@ export const extensionAuthBridge = {
             data: {
                 isAuthenticated,
                 userId,
+                email: userEmail,
                 accessToken: session?.access_token,
                 refreshToken: session?.refresh_token,
                 expiresAt: session?.expires_at,

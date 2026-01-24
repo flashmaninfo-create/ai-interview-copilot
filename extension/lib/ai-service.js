@@ -49,6 +49,10 @@ export class AIService {
 
             if (!configResult.config) {
                 console.log('[AIService] No LLM configured, using fallback. Reason:', configResult.error);
+                // Inject debug info into context so generateFallbackHint can display it
+                if (configResult.debug) {
+                    context.debug = configResult.debug;
+                }
                 return this.generateFallbackHint(context, configResult.error);
             }
 
@@ -103,6 +107,15 @@ export class AIService {
                         );
 
                         context.visualContext = processed;
+                        
+                        // FIX: Set the primary screenshot for Vision API
+                        // Use the most recent one (last in the array)
+                        const latest = recentScreenshots[recentScreenshots.length - 1];
+                        if (latest) {
+                            context.currentScreenshot = latest.image_url || latest.imageUrl;
+                            console.log('[AIService] Set currentScreenshot for Vision API:', context.currentScreenshot.substring(0, 30) + '...');
+                        }
+
                         console.log('[AIService] Screenshot context extracted. Code found:', !!processed.code, 'Problem found:', !!processed.problemStatement);
                     }
                 } catch (err) {
@@ -273,7 +286,7 @@ export class AIService {
                 this.configCacheTime = 0;
                 const errorMsg = result?.error || 'NO_PROVIDER_ENABLED';
                 console.warn('[AIService] ❌ LLM config not available:', errorMsg);
-                return { config: null, error: errorMsg };
+                return { config: null, error: errorMsg, debug: result?.debug };
             }
         } catch (error) {
             // Clear cache on error
@@ -598,7 +611,9 @@ export class AIService {
             if (errorReason === 'NO_PROVIDER_ENABLED') {
                 hint = '⚠️ No LLM provider is enabled.\n\nGo to Admin Panel → Providers and enable OpenAI, Anthropic, or Google.';
             } else if (errorReason === 'NO_MODEL_AVAILABLE') {
-                hint = '⚠️ Provider enabled but no model selected.\n\nGo to Admin Panel → Providers, expand the provider, and enable at least one model.';
+                const debugProvider = context.debug?.provider_name || 'Unknown';
+                const debugModel = context.debug?.attempted_model_id || 'None';
+                hint = `⚠️ Provider enabled (${debugProvider}) but no model available.\n\nDebug Info:\n- Provider: ${debugProvider}\n- Target Model: ${debugModel}\n\nFix: Go to Admin Panel → Providers, select ${debugProvider}, and enable a model.`;
             } else if (errorReason === 'UNAUTHORIZED') {
                 hint = '⚠️ Please log in to use AI assistance.';
             } else if (errorReason.includes('API')) {

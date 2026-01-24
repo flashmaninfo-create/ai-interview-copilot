@@ -650,7 +650,7 @@
             ? 'http://localhost:5173'
             : window.location.host.includes('vercel.app')
                 ? 'https://ai-interview-copilot-kappa.vercel.app'
-                : 'https://xtroone.com';
+                : 'https://ai-interview-copilot-kappa.vercel.app';
         const url = `${dashboardUrl}/dashboard/console`;
         window.open(url, '_blank');
     }

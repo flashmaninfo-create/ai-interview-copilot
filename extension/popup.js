@@ -254,7 +254,7 @@ function attachEventListeners() {
     // In Meeting buttons
     elements.finishMeetingBtn?.addEventListener('click', handleFinishMeeting);
     elements.disconnectMeetingBtn?.addEventListener('click', handleDisconnectMeeting);
-    elements.openConsoleLinkInMeeting?.addEventListener('click', handleDashboard);
+    elements.openConsoleLinkInMeeting?.addEventListener('click', handleConsole);
 
     // Stealth Console Setup Buttons
     elements.setupBackBtn?.addEventListener('click', handleSetupBack);
@@ -1542,10 +1542,10 @@ async function handleDisconnectMeeting(e) {
 
 // Duplicate handleLogout removed
 
-function handleDashboard(e) {
+function handleConsole(e) {
     if (e) e.preventDefault();
     // Redirect to console page
-    chrome.tabs.create({ url: 'http://localhost:5173/dashboard/console' });
+    chrome.tabs.create({ url: `${getDashboardUrl()}/dashboard/console` });
 }
 
 // ===== AUTHENTICATION HANDLERS =====
